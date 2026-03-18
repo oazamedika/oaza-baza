@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Соби — ПУСЗ Оаза Портал</title>
+  <link rel="stylesheet" href="shared.css"/>
+  <script src="auth-guard.js"></script>
+  <style>
+    .floor-block { margin-bottom: 2.5rem; }
+    .floor-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .floor-stats {
+      font-family: 'Lato', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: var(--gray);
+      letter-spacing: 0.08em;
+    }
+
+    .rooms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+
+    .room-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .room-card-header {
+      padding: 0.65rem 1rem;
+      background: var(--cream);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .room-card-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--dark);
+    }
+    .room-occupancy-count {
+      font-size: 0.72rem;
+      color: var(--gray);
+    }
+
+    .bed-list { padding: 0.5rem 0; }
+
+    .bed-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    .bed-row:last-child { border-bottom: none; }
+
+    /* Bed icon */
+    .bed-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .bed-icon.occupied { background: rgba(122,122,46,0.12); color: var(--olive); }
+    .bed-icon.empty    { background: var(--cream2); color: var(--border); }
+
+    .bed-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gray);
+      flex-shrink: 0;
+      min-width: 60px;
+    }
+
+    .bed-content { flex: 1; min-width: 0; }
+
+    .bed-client-name {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--dark);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .bed-client-meta {
+      font-size: 0.73rem;
+      color: var(--gray);
+      margin-top: 0.05rem;
+    }
+    .bed-empty-text {
+      font-size: 0.83rem;
+      color: var(--border);
+      font-style: italic;
+    }
+
+    .badge { display:inline-block;padding:0.15rem 0.5rem;border-radius:20px;font-size:0.65rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase; }
+    .badge-draft{background:#f0ece2;color:#8a7a55}
+    .badge-social{background:#e8f0e8;color:#3a6e3a}
+    .badge-doctor{background:#e8ecf5;color:#2e4a8a}
+    .badge-completed{background:#e6f0e6;color:#2a6e2a;border:1px solid #b5d5b5}
+
+    /* Legend */
+    .legend {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--gray);
+    }
+    .legend-dot {
+      width: 12px; height: 12px;
+      border-radius: 3px;
+    }
+    .legend-dot.occupied { background: rgba(122,122,46,0.25); }
+    .legend-dot.empty    { background: var(--cream2); border: 1px solid var(--border); }
+
+    /* Summary cards */
+    .summary-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px,1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .summary-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+    }
+    .summary-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-bottom: 0.35rem;
+    }
+    .summary-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--dark);
+      line-height: 1;
+    }
+    .summary-card.highlight { border-left: 3px solid var(--olive); }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebar-placeholder"></div>
+  <main class="main">
+    <div class="page-header">
+      <h1 class="page-title">Соби</h1>
+      <p class="page-subtitle">Преглед на зафатеност на соби и кревети</p>
+    </div>
+
+    <div class="page-content">
+      <div id="rooms-loading" style="padding:2rem 0;text-align:center;color:var(--gray);">Се вчитува…</div>
+      <div id="rooms-content" style="display:none;">
+
+        <!-- Summary -->
+        <div class="summary-row" id="summary-row"></div>
+
+        <!-- Legend -->
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot occupied"></div>Зафатен</div>
+          <div class="legend-item"><div class="legend-dot empty"></div>Слободен</div>
+        </div>
+
+        <!-- Floors -->
+        <div id="floors-container"></div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="sidebar.js"></script>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  const wait = setInterval(() => {
+    if (window._username !== undefined) {
+      clearInterval(wait);
+      buildSidebar('Соби');
+      loadRooms();
+    }
+  }, 30);
+});
+
+const STATUS_LABEL = {
+  draft:     { text:'Нацрт',          cls:'badge-draft'     },
+  social:    { text:'Чека социјален', cls:'badge-social'    },
+  doctor:    { text:'Чека доктор',    cls:'badge-doctor'    },
+  completed: { text:'Завршен прием',  cls:'badge-completed' },
+};
+
+function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function loadRooms() {
+  // Fetch all clients with bed assignments (not discharged)
+  const { data, error } = await window._sb
+    .from('clients')
+    .select('id,ime_prezime,obrakanje,floor_number,room_number,bed_number,status,profile_pic_url')
+    .neq('status','discharged')
+    .not('floor_number','is',null);
+
+  document.getElementById('rooms-loading').style.display = 'none';
+  document.getElementById('rooms-content').style.display = 'block';
+
+  // Build lookup: "floor-room-bed" → client
+  const occupied = {};
+  if (data) {
+    data.forEach(c => {
+      const key = `${c.floor_number}-${c.room_number}-${c.bed_number}`;
+      occupied[key] = c;
+    });
+  }
+
+  // Totals
+  const totalBeds  = 2 * 8 * 2; // floors × rooms × beds = 32
+  const takenCount = Object.keys(occupied).length;
+  const freeCount  = totalBeds - takenCount;
+
+  // Summary
+  document.getElementById('summary-row').innerHTML = `
+    <div class="summary-card highlight">
+      <div class="summary-label">Вкупно кревети</div>
+      <div class="summary-value">${totalBeds}</div>
+    </div>
+    <div class="summary-card highlight">
+      <div class="summary-label">Зафатени</div>
+      <div class="summary-value">${takenCount}</div>
+    </div>
+    <div class="summary-card highlight">
+      <div class="summary-label">Слободни</div>
+      <div class="summary-value">${freeCount}</div>
+    </div>
+    <div class="summary-card highlight">
+      <div class="summary-label">Пополнетост</div>
+      <div class="summary-value">${Math.round(takenCount/totalBeds*100)}%</div>
+    </div>`;
+
+  // Build floors
+  let html = '';
+  for (let floor = 1; floor <= 2; floor++) {
+    let floorTaken = 0;
+    let roomsHtml = '';
+
+    for (let room = 1; room <= 8; room++) {
+      let bedsHtml = '';
+      let roomTaken = 0;
+
+      for (let bed = 1; bed <= 2; bed++) {
+        const key = `${floor}-${room}-${bed}`;
+        const client = occupied[key];
+        if (client) roomTaken++;
+
+        const icon = client
+          ? `<div class="bed-icon occupied">
+               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+             </div>`
+          : `<div class="bed-icon empty">
+               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.4"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+             </div>`;
+
+        const content = client
+          ? `<div class="bed-content">
+               <div class="bed-client-name">${esc(client.obrakanje ? client.obrakanje+' ' : '')}${esc(client.ime_prezime)}</div>
+               <div class="bed-client-meta"><span class="badge ${STATUS_LABEL[client.status]?.cls||''}">${STATUS_LABEL[client.status]?.text||client.status}</span></div>
+             </div>`
+          : `<div class="bed-content"><div class="bed-empty-text">Слободен</div></div>`;
+
+        bedsHtml += `
+          <div class="bed-row">
+            ${icon}
+            <div class="bed-label">Кревет ${bed}</div>
+            ${content}
+          </div>`;
+      }
+
+      floorTaken += roomTaken;
+      const occ = roomTaken === 2 ? 'Целосно зафатена' : roomTaken === 1 ? '1/2 зафатена' : 'Слободна';
+
+      roomsHtml += `
+        <div class="room-card">
+          <div class="room-card-header">
+            <span class="room-card-title">Соба ${room}</span>
+            <span class="room-occupancy-count">${occ}</span>
+          </div>
+          <div class="bed-list">${bedsHtml}</div>
+        </div>`;
+    }
+
+    html += `
+      <div class="floor-block">
+        <div class="floor-title">
+          Кат ${floor}
+          <span class="floor-stats">${floorTaken} / 16 кревети зафатени</span>
+        </div>
+        <div class="rooms-grid">${roomsHtml}</div>
+      </div>`;
+  }
+
+  document.getElementById('floors-container').innerHTML = html;
+}
+</script>
+</body>
+</html>

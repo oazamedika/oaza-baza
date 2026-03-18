@@ -20,6 +20,7 @@ function buildSidebar(activePage) {
     { label: 'Записи',     href: 'logs.html',       icon: iconLogs()     },
     { label: 'Задачи',     href: 'tasks.html',      icon: iconTasks()    },
     { label: 'Извештаи',   href: 'reports.html',    icon: iconReports()  },
+    { label: 'Соби',        href: 'rooms.html',     icon: iconRooms()    },
     { label: 'Поставки',   href: 'settings.html',   icon: iconSettings() },
   ];
 
@@ -106,3 +107,4 @@ function canManageClients() {
   return u === 'menadzer' || u === 'glavnasestra';
 }
 window.canManageClients = canManageClients;
+function iconRooms() { return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`; }
