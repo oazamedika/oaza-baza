@@ -44,7 +44,7 @@
       }
     });
 
-    sb.auth.getSession().then(({ data: { session } }) => {
+    sb.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
         window.location.replace(loginURL());
       } else {
@@ -53,9 +53,21 @@
         window._session  = session;
         window._user     = session.user;
 
-        // Derive human-readable username from email convention: username@oaza.internal
+        // Latin username derived from email (used as fallback)
         const email = session.user.email || '';
         window._username = email.replace('@oaza.internal', '');
+
+        // Fetch Cyrillic full_name from portal_users profile table
+        try {
+          const { data } = await sb
+            .from('portal_users')
+            .select('full_name')
+            .eq('id', session.user.id)
+            .single();
+          window._displayName = (data && data.full_name) ? data.full_name : window._username;
+        } catch (_) {
+          window._displayName = window._username;
+        }
 
         document.documentElement.style.visibility = '';
       }
