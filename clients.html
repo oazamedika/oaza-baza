@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Корисници — ПУСЗ Оаза Портал</title>
+  <link rel="stylesheet" href="shared.css"/>
+  <script src="auth-guard.js"></script>
+  <style>
+    /* ── Status badges ── */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.65rem;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .badge-draft     { background: #f0ece2; color: #8a7a55; }
+    .badge-social    { background: #e8f0e8; color: #3a6e3a; }
+    .badge-doctor    { background: #e8ecf5; color: #2e4a8a; }
+    .badge-completed { background: #e6f0e6; color: #2a6e2a; border: 1px solid #b5d5b5; }
+
+    /* ── Clients table ── */
+    .clients-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .clients-table th {
+      text-align: left;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gray);
+      padding: 0.75rem 1rem;
+      border-bottom: 2px solid var(--border);
+    }
+    .clients-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--dark);
+      vertical-align: middle;
+    }
+    .clients-table tr:last-child td { border-bottom: none; }
+    .clients-table tr:hover td { background: #faf7f2; }
+    .client-name { font-weight: 700; }
+    .client-meta { font-size: 0.78rem; color: var(--gray); margin-top: 0.1rem; }
+
+    /* ── New client button ── */
+    .btn-new-client {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.25rem;
+      background: var(--dark);
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-family: 'Lato', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-new-client:hover { background: var(--olive); }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--gray);
+    }
+    .empty-state svg { opacity: 0.25; margin-bottom: 1rem; }
+    .empty-state p { font-size: 0.9rem; }
+
+    /* ══════════════════════════════
+       MODAL
+    ══════════════════════════════ */
+    .modal-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(47,42,36,0.55);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 680px;
+      max-height: 92vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      padding: 1.5rem 1.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0;
+      background: #fff;
+      z-index: 2;
+    }
+
+    .modal-header-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .modal-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--dark);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--gray);
+      padding: 0.25rem;
+      display: flex;
+      align-items: center;
+      transition: color 0.15s;
+    }
+    .modal-close:hover { color: var(--dark); }
+
+    /* Step indicator */
+    .step-indicator {
+      display: flex;
+      gap: 0;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1;
+    }
+    .step:not(:last-child)::after {
+      content: '';
+      flex: 1;
+      height: 2px;
+      background: var(--border);
+      margin: 0 0.5rem;
+      transition: background 0.2s;
+    }
+    .step.done:not(:last-child)::after { background: var(--olive); }
+    .step-num {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: var(--border);
+      color: var(--gray);
+      flex-shrink: 0;
+      transition: background 0.2s, color 0.2s;
+    }
+    .step.active .step-num { background: var(--dark); color: #fff; }
+    .step.done   .step-num { background: var(--olive); color: #fff; }
+    .step-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gray);
+      white-space: nowrap;
+    }
+    .step.active .step-label { color: var(--dark); }
+    .step.done   .step-label { color: var(--olive); }
+
+    /* Modal body */
+    .modal-body {
+      padding: 1.5rem 1.75rem;
+      flex: 1;
+    }
+
+    /* Form grid */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem 1.25rem;
+    }
+    .form-grid .full { grid-column: 1 / -1; }
+
+    .form-group { display: flex; flex-direction: column; }
+
+    .form-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-bottom: 0.4rem;
+    }
+    .form-label .req { color: #c0392b; margin-left: 2px; }
+
+    .form-input, .form-select {
+      padding: 0.7rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: 'Lato', sans-serif;
+      font-size: 0.9rem;
+      color: var(--dark);
+      background: #fff;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-input:focus, .form-select:focus {
+      border-color: var(--olive);
+      box-shadow: 0 0 0 3px rgba(122,122,46,0.1);
+    }
+
+    /* Сродство section */
+    .srodstvo-section { margin-top: 1.5rem; }
+    .srodstvo-section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 0.25rem;
+    }
+    .srodstvo-section-sub {
+      font-size: 0.8rem;
+      color: var(--gray);
+      margin-bottom: 1rem;
+    }
+
+    .srodstvo-item {
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      position: relative;
+    }
+    .srodstvo-item-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .srodstvo-remove {
+      position: absolute;
+      top: 0.6rem; right: 0.6rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--gray);
+      font-size: 1.1rem;
+      line-height: 1;
+      padding: 0.2rem 0.4rem;
+      border-radius: 3px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .srodstvo-remove:hover { background: #fdf0ef; color: #c0392b; }
+
+    .btn-add-srodstvo {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 0.9rem;
+      background: transparent;
+      border: 1px dashed var(--olive);
+      border-radius: 4px;
+      color: var(--olive);
+      font-family: 'Lato', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-add-srodstvo:hover { background: rgba(122,122,46,0.07); }
+
+    /* Pending step placeholder */
+    .step-pending {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2.5rem 1rem;
+      text-align: center;
+      color: var(--gray);
+      gap: 0.75rem;
+    }
+    .step-pending svg { opacity: 0.3; }
+    .step-pending strong { font-size: 1rem; color: var(--dark); font-family: 'Playfair Display', serif; }
+    .step-pending p { font-size: 0.85rem; max-width: 360px; line-height: 1.7; }
+
+    /* Modal footer */
+    .modal-footer {
+      padding: 1rem 1.75rem 1.5rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      position: sticky; bottom: 0;
+      background: #fff;
+    }
+
+    .modal-error {
+      font-size: 0.82rem;
+      color: #c0392b;
+      flex: 1;
+    }
+
+    .modal-footer-btns {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn-secondary {
+      padding: 0.65rem 1.2rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: 'Lato', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--gray);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--dark); color: var(--dark); }
+
+    .btn-primary {
+      padding: 0.65rem 1.4rem;
+      background: var(--dark);
+      border: none;
+      border-radius: 4px;
+      font-family: 'Lato', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: var(--olive); }
+    .btn-primary:disabled { opacity: 0.5; pointer-events: none; }
+
+    /* View client link */
+    .link-view {
+      font-size: 0.82rem;
+      color: var(--olive);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .link-view:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div id="sidebar-placeholder"></div>
+
+  <main class="main">
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h1 class="page-title">Корисници</h1>
+        <p class="page-subtitle">Евиденција на сите корисници на установата</p>
+      </div>
+      <!-- Only rendered for Menadzer & GlavnaSestra via JS -->
+      <div id="new-client-btn-wrap" style="display:none;">
+        <button class="btn-new-client" id="btnNewClient">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Нов Корисник
+        </button>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="clients-loading" style="padding:3rem;text-align:center;color:var(--gray);font-size:0.9rem;">Се вчитува…</div>
+        <div id="clients-table-wrap" style="display:none;">
+          <table class="clients-table">
+            <thead>
+              <tr>
+                <th>Корисник</th>
+                <th>Соба</th>
+                <th>ЕМБГ</th>
+                <th>Статус</th>
+                <th>Датум</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="clients-tbody"></tbody>
+          </table>
+        </div>
+        <div id="clients-empty" style="display:none;">
+          <div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <p>Сè уште нема регистрирани корисници.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════
+     NEW CLIENT MODAL
+══════════════════════════════════════════ -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+
+    <div class="modal-header">
+      <div class="modal-header-top">
+        <h2 class="modal-title" id="modalTitle">Регистрација на нов корисник</h2>
+        <button class="modal-close" id="modalClose" aria-label="Затвори">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Step indicator -->
+      <div class="step-indicator" id="stepIndicator">
+        <div class="step active" data-step="1">
+          <div class="step-num">1</div>
+          <span class="step-label">Општи податоци</span>
+        </div>
+        <div class="step" data-step="2">
+          <div class="step-num">2</div>
+          <span class="step-label">Социјален работник</span>
+        </div>
+        <div class="step" data-step="3">
+          <div class="step-num">3</div>
+          <span class="step-label">Доктор</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-body" id="modalBody">
+      <!-- Step content injected by JS -->
+    </div>
+
+    <div class="modal-footer">
+      <div class="modal-error" id="modalError"></div>
+      <div class="modal-footer-btns">
+        <button class="btn-secondary" id="btnBack" style="display:none;">Назад</button>
+        <button class="btn-primary"   id="btnNext">Следно</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="sidebar.js"></script>
+<script>
+  // ── Wait for auth-guard then boot ──────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    const wait = setInterval(() => {
+      if (window._username !== undefined) {
+        clearInterval(wait);
+        buildSidebar('Корисници');
+        initPage();
+      }
+    }, 30);
+  });
+
+  // ── Status label map ──────────────────────────────────────────
+  const STATUS_LABEL = {
+    draft:     { text: 'Нацрт',            cls: 'badge-draft'     },
+    social:    { text: 'Чека социјален',   cls: 'badge-social'    },
+    doctor:    { text: 'Чека доктор',      cls: 'badge-doctor'    },
+    completed: { text: 'Завршен прием',    cls: 'badge-completed' },
+  };
+
+  function formatDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('mk-MK', { day:'2-digit', month:'2-digit', year:'numeric' });
+  }
+
+  // ── Load clients list ─────────────────────────────────────────
+  async function loadClients() {
+    const { data, error } = await window._sb
+      .from('clients')
+      .select('id, ime_prezime, broj_soba, embg, status, created_at, obrakanje')
+      .order('created_at', { ascending: false });
+
+    document.getElementById('clients-loading').style.display = 'none';
+
+    if (error || !data || data.length === 0) {
+      document.getElementById('clients-empty').style.display = 'block';
+      return;
+    }
+
+    const tbody = document.getElementById('clients-tbody');
+    tbody.innerHTML = data.map(c => {
+      const st = STATUS_LABEL[c.status] || { text: c.status, cls: 'badge-draft' };
+      return `
+        <tr>
+          <td>
+            <div class="client-name">${esc(c.obrakanje ? c.obrakanje + ' ' : '')}${esc(c.ime_prezime)}</div>
+          </td>
+          <td>${esc(c.broj_soba || '—')}</td>
+          <td style="font-family:monospace;font-size:0.85rem;">${esc(c.embg || '—')}</td>
+          <td><span class="badge ${st.cls}">${st.text}</span></td>
+          <td style="color:var(--gray);font-size:0.82rem;">${formatDate(c.created_at)}</td>
+          <td><a href="#" class="link-view">Преглед</a></td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('clients-table-wrap').style.display = 'block';
+  }
+
+  function initPage() {
+    // Show "Нов Корисник" button only for privileged roles
+    if (canManageClients()) {
+      document.getElementById('new-client-btn-wrap').style.display = '';
+      document.getElementById('btnNewClient').addEventListener('click', openModal);
+    }
+    loadClients();
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/[&<>"']/g, c =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  MODAL
+  // ══════════════════════════════════════════════════════════════
+  let currentStep = 1;
+  let savedClientId = null;   // set after Part 1 is saved
+  let srodstvoItems = [];     // [{ime_prezime, adresa, telefon}]
+
+  function openModal() {
+    currentStep = 1;
+    savedClientId = null;
+    srodstvoItems = [];
+    renderStep();
+    document.getElementById('modalBackdrop').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    document.getElementById('modalBackdrop').classList.remove('open');
+    document.body.style.overflow = '';
+    clearError();
+    loadClients();   // refresh list
+  }
+
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalBackdrop').addEventListener('click', e => {
+    if (e.target === document.getElementById('modalBackdrop')) closeModal();
+  });
+
+  // ── Step rendering ────────────────────────────────────────────
+  function renderStep() {
+    updateStepIndicator();
+    clearError();
+
+    const body = document.getElementById('modalBody');
+    const btnNext = document.getElementById('btnNext');
+    const btnBack = document.getElementById('btnBack');
+
+    btnBack.style.display = currentStep > 1 ? '' : 'none';
+
+    if (currentStep === 1) {
+      btnNext.textContent = 'Зачувај и продолжи';
+      body.innerHTML = renderStep1();
+      setupSrodstvo();
+    } else if (currentStep === 2) {
+      btnNext.textContent = 'Продолжи кон доктор';
+      body.innerHTML = renderStep2();
+    } else if (currentStep === 3) {
+      btnNext.textContent = 'Заврши прием';
+      body.innerHTML = renderStep3();
+    }
+  }
+
+  function updateStepIndicator() {
+    document.querySelectorAll('.step').forEach(el => {
+      const s = parseInt(el.dataset.step);
+      el.classList.toggle('active', s === currentStep);
+      el.classList.toggle('done',   s < currentStep);
+    });
+  }
+
+  // ── Step 1: General info ──────────────────────────────────────
+  function renderStep1() {
+    return `
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Обраќање</label>
+          <select class="form-select" id="f_obrakanje">
+            <option value="">— Изберете —</option>
+            <option>Г-дин</option>
+            <option>Г-ѓа</option>
+            <option>Г-ца</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Број од матична книга</label>
+          <input class="form-input" id="f_maticen" type="text" placeholder="нпр. 123456"/>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Име и Презиме <span class="req">*</span></label>
+          <input class="form-input" id="f_ime_prezime" type="text" placeholder="Марија Петровска"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Број на соба</label>
+          <input class="form-input" id="f_soba" type="text" placeholder="нпр. 12А"/>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Адреса на живеење</label>
+          <input class="form-input" id="f_adresa" type="text" placeholder="ул. Климент Охридски 5, Скопје"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">ЕМБГ</label>
+          <input class="form-input" id="f_embg" type="text" placeholder="0101950450001" maxlength="13"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Бр. лична карта / пасош</label>
+          <input class="form-input" id="f_lk" type="text" placeholder="нпр. 1234567"/>
+        </div>
+      </div>
+
+      <div class="srodstvo-section">
+        <div class="srodstvo-section-title">Сродство</div>
+        <div class="srodstvo-section-sub">Лица за контакт / роднини (може да се додадат повеќе)</div>
+        <div id="srodstvo-list"></div>
+        <button class="btn-add-srodstvo" type="button" id="btnAddSrodstvo">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Додај сродник
+        </button>
+      </div>`;
+  }
+
+  function setupSrodstvo() {
+    renderSrodstvoList();
+    document.getElementById('btnAddSrodstvo').addEventListener('click', () => {
+      srodstvoItems.push({ ime_prezime: '', adresa: '', telefon: '' });
+      renderSrodstvoList();
+    });
+  }
+
+  function renderSrodstvoList() {
+    const list = document.getElementById('srodstvo-list');
+    if (!list) return;
+    if (srodstvoItems.length === 0) { list.innerHTML = ''; return; }
+    list.innerHTML = srodstvoItems.map((item, i) => `
+      <div class="srodstvo-item">
+        <button class="srodstvo-remove" type="button" onclick="removeSrodstvo(${i})" title="Отстрани">×</button>
+        <div class="srodstvo-item-grid">
+          <div class="form-group">
+            <label class="form-label">Ime и Презиме</label>
+            <input class="form-input" value="${esc(item.ime_prezime)}" oninput="updateSrodstvo(${i},'ime_prezime',this.value)" placeholder="Петар Петровски"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Адреса</label>
+            <input class="form-input" value="${esc(item.adresa)}" oninput="updateSrodstvo(${i},'adresa',this.value)" placeholder="Адреса"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Телефон</label>
+            <input class="form-input" value="${esc(item.telefon)}" oninput="updateSrodstvo(${i},'telefon',this.value)" placeholder="+389 70 000 000"/>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  function updateSrodstvo(i, field, val) { srodstvoItems[i][field] = val; }
+  function removeSrodstvo(i) { srodstvoItems.splice(i, 1); renderSrodstvoList(); }
+
+  // ── Step 2 & 3: Pending placeholders ─────────────────────────
+  function renderStep2() {
+    return `<div class="step-pending">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <strong>Дел 2 — Социјален Работник</strong>
+      <p>Овој дел ќе биде додаден подоцна. Корисникот е снимен и социјалниот работник може да го пополни подоцна. Кликнете „Продолжи кон доктор" за да продолжите.</p>
+    </div>`;
+  }
+
+  function renderStep3() {
+    return `<div class="step-pending">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      <strong>Дел 3 — Доктор</strong>
+      <p>Овој дел ќе биде додаден подоцна. Кликнете „Заврши прием" за да го означите прием-от како завршен и да го активирате корисникот.</p>
+    </div>`;
+  }
+
+  // ── Next / Back handlers ──────────────────────────────────────
+  document.getElementById('btnNext').addEventListener('click', async () => {
+    clearError();
+    if (currentStep === 1) {
+      await saveStep1();
+    } else if (currentStep === 2) {
+      await saveStep2();
+    } else if (currentStep === 3) {
+      await completeAdmission();
+    }
+  });
+
+  document.getElementById('btnBack').addEventListener('click', () => {
+    if (currentStep > 1) { currentStep--; renderStep(); }
+  });
+
+  // ── Save Step 1 ───────────────────────────────────────────────
+  async function saveStep1() {
+    const ime = document.getElementById('f_ime_prezime').value.trim();
+    if (!ime) { showError('Полето „Ime и Презиме" е задолжително.'); return; }
+
+    const payload = {
+      ime_prezime:     ime,
+      obrakanje:       document.getElementById('f_obrakanje').value || null,
+      maticen_broj:    document.getElementById('f_maticen').value.trim() || null,
+      broj_soba:       document.getElementById('f_soba').value.trim()    || null,
+      adresa:          document.getElementById('f_adresa').value.trim()  || null,
+      embg:            document.getElementById('f_embg').value.trim()    || null,
+      licna_karta_broj:document.getElementById('f_lk').value.trim()      || null,
+      status:          'social',
+      created_by:      window._user.id,
+    };
+
+    document.getElementById('btnNext').disabled = true;
+    const { data, error } = await window._sb.from('clients').insert([payload]).select('id').single();
+    document.getElementById('btnNext').disabled = false;
+
+    if (error) { showError('Грешка при зачувување: ' + error.message); return; }
+
+    savedClientId = data.id;
+
+    // Save srodstvo entries
+    if (srodstvoItems.length > 0) {
+      const srRows = srodstvoItems
+        .filter(s => s.ime_prezime.trim())
+        .map(s => ({ client_id: savedClientId, ...s }));
+      if (srRows.length > 0) {
+        await window._sb.from('client_srodstvo').insert(srRows);
+      }
+    }
+
+    currentStep = 2;
+    renderStep();
+  }
+
+  // ── Save Step 2 (placeholder) ─────────────────────────────────
+  async function saveStep2() {
+    if (savedClientId) {
+      await window._sb.from('clients')
+        .update({ status: 'doctor' })
+        .eq('id', savedClientId);
+    }
+    currentStep = 3;
+    renderStep();
+  }
+
+  // ── Complete admission ────────────────────────────────────────
+  async function completeAdmission() {
+    if (savedClientId) {
+      await window._sb.from('clients')
+        .update({ status: 'completed' })
+        .eq('id', savedClientId);
+    }
+    closeModal();
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────
+  function showError(msg) { document.getElementById('modalError').textContent = msg; }
+  function clearError()   { document.getElementById('modalError').textContent = ''; }
+</script>
+</body>
+</html>
