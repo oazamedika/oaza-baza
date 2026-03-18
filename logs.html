@@ -6,6 +6,68 @@
   <title>Записи — ПУСЗ Оаза Портал</title>
   <link rel="stylesheet" href="shared.css"/>
   <script src="auth-guard.js"></script>
+  <style>
+    .logs-layout{display:grid;grid-template-columns:280px 1fr;gap:1.5rem;align-items:start}
+    .client-panel{background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden;position:sticky;top:1.5rem}
+    .client-panel-header{padding:0.85rem 1rem;background:var(--cream);border-bottom:1px solid var(--border);font-size:0.72rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gray)}
+    .client-search{padding:0.65rem 1rem;border-bottom:1px solid var(--border)}
+    .client-search input{width:100%;padding:0.5rem 0.75rem;border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif;font-size:0.85rem;outline:none;color:var(--dark)}
+    .client-search input:focus{border-color:var(--olive)}
+    .client-list{max-height:calc(100vh - 280px);overflow-y:auto}
+    .client-item{display:flex;align-items:center;gap:0.65rem;padding:0.7rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.1s}
+    .client-item:last-child{border-bottom:none}
+    .client-item:hover{background:var(--cream)}
+    .client-item.active{background:var(--olive);color:#fff}
+    .client-item.active .ci-meta{color:rgba(255,255,255,0.7)}
+    .ci-avatar{width:30px;height:30px;border-radius:50%;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:0.8rem;font-weight:700;flex-shrink:0}
+    .client-item.active .ci-avatar{background:rgba(255,255,255,0.25)}
+    .ci-name{font-size:0.85rem;font-weight:700;line-height:1.2}
+    .ci-meta{font-size:0.72rem;color:var(--gray);margin-top:0.1rem}
+    .logs-right{display:flex;flex-direction:column;gap:1.25rem}
+    .lcard{background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+    .lcard-hdr{padding:0.85rem 1.25rem;background:var(--cream);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .lcard-title{font-family:'Playfair Display',serif;font-size:1rem;font-weight:600;color:var(--dark)}
+    .lcard-body{padding:1.25rem}
+    .fg{display:flex;flex-direction:column}
+    .fl{font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gray);margin-bottom:0.35rem}
+    .fl .req{color:#c0392b;margin-left:2px}
+    .fi,.fs{padding:0.65rem 0.8rem;border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif;font-size:0.88rem;color:var(--dark);background:#fff;outline:none;transition:border-color 0.15s,box-shadow 0.15s}
+    .fi:focus,.fs:focus{border-color:var(--olive);box-shadow:0 0 0 3px rgba(122,122,46,0.1)}
+    .fi[readonly]{background:var(--cream)}
+    .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:0.85rem 1.1rem}
+    .fgrid .full{grid-column:1/-1}
+    .fsect{font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:600;color:var(--dark);margin:1rem 0 0.6rem;padding-top:0.85rem;border-top:1px solid var(--border)}
+    .drug-wrap{position:relative}
+    .drug-sugg{position:absolute;top:calc(100% + 2px);left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:50;max-height:200px;overflow-y:auto;display:none}
+    .dsi{padding:0.55rem 0.8rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.83rem}
+    .dsi:hover{background:var(--cream)}
+    .dsi .dn{font-weight:700}.dsi .dm{font-size:0.72rem;color:var(--gray)}
+    .therapy-table{width:100%;border-collapse:collapse;font-size:0.85rem}
+    .therapy-table th{text-align:left;font-size:0.67rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray);padding:0.5rem 0.75rem;border-bottom:2px solid var(--border)}
+    .therapy-table td{padding:0.6rem 0.75rem;border-bottom:1px solid var(--border);vertical-align:middle}
+    .therapy-table tr:last-child td{border-bottom:none}
+    .therapy-table tr.stopped td{opacity:0.45;text-decoration:line-through}
+    .btn-stop{background:none;border:1px solid var(--border);border-radius:3px;padding:0.2rem 0.5rem;font-size:0.72rem;cursor:pointer;color:var(--gray);transition:all 0.15s}
+    .btn-stop:hover{background:#fdf0ef;border-color:#c0392b;color:#c0392b}
+    .btn-add-sm{display:inline-flex;align-items:center;gap:0.35rem;padding:0.45rem 0.8rem;background:transparent;border:1px dashed var(--olive);border-radius:4px;color:var(--olive);font-family:'Lato',sans-serif;font-size:0.8rem;font-weight:700;cursor:pointer;transition:background 0.15s}
+    .btn-add-sm:hover{background:rgba(122,122,46,0.07)}
+    .log-entry{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem}
+    .le-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.65rem}
+    .le-diag{font-family:monospace;font-size:0.82rem;font-weight:700;color:var(--olive)}
+    .le-date{font-size:0.75rem;color:var(--gray)}
+    .lf-label{font-size:0.67rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray);margin-bottom:0.1rem}
+    .lf-val{font-size:0.85rem;color:var(--dark);line-height:1.6}
+    .vitals{display:flex;flex-wrap:wrap;gap:0.4rem 1.1rem;margin:0.5rem 0}
+    .vc{font-size:0.78rem;color:var(--dark)}.vc span{font-weight:700}
+    .btn-primary{padding:0.65rem 1.4rem;background:var(--dark);border:none;border-radius:4px;font-family:'Lato',sans-serif;font-size:0.85rem;font-weight:700;letter-spacing:0.08em;color:#fff;cursor:pointer;transition:background 0.15s}
+    .btn-primary:hover{background:var(--olive)}.btn-primary:disabled{opacity:0.5;pointer-events:none}
+    .err{font-size:0.82rem;color:#c0392b;margin-top:0.5rem}
+    .badge{display:inline-block;padding:0.15rem 0.5rem;border-radius:20px;font-size:0.65rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase}
+    .badge-active{background:#e6f0e6;color:#2a6e2a;border:1px solid #b5d5b5}
+    .badge-stopped{background:#f0ece2;color:#8a7a55}
+    .empty-panel{text-align:center;padding:3rem 1rem;color:var(--gray);font-size:0.88rem}
+    details.th-hist summary{cursor:pointer;color:var(--olive);font-weight:700;font-size:0.78rem;margin-top:0.5rem}
+  </style>
 </head>
 <body>
 <div class="app">
@@ -13,23 +75,275 @@
   <main class="main">
     <div class="page-header">
       <h1 class="page-title">Записи</h1>
-      <p class="page-subtitle">Евиденција и историја на активности</p>
+      <p class="page-subtitle">Клинички записи по корисник</p>
     </div>
     <div class="page-content">
-      <div class="card">
-        <div class="card-title">Записи</div>
-        <p style="font-size:0.9rem;color:var(--gray);line-height:1.75;">Содржината на овој модул ќе биде додадена подоцна.</p>
+      <div class="logs-layout">
+        <div class="client-panel">
+          <div class="client-panel-header">Корисници</div>
+          <div class="client-search"><input type="text" id="clientSearch" placeholder="Пребарај…" oninput="filterClients(this.value)"/></div>
+          <div class="client-list" id="clientList"><div style="padding:1.5rem;text-align:center;color:var(--gray);font-size:0.85rem">Се вчитува…</div></div>
+        </div>
+        <div class="logs-right" id="logsRight">
+          <div class="empty-panel">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.25;display:block;margin:0 auto 0.75rem"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Изберете корисник за да ги видите записите.
+          </div>
+        </div>
       </div>
     </div>
   </main>
 </div>
 <script src="sidebar.js"></script>
 <script>
-  window.addEventListener('DOMContentLoaded', () => {
-    const wait = setInterval(() => {
-      if (window._username !== undefined) { clearInterval(wait); buildSidebar('Записи'); }
-    }, 30);
-  });
+let isDoctor=false;
+window.addEventListener('DOMContentLoaded',()=>{
+  const wait=setInterval(()=>{
+    if(window._username!==undefined){
+      clearInterval(wait);
+      isDoctor=(window._username||'').toLowerCase()==='doktor';
+      buildSidebar('Записи');
+      initLogs();
+    }
+  },30);
+});
+
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function numVal(id){const v=document.getElementById(id)?.value;if(!v||v.trim()==='')return null;return parseFloat(v);}
+
+let allClients=[],selectedClient=null,mkbCache={},therapyItems=[],newTherapyItems=[],logDrug='',drugTimer=null;
+
+async function initLogs(){
+  const{data}=await window._sb.from('clients').select('id,ime_prezime,obrakanje,floor_number,room_number,bed_number').eq('status','completed').order('ime_prezime');
+  allClients=data||[];
+  renderClientList(allClients);
+}
+
+function renderClientList(list){
+  const el=document.getElementById('clientList');
+  if(!list.length){el.innerHTML='<div style="padding:1.5rem;text-align:center;color:var(--gray);font-size:0.85rem">Нема корисници.</div>';return;}
+  el.innerHTML=list.map(c=>`
+    <div class="client-item${selectedClient?.id===c.id?' active':''}" onclick="selectClient('${c.id}')">
+      <div class="ci-avatar">${esc((c.ime_prezime||'?').charAt(0))}</div>
+      <div><div class="ci-name">${esc(c.obrakanje?c.obrakanje+' ':'')}${esc(c.ime_prezime)}</div>
+      <div class="ci-meta">${c.floor_number?'К'+c.floor_number+'/С'+c.room_number+'/Кр'+c.bed_number:'—'}</div></div>
+    </div>`).join('');
+}
+
+function filterClients(val){
+  const q=val.toLowerCase();
+  renderClientList(allClients.filter(c=>(c.ime_prezime||'').toLowerCase().includes(q)));
+}
+
+async function selectClient(id){
+  selectedClient=allClients.find(c=>c.id===id)||null;
+  if(!selectedClient)return;
+  filterClients(document.getElementById('clientSearch')?.value||'');
+  await loadClientData();
+}
+
+async function loadClientData(){
+  const right=document.getElementById('logsRight');
+  right.innerHTML='<div style="padding:2rem;text-align:center;color:var(--gray)">Се вчитува…</div>';
+  const[logsRes,therapyRes]=await Promise.all([
+    window._sb.from('client_logs').select('*').eq('client_id',selectedClient.id).order('created_at',{ascending:false}),
+    window._sb.from('client_chronic_therapy').select('*').eq('client_id',selectedClient.id).order('added_at'),
+  ]);
+  therapyItems=therapyRes.data||[];
+  newTherapyItems=[];
+  right.innerHTML=(isDoctor?buildNewLogForm():'')+buildTherapySection()+buildLogHistory(logsRes.data||[]);
+}
+
+// ── New log form ──────────────────────────────────────────────────
+function buildNewLogForm(){
+  return`<div class="lcard">
+  <div class="lcard-hdr"><span class="lcard-title">Нов запис — ${esc(selectedClient.obrakanje?selectedClient.obrakanje+' ':'')}${esc(selectedClient.ime_prezime)}</span></div>
+  <div class="lcard-body">
+    <div class="fgrid">
+      <div class="fg"><label class="fl">МКБ-10 Код <span class="req">*</span></label><input class="fi" id="l_kod" placeholder="нпр. I10" oninput="lookupDiag(this.value,'l_opis')"/></div>
+      <div class="fg"><label class="fl">Опис</label><input class="fi" id="l_opis" readonly placeholder="Автоматски…"/></div>
+    </div>
+    <div class="fsect">Анамнеза</div>
+    <textarea class="fi" id="l_anamneza" rows="2" style="width:100%;resize:vertical" placeholder="Анамнестички податоци…"></textarea>
+    <div class="fsect">Витални параметри</div>
+    <div class="fgrid">
+      <div class="fg"><label class="fl">КП Систоличен (mmHg)</label><input class="fi" id="l_kp_s" type="number" placeholder="120"/></div>
+      <div class="fg"><label class="fl">КП Дијастоличен (mmHg)</label><input class="fi" id="l_kp_d" type="number" placeholder="80"/></div>
+      <div class="fg"><label class="fl">Пулс (bpm)</label><input class="fi" id="l_puls" type="number" placeholder="72"/></div>
+      <div class="fg"><label class="fl">Температура (°C)</label><input class="fi" id="l_temp" type="number" step="0.1" placeholder="36.6"/></div>
+      <div class="fg"><label class="fl">SpO2 (%)</label><input class="fi" id="l_spo2" type="number" placeholder="98"/></div>
+      <div class="fg"><label class="fl">Респирации (/мин)</label><input class="fi" id="l_resp" type="number" placeholder="16"/></div>
+      <div class="fg"><label class="fl">Тежина (kg)</label><input class="fi" id="l_tezina" type="number" step="0.1" placeholder="72.5"/></div>
+      <div class="fg"><label class="fl">Крвен шеќер (mmol/L)</label><input class="fi" id="l_seker" type="number" step="0.1" placeholder="5.4"/></div>
+      <div class="fg full">
+        <label class="fl">Скала на болка (0–10)</label>
+        <div style="display:flex;align-items:center;gap:1rem">
+          <input type="range" id="l_bolka" min="0" max="10" value="0" style="flex:1" oninput="document.getElementById('l_bolka_val').textContent=this.value"/>
+          <span id="l_bolka_val" style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;min-width:1.5rem;text-align:center">0</span>
+        </div>
+      </div>
+    </div>
+    <div class="fsect">Наод</div>
+    <textarea class="fi" id="l_naod" rows="2" style="width:100%;resize:vertical" placeholder="Клинички наод…"></textarea>
+    <div class="fsect">Апликувана парентерална терапија</div>
+    <textarea class="fi" id="l_parenteralna" rows="2" style="width:100%;resize:vertical" placeholder="нпр. NaCl 0.9% 500ml iv, Ceftriaxone 1g iv…"></textarea>
+    <div class="fsect">Додади/промени во хронична терапија</div>
+    <div id="new-therapy-list"></div>
+    <div style="display:flex;gap:0.65rem;align-items:flex-end;flex-wrap:wrap;margin-top:0.5rem">
+      <div class="fg drug-wrap" style="flex:1;min-width:160px">
+        <label class="fl">Лек</label>
+        <input class="fi" id="lt_drug" placeholder="Пребарај лек…" oninput="searchDrugLog(this.value)" autocomplete="off"/>
+        <div class="drug-sugg" id="lt_sugg"></div>
+      </div>
+      <div class="fg" style="flex:0 0 150px"><label class="fl">Доза</label><input class="fi" id="lt_dose" placeholder="нпр. 1×1"/></div>
+      <button class="btn-add-sm" type="button" onclick="addLogTherapy()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Додај
+      </button>
+    </div>
+    <div class="err" id="logError"></div>
+    <div style="margin-top:1.25rem;display:flex;justify-content:flex-end">
+      <button class="btn-primary" id="btnSaveLog" onclick="saveLog()">Зачувај запис</button>
+    </div>
+  </div></div>`;
+}
+
+// ── Therapy section ───────────────────────────────────────────────
+function buildTherapySection(){
+  const active=therapyItems.filter(t=>t.active);
+  const stopped=therapyItems.filter(t=>!t.active);
+  const rows=active.map(t=>`<tr>
+    <td style="font-weight:700">${esc(t.drug_name)}</td><td>${esc(t.dosage)}</td>
+    <td>${new Date(t.added_at).toLocaleDateString('mk-MK')}</td>
+    <td>${isDoctor?`<button class="btn-stop" onclick="stopTherapy('${t.id}')">Стопирај</button>`:'<span class="badge badge-active">Активна</span>'}</td>
+  </tr>`).join('');
+  const stoppedRows=stopped.map(t=>`<tr class="stopped">
+    <td>${esc(t.drug_name)}</td><td>${esc(t.dosage)}</td>
+    <td>${new Date(t.added_at).toLocaleDateString('mk-MK')}</td>
+    <td><span class="badge badge-stopped">Стопирана</span></td>
+  </tr>`).join('');
+  return`<div class="lcard"><div class="lcard-hdr"><span class="lcard-title">Хронична терапија</span></div>
+  <div style="padding:0.75rem 1.25rem">
+    ${!active.length&&!stopped.length
+      ?'<div class="empty-panel" style="padding:1.5rem">Нема евидентирана хронична терапија.</div>'
+      :`<table class="therapy-table"><thead><tr><th>Лек</th><th>Доза</th><th>Додадена</th><th>Статус</th></tr></thead><tbody>${rows}</tbody></table>
+        ${stopped.length?`<details class="th-hist"><summary>Прикажи стопирана терапија (${stopped.length})</summary>
+        <table class="therapy-table" style="margin-top:0.5rem"><thead><tr><th>Лек</th><th>Доза</th><th>Додадена</th><th>Статус</th></tr></thead><tbody>${stoppedRows}</tbody></table></details>`:''}`}
+  </div></div>`;
+}
+
+// ── Log history ───────────────────────────────────────────────────
+function buildLogHistory(logs){
+  const header=`<div class="lcard-hdr"><span class="lcard-title">Историја на записи (${logs.length})</span></div>`;
+  if(!logs.length)return`<div class="lcard">${header}<div class="empty-panel">Нема записи за овој корисник.</div></div>`;
+  const entries=logs.map(l=>{
+    const v=[];
+    if(l.kp_sistolicen&&l.kp_dijastolicen)v.push(`КП: <span>${l.kp_sistolicen}/${l.kp_dijastolicen} mmHg</span>`);
+    if(l.puls)       v.push(`Пулс: <span>${l.puls} bpm</span>`);
+    if(l.temperatura)v.push(`Т°: <span>${l.temperatura}°C</span>`);
+    if(l.spo2)       v.push(`SpO2: <span>${l.spo2}%</span>`);
+    if(l.respiracii) v.push(`Респ: <span>${l.respiracii}/мин</span>`);
+    if(l.tezina)     v.push(`Тежина: <span>${l.tezina} kg</span>`);
+    if(l.seker)      v.push(`Шеќер: <span>${l.seker} mmol/L</span>`);
+    if(l.bolka!=null)v.push(`Болка: <span>${l.bolka}/10</span>`);
+    return`<div class="log-entry">
+      <div class="le-hdr">
+        <div><div class="le-diag">${esc(l.dijagnoza_kod||'—')}${l.dijagnoza_opis?' — '+esc(l.dijagnoza_opis):''}</div>
+        <div class="le-date">${new Date(l.created_at).toLocaleString('mk-MK')}</div></div>
+      </div>
+      ${v.length?`<div class="vitals">${v.map(x=>`<div class="vc">${x}</div>`).join('')}</div>`:''}
+      ${l.anamneza?`<div style="margin-top:0.5rem"><div class="lf-label">Анамнеза</div><div class="lf-val">${esc(l.anamneza)}</div></div>`:''}
+      ${l.naod?`<div style="margin-top:0.5rem"><div class="lf-label">Наод</div><div class="lf-val">${esc(l.naod)}</div></div>`:''}
+      ${l.parenteralna?`<div style="margin-top:0.5rem"><div class="lf-label">Парентерална терапија</div><div class="lf-val">${esc(l.parenteralna)}</div></div>`:''}
+    </div>`;
+  }).join('');
+  return`<div class="lcard">${header}<div style="padding:1rem 1.25rem;display:flex;flex-direction:column;gap:0.85rem">${entries}</div></div>`;
+}
+
+// ── МКБ-10 lookup ─────────────────────────────────────────────────
+async function lookupDiag(kod,tid){
+  kod=(kod||'').trim().toUpperCase();
+  const t=document.getElementById(tid);if(!t)return;
+  if(!kod){t.value='';return;}
+  if(mkbCache[kod]){t.value=mkbCache[kod];return;}
+  const{data}=await window._sb.from('mkb10').select('description').eq('code',kod).maybeSingle();
+  if(data){mkbCache[kod]=data.description;t.value=data.description;}else t.value='';
+}
+
+// ── Drug search ───────────────────────────────────────────────────
+function searchDrugLog(val){
+  clearTimeout(drugTimer);logDrug='';
+  const box=document.getElementById('lt_sugg');
+  if(!val||val.length<2){if(box)box.style.display='none';return;}
+  drugTimer=setTimeout(async()=>{
+    const{data}=await window._sb.from('drugs').select('id,latin_name,generic_name,strength,form').ilike('latin_name',`%${val}%`).limit(8);
+    if(!box)return;
+    if(!data||!data.length){box.style.display='none';return;}
+    box.innerHTML=data.map(d=>`<div class="dsi" onclick="selectDrugLog('${esc(d.latin_name)}','${esc(d.strength||'')}','${esc(d.form||'')}')">
+      <div class="dn">${esc(d.latin_name)}</div><div class="dm">${esc(d.generic_name||'')} ${esc(d.strength||'')} — ${esc(d.form||'')}</div>
+    </div>`).join('');
+    box.style.display='block';
+  },300);
+}
+function selectDrugLog(name,strength,form){
+  logDrug=name;
+  const inp=document.getElementById('lt_drug');
+  if(inp)inp.value=name+(strength?' '+strength:'')+(form?' ('+form+')':'');
+  const box=document.getElementById('lt_sugg');if(box)box.style.display='none';
+}
+function addLogTherapy(){
+  const d=(document.getElementById('lt_drug')?.value||'').trim();
+  const dose=(document.getElementById('lt_dose')?.value||'').trim();
+  if(!d||!dose)return;
+  newTherapyItems.push({drug_name:logDrug||d,dosage:dose});
+  renderNewTherapyList();
+  document.getElementById('lt_drug').value='';
+  document.getElementById('lt_dose').value='';logDrug='';
+}
+function removeNewTherapy(i){newTherapyItems.splice(i,1);renderNewTherapyList();}
+function renderNewTherapyList(){
+  const el=document.getElementById('new-therapy-list');if(!el)return;
+  if(!newTherapyItems.length){el.innerHTML='';return;}
+  el.innerHTML=newTherapyItems.map((t,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.75rem;background:var(--cream);border:1px solid var(--border);border-radius:4px;margin-bottom:0.4rem;font-size:0.83rem">
+      <span style="font-weight:700">${esc(t.drug_name)}</span>
+      <span style="color:var(--gray);margin:0 0.5rem">${esc(t.dosage)}</span>
+      <button style="background:none;border:none;cursor:pointer;color:var(--gray);font-size:1rem" onclick="removeNewTherapy(${i})">×</button>
+    </div>`).join('');
+}
+
+// ── Stop therapy ──────────────────────────────────────────────────
+async function stopTherapy(id){
+  if(!confirm('Дали сте сигурни дека сакате да ја стопирате оваа терапија?'))return;
+  await window._sb.from('client_chronic_therapy').update({active:false,stopped_by:window._user.id,stopped_at:new Date().toISOString()}).eq('id',id);
+  await loadClientData();
+}
+
+// ── Save log ──────────────────────────────────────────────────────
+async function saveLog(){
+  const kod=(document.getElementById('l_kod')?.value||'').trim().toUpperCase();
+  const errEl=document.getElementById('logError');
+  if(!kod){errEl.textContent='Дијагнозата е задолжителна.';return;}
+  errEl.textContent='';
+  document.getElementById('btnSaveLog').disabled=true;
+  const payload={
+    client_id:selectedClient.id,created_by:window._user.id,
+    dijagnoza_kod:kod,dijagnoza_opis:document.getElementById('l_opis')?.value||null,
+    anamneza:document.getElementById('l_anamneza')?.value||null,
+    naod:document.getElementById('l_naod')?.value||null,
+    parenteralna:document.getElementById('l_parenteralna')?.value||null,
+    kp_sistolicen:numVal('l_kp_s'),kp_dijastolicen:numVal('l_kp_d'),
+    puls:numVal('l_puls'),temperatura:numVal('l_temp'),spo2:numVal('l_spo2'),
+    respiracii:numVal('l_resp'),tezina:numVal('l_tezina'),seker:numVal('l_seker'),
+    bolka:parseInt(document.getElementById('l_bolka')?.value||'0'),
+  };
+  const{error}=await window._sb.from('client_logs').insert([payload]);
+  if(error){errEl.textContent='Грешка: '+error.message;document.getElementById('btnSaveLog').disabled=false;return;}
+  if(newTherapyItems.length>0){
+    const rows=newTherapyItems.map(t=>({client_id:selectedClient.id,drug_name:t.drug_name,dosage:t.dosage,added_by:window._user.id}));
+    await window._sb.from('client_chronic_therapy').insert(rows);
+  }
+  await loadClientData();
+}
 </script>
 </body>
 </html>

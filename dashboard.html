@@ -7,25 +7,15 @@
   <link rel="stylesheet" href="shared.css"/>
   <script src="auth-guard.js"></script>
   <style>
-    .btn-new-client {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.65rem 1.25rem;
-      background: var(--dark);
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      font-family: 'Lato', sans-serif;
-      font-size: 0.82rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      cursor: pointer;
-      text-decoration: none;
-      transition: background 0.15s;
-    }
-    .btn-new-client:hover { background: var(--olive); }
+    .btn-new-client{display:inline-flex;align-items:center;gap:0.5rem;padding:0.65rem 1.25rem;background:var(--dark);color:#fff;border:none;border-radius:5px;font-family:'Lato',sans-serif;font-size:0.82rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;text-decoration:none;transition:background 0.15s}
+    .btn-new-client:hover{background:var(--olive)}
+    .pending-badge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#c0392b;color:#fff;font-size:0.72rem;font-weight:700;flex-shrink:0}
+    .pending-item{display:flex;align-items:center;justify-content:space-between;padding:0.7rem 0;border-bottom:1px solid var(--border);font-size:0.88rem}
+    .pending-item:last-child{border-bottom:none}
+    .pending-name{font-weight:700;color:var(--dark)}
+    .pending-meta{font-size:0.75rem;color:var(--gray);margin-top:0.1rem}
+    .link-action{font-size:0.8rem;color:var(--olive);text-decoration:none;font-weight:700}
+    .link-action:hover{text-decoration:underline}
   </style>
 </head>
 <body>
@@ -37,51 +27,110 @@
       <p class="page-subtitle">Преглед на активности и статус</p>
     </div>
     <div class="page-content">
-      <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap:1.25rem; margin-bottom:2rem;">
-        <div class="card" style="border-left:3px solid var(--olive);">
-          <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--gray);margin-bottom:0.5rem;">Активни Задачи</div>
-          <div style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:600;color:var(--dark);">—</div>
+
+      <!-- Stat row -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1.25rem;margin-bottom:2rem">
+        <div class="card" style="border-left:3px solid var(--olive)">
+          <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--gray);margin-bottom:0.5rem">Активни Задачи</div>
+          <div style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:600;color:var(--dark)">—</div>
         </div>
-        <div class="card" style="border-left:3px solid var(--olive);">
-          <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--gray);margin-bottom:0.5rem;">Денешни Записи</div>
-          <div style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:600;color:var(--dark);">—</div>
+        <div class="card" style="border-left:3px solid var(--olive)">
+          <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--gray);margin-bottom:0.5rem">Денешни Записи</div>
+          <div id="stat-logs" style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:600;color:var(--dark)">—</div>
         </div>
-        <div class="card" style="border-left:3px solid var(--olive);">
-          <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--gray);margin-bottom:0.5rem;">Извештаи</div>
-          <div style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:600;color:var(--dark);">—</div>
+        <div class="card" style="border-left:3px solid var(--olive)">
+          <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--gray);margin-bottom:0.5rem">Корисници</div>
+          <div id="stat-clients" style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:600;color:var(--dark)">—</div>
         </div>
       </div>
-      <div class="card" style="display:flex;align-items:flex-start;justify-content:space-between;gap:2rem;flex-wrap:wrap;">
-        <div>
-          <div class="card-title">Добредојдовте на Порталот</div>
-          <p style="font-size:0.9rem;color:var(--gray);line-height:1.75;max-width:480px;">
-            Користете го менито лево за да пристапите до сите модули —
-            Корисници, Записи, Задачи, Извештаи и Поставки.
-          </p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;flex-wrap:wrap">
+
+        <!-- Welcome / new client -->
+        <div class="card" style="display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem;flex-wrap:wrap">
+          <div>
+            <div class="card-title">Добредојдовте на Порталот</div>
+            <p style="font-size:0.9rem;color:var(--gray);line-height:1.75;max-width:360px;margin-top:0.4rem">
+              Користете го менито лево за да пристапите до сите модули.
+            </p>
+          </div>
+          <div id="new-client-btn-wrap" style="display:none;flex-shrink:0">
+            <a href="clients.html" class="btn-new-client">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Нов Корисник
+            </a>
+          </div>
         </div>
-        <div id="new-client-btn-wrap" style="display:none;flex-shrink:0;padding-top:0.25rem;">
-          <a href="clients.html" class="btn-new-client">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Нов Корисник
-          </a>
+
+        <!-- Doctor: pending priems -->
+        <div class="card" id="pending-priems-card" style="display:none">
+          <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem">
+            <div class="card-title" style="margin:0">Приеми на чекање</div>
+            <div class="pending-badge" id="pending-count">0</div>
+          </div>
+          <div id="pending-list"><div style="font-size:0.85rem;color:var(--gray)">Се вчитува…</div></div>
         </div>
+
       </div>
     </div>
   </main>
 </div>
 <script src="sidebar.js"></script>
 <script>
-  window.addEventListener('DOMContentLoaded', () => {
-    const wait = setInterval(() => {
-      if (window._username !== undefined) {
-        clearInterval(wait);
-        buildSidebar('Почетна');
-        if (canManageClients()) {
-          document.getElementById('new-client-btn-wrap').style.display = '';
-        }
-      }
-    }, 30);
-  });
+window.addEventListener('DOMContentLoaded',()=>{
+  const wait=setInterval(()=>{
+    if(window._username!==undefined){
+      clearInterval(wait);
+      buildSidebar('Почетна');
+      initDashboard();
+    }
+  },30);
+});
+
+async function initDashboard(){
+  const u=(window._username||'').toLowerCase();
+
+  // Show new client button for managers
+  if(canManageClients()){
+    document.getElementById('new-client-btn-wrap').style.display='';
+  }
+
+  // Load stats
+  const[clientsRes,logsRes]=await Promise.all([
+    window._sb.from('clients').select('id',{count:'exact',head:true}).eq('status','completed'),
+    window._sb.from('client_logs').select('id',{count:'exact',head:true})
+      .gte('created_at',new Date().toISOString().slice(0,10)),
+  ]);
+  document.getElementById('stat-clients').textContent=clientsRes.count??'—';
+  document.getElementById('stat-logs').textContent=logsRes.count??'—';
+
+  // Doctor: show pending priems
+  if(u==='doktor'){
+    document.getElementById('pending-priems-card').style.display='';
+    const{data}=await window._sb.from('clients')
+      .select('id,ime_prezime,obrakanje,floor_number,room_number,bed_number,created_at')
+      .eq('status','doctor')
+      .order('created_at',{ascending:true});
+    const list=document.getElementById('pending-list');
+    const count=document.getElementById('pending-count');
+    const items=data||[];
+    count.textContent=items.length;
+    if(!items.length){
+      list.innerHTML='<div style="font-size:0.85rem;color:var(--gray)">Нема приеми на чекање.</div>';
+      return;
+    }
+    list.innerHTML=items.map(c=>`
+      <div class="pending-item">
+        <div>
+          <div class="pending-name">${esc(c.obrakanje?c.obrakanje+' ':'')}${esc(c.ime_prezime)}</div>
+          <div class="pending-meta">${c.floor_number?'К'+c.floor_number+'/С'+c.room_number+'/Кр'+c.bed_number:'—'} · ${new Date(c.created_at).toLocaleDateString('mk-MK')}</div>
+        </div>
+        <a href="clients.html" class="link-action">Заврши прием →</a>
+      </div>`).join('');
+  }
+}
+
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 </script>
 </body>
 </html>

@@ -204,6 +204,7 @@ let currentStep=1,savedClientId=null,srodstvoItems=[],picFile=null,uploadFiles=[
 
 function openModal(){
   currentStep=1;savedClientId=null;srodstvoItems=[];picFile=null;uploadFiles=[];
+  chronicDiagItems=[];chronicTherapyItems=[];selectedDrugName='';
   renderStep();
   document.getElementById('modalBackdrop').classList.add('open');
   document.body.style.overflow='hidden';
@@ -437,10 +438,130 @@ function renderStep2HTML(canEdit){
 }
 
 function renderStep3HTML(canEdit){
-  const body=canEdit
-    ?`<div class="step-pending"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><strong>Дел 3 — Доктор</strong><p>Полињата за докторот ќе бидат додадени подоцна. Кликнете „Потврди дел 3" за да се заврши приемот.</p></div>`
-    :`<div class="step-pending"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><strong>Дел 3 — Доктор</strong><p>Овој дел го пополнува Докторот. Следете го статусот овде.</p></div>`;
-  return`<div class="step-status-card"><div class="step-status-header"><span class="step-status-title">Дел 1 — Општи податоци</span><span class="badge badge-completed">Завршен</span></div><div class="step-status-body">Основните информации се снимени.</div></div><div class="step-status-card"><div class="step-status-header"><span class="step-status-title">Дел 2 — Социјален работник</span><span class="badge badge-completed">Завршен</span></div><div class="step-status-body">Делот за социјалниот работник е потврден.</div></div>${body}`;
+  const statusCards=`
+    <div class="step-status-card"><div class="step-status-header"><span class="step-status-title">Дел 1 — Општи податоци</span><span class="badge badge-completed">Завршен</span></div><div class="step-status-body">Основните информации се снимени.</div></div>
+    <div class="step-status-card"><div class="step-status-header"><span class="step-status-title">Дел 2 — Социјален работник</span><span class="badge badge-completed">Завршен</span></div><div class="step-status-body">Делот за социјалниот работник е потврден.</div></div>`;
+  if(!canEdit) return statusCards+`<div class="step-pending"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><strong>Дел 3 — Доктор</strong><p>Овој дел го пополнува Докторот. Следете го статусот овде.</p></div>`;
+  return statusCards+`
+  <!-- Diagnosis on priem -->
+  <div class="form-section" style="margin-top:1rem">
+    <div class="form-section-title">Дијагноза на прием <span class="req">*</span></div>
+    <div style="display:flex;gap:0.75rem;align-items:flex-start">
+      <div style="flex:0 0 140px">
+        <label class="form-label">МКБ-10 Код</label>
+        <input class="form-input" id="d_dijagnoza_kod" placeholder="нпр. A00.1" oninput="lookupDiagnosis(this.value,'d_dijagnoza_opis')"/>
+      </div>
+      <div style="flex:1">
+        <label class="form-label">Опис</label>
+        <input class="form-input" id="d_dijagnoza_opis" placeholder="Автоматски се пополнува…" readonly style="background:var(--cream)"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- Anamneza -->
+  <div class="form-section">
+    <div class="form-section-title">Анамнеза</div>
+    <textarea class="form-input" id="d_anamneza" rows="3" style="resize:vertical" placeholder="Анамнестички податоци…"></textarea>
+  </div>
+
+  <!-- Vital parameters -->
+  <div class="form-section">
+    <div class="form-section-title">Витални параметри на прием</div>
+    <div class="form-grid" style="margin-top:0.75rem">
+      <div class="form-group">
+        <label class="form-label">КП Систоличен (mmHg)</label>
+        <input class="form-input" id="d_kp_s" type="number" min="50" max="300" placeholder="нпр. 120"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">КП Дијастоличен (mmHg)</label>
+        <input class="form-input" id="d_kp_d" type="number" min="30" max="200" placeholder="нпр. 80"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Пулс (bpm)</label>
+        <input class="form-input" id="d_puls" type="number" min="20" max="300" placeholder="нпр. 72"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Температура (°C)</label>
+        <input class="form-input" id="d_temp" type="number" step="0.1" min="34" max="43" placeholder="нпр. 36.6"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">SpO2 (%)</label>
+        <input class="form-input" id="d_spo2" type="number" min="50" max="100" placeholder="нпр. 98"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Респирации (вдишувања/мин)</label>
+        <input class="form-input" id="d_resp" type="number" min="5" max="60" placeholder="нпр. 16"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Тежина (kg)</label>
+        <input class="form-input" id="d_tezina" type="number" step="0.1" min="20" max="300" placeholder="нпр. 72.5"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Крвен шеќер (mmol/L)</label>
+        <input class="form-input" id="d_seker" type="number" step="0.1" min="1" max="40" placeholder="нпр. 5.4"/>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Скала на болка (0–10)</label>
+        <div style="display:flex;align-items:center;gap:1rem">
+          <input type="range" id="d_bolka" min="0" max="10" value="0" style="flex:1" oninput="document.getElementById('d_bolka_val').textContent=this.value"/>
+          <span id="d_bolka_val" style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:600;min-width:2rem;text-align:center">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Naod -->
+  <div class="form-section">
+    <div class="form-section-title">Наод</div>
+    <textarea class="form-input" id="d_naod" rows="3" style="resize:vertical" placeholder="Клинички наод…"></textarea>
+  </div>
+
+  <!-- Chronic diagnoses -->
+  <div class="form-section">
+    <div class="form-section-title">Хронични дијагнози</div>
+    <div id="chronic-diag-list" style="margin-bottom:0.75rem"></div>
+    <div style="display:flex;gap:0.75rem;align-items:flex-end">
+      <div style="flex:0 0 130px">
+        <label class="form-label">МКБ-10 Код</label>
+        <input class="form-input" id="cd_kod" placeholder="нпр. I10" oninput="lookupDiagnosis(this.value,'cd_opis')"/>
+      </div>
+      <div style="flex:1">
+        <label class="form-label">Опис</label>
+        <input class="form-input" id="cd_opis" placeholder="Автоматски…" readonly style="background:var(--cream)"/>
+      </div>
+      <button class="btn-add-srodstvo" type="button" onclick="addChronicDiag()" style="flex-shrink:0;margin-bottom:1px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Додај
+      </button>
+    </div>
+  </div>
+
+  <!-- Chronic therapy -->
+  <div class="form-section">
+    <div class="form-section-title">Хронична терапија</div>
+    <div id="chronic-therapy-list" style="margin-bottom:0.75rem"></div>
+    <div style="display:flex;gap:0.75rem;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:180px">
+        <label class="form-label">Лек</label>
+        <input class="form-input" id="ct_drug" placeholder="Пребарај лек…" oninput="searchDrug(this.value)" autocomplete="off"/>
+        <div id="drug-suggestions" style="position:relative"></div>
+      </div>
+      <div style="flex:0 0 160px">
+        <label class="form-label">Доза</label>
+        <input class="form-input" id="ct_dose" placeholder="нпр. 1×1 tabl."/>
+      </div>
+      <button class="btn-add-srodstvo" type="button" onclick="addChronicTherapy()" style="flex-shrink:0;margin-bottom:1px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Додај
+      </button>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div class="form-section">
+    <div class="form-section-title">Белешки</div>
+    <textarea class="form-input" id="d_notes" rows="2" style="resize:vertical" placeholder="Дополнителни белешки…"></textarea>
+  </div>`;
 }
 
 document.getElementById('btnNext').addEventListener('click',async()=>{
@@ -525,10 +646,148 @@ async function saveStep2(){
 }
 
 async function saveStep3(){
-  if(savedClientId){
-    await window._sb.from('clients').update({status:'completed',doctor_completed_at:new Date().toISOString(),doctor_completed_by:window._user.id}).eq('id',savedClientId);
+  const kod = (document.getElementById('d_dijagnoza_kod')?.value||'').trim();
+  if(!kod){showError('Дијагнозата на прием е задолжителна.');return;}
+
+  document.getElementById('btnNext').disabled=true;
+
+  // Save doctor priem fields to clients table
+  const priemUpdate = {
+    priem_dijagnoza_kod:   kod,
+    priem_dijagnoza_opis:  document.getElementById('d_dijagnoza_opis')?.value||null,
+    priem_anamneza:        document.getElementById('d_anamneza')?.value||null,
+    priem_naod:            document.getElementById('d_naod')?.value||null,
+    priem_notes:           document.getElementById('d_notes')?.value||null,
+    priem_kp_sistolicen:   numVal('d_kp_s'),
+    priem_kp_dijastolicen: numVal('d_kp_d'),
+    priem_puls:            numVal('d_puls'),
+    priem_temperatura:     numVal('d_temp'),
+    priem_spo2:            numVal('d_spo2'),
+    priem_respiracii:      numVal('d_resp'),
+    priem_tezina:          numVal('d_tezina'),
+    priem_seker:           numVal('d_seker'),
+    priem_bolka:           parseInt(document.getElementById('d_bolka')?.value||'0'),
+    status:                'completed',
+    doctor_completed_at:   new Date().toISOString(),
+    doctor_completed_by:   window._user.id,
+  };
+
+  const {error:priemErr} = await window._sb.from('clients').update(priemUpdate).eq('id',savedClientId);
+  if(priemErr){showError('Грешка при зачувување: '+priemErr.message);document.getElementById('btnNext').disabled=false;return;}
+
+  // Save chronic diagnoses
+  if(chronicDiagItems.length>0){
+    const rows=chronicDiagItems.map(d=>({client_id:savedClientId,kod:d.kod,opis:d.opis,added_by:window._user.id}));
+    await window._sb.from('client_chronic_diagnoses').insert(rows);
   }
+
+  // Save chronic therapy
+  if(chronicTherapyItems.length>0){
+    const rows=chronicTherapyItems.map(t=>({client_id:savedClientId,drug_name:t.drug_name,dosage:t.dosage,added_by:window._user.id}));
+    await window._sb.from('client_chronic_therapy').insert(rows);
+  }
+
+  document.getElementById('btnNext').disabled=false;
   closeModal();
+}
+
+function numVal(id){
+  const v=document.getElementById(id)?.value;
+  if(!v||v.trim()==='')return null;
+  return parseFloat(v);
+}
+
+// ── МКБ-10 lookup ─────────────────────────────────────────────────
+let mkbCache={};
+async function lookupDiagnosis(kod, targetId){
+  kod=(kod||'').trim().toUpperCase();
+  const target=document.getElementById(targetId);
+  if(!target)return;
+  if(!kod){target.value='';return;}
+  if(mkbCache[kod]){target.value=mkbCache[kod];return;}
+  const{data}=await window._sb.from('mkb10').select('description').eq('code',kod).maybeSingle();
+  if(data){mkbCache[kod]=data.description;target.value=data.description;}
+  else target.value='';
+}
+
+// ── Chronic diagnoses ─────────────────────────────────────────────
+let chronicDiagItems=[];
+function addChronicDiag(){
+  const kod=(document.getElementById('cd_kod')?.value||'').trim().toUpperCase();
+  const opis=(document.getElementById('cd_opis')?.value||'').trim();
+  if(!kod){return;}
+  chronicDiagItems.push({kod,opis});
+  renderChronicDiagList();
+  document.getElementById('cd_kod').value='';
+  document.getElementById('cd_opis').value='';
+}
+function removeChronicDiag(i){chronicDiagItems.splice(i,1);renderChronicDiagList();}
+function renderChronicDiagList(){
+  const el=document.getElementById('chronic-diag-list');if(!el)return;
+  if(chronicDiagItems.length===0){el.innerHTML='';return;}
+  el.innerHTML=chronicDiagItems.map((d,i)=>`
+    <div class="srodstvo-item" style="padding:0.6rem 0.9rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
+      <span style="font-family:monospace;font-size:0.85rem;font-weight:700;color:var(--olive);flex-shrink:0">${esc(d.kod)}</span>
+      <span style="font-size:0.85rem;flex:1">${esc(d.opis||'—')}</span>
+      <button class="srodstvo-remove" type="button" onclick="removeChronicDiag(${i})" style="position:static">×</button>
+    </div>`).join('');
+}
+
+// ── Drug search & chronic therapy ────────────────────────────────
+let chronicTherapyItems=[];
+let selectedDrugName='';
+let drugSearchTimer=null;
+
+function searchDrug(val){
+  clearTimeout(drugSearchTimer);
+  const box=document.getElementById('drug-suggestions');
+  selectedDrugName='';
+  if(!val||val.length<2){if(box)box.innerHTML='';return;}
+  drugSearchTimer=setTimeout(async()=>{
+    const{data}=await window._sb.from('drugs').select('id,latin_name,generic_name,strength,form')
+      .ilike('latin_name',`%${val}%`).limit(8);
+    if(!box)return;
+    if(!data||data.length===0){box.innerHTML='';return;}
+    box.innerHTML=`<div style="position:absolute;top:2px;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:50;max-height:220px;overflow-y:auto">
+      ${data.map(d=>`
+        <div onclick="selectDrug('${esc(d.latin_name)}','${esc(d.strength||'')}','${esc(d.form||'')}')"
+          style="padding:0.6rem 0.85rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.85rem"
+          onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background=''">
+          <div style="font-weight:700">${esc(d.latin_name)}</div>
+          <div style="font-size:0.75rem;color:var(--gray)">${esc(d.generic_name||'')} ${esc(d.strength||'')} — ${esc(d.form||'')}</div>
+        </div>`).join('')}
+    </div>`;
+  },300);
+}
+
+function selectDrug(name,strength,form){
+  selectedDrugName=name;
+  const input=document.getElementById('ct_drug');
+  if(input)input.value=`${name}${strength?' '+strength:''}${form?' ('+form+')':''}`;
+  const box=document.getElementById('drug-suggestions');
+  if(box)box.innerHTML='';
+}
+
+function addChronicTherapy(){
+  const drugInput=(document.getElementById('ct_drug')?.value||'').trim();
+  const dose=(document.getElementById('ct_dose')?.value||'').trim();
+  if(!drugInput||!dose)return;
+  chronicTherapyItems.push({drug_name:selectedDrugName||drugInput,dosage:dose});
+  renderChronicTherapyList();
+  document.getElementById('ct_drug').value='';
+  document.getElementById('ct_dose').value='';
+  selectedDrugName='';
+}
+function removeChronicTherapy(i){chronicTherapyItems.splice(i,1);renderChronicTherapyList();}
+function renderChronicTherapyList(){
+  const el=document.getElementById('chronic-therapy-list');if(!el)return;
+  if(chronicTherapyItems.length===0){el.innerHTML='';return;}
+  el.innerHTML=chronicTherapyItems.map((t,i)=>`
+    <div class="srodstvo-item" style="padding:0.6rem 0.9rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
+      <span style="font-size:0.85rem;font-weight:700;flex:1">${esc(t.drug_name)}</span>
+      <span style="font-size:0.82rem;color:var(--gray);flex-shrink:0">${esc(t.dosage)}</span>
+      <button class="srodstvo-remove" type="button" onclick="removeChronicTherapy(${i})" style="position:static">×</button>
+    </div>`).join('');
 }
 
 function showError(msg){document.getElementById('modalError').textContent=msg;}
