@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ПУСЗ Оаза — Портал за Вработени</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --dark:   #2F2A24;
+      --olive:  #7A7A2E;
+      --gray:   #5C5C5C;
+      --cream:  #F5F0E8;
+      --cream2: #EDE6D6;
+      --light-olive: #A8A84A;
+      --border: #D4C9B0;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Lato', sans-serif;
+      background-color: var(--cream);
+      color: var(--dark);
+    }
+
+    /* ── Texture overlay ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0;
+    }
+
+    .page {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      position: relative; z-index: 1;
+    }
+
+    /* ── Left decorative panel ── */
+    .panel-left {
+      background-color: var(--dark);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel-left::before {
+      content: '';
+      position: absolute;
+      top: -80px; right: -80px;
+      width: 360px; height: 360px;
+      border-radius: 50%;
+      border: 1px solid rgba(122,122,46,0.2);
+    }
+    .panel-left::after {
+      content: '';
+      position: absolute;
+      bottom: -120px; left: -60px;
+      width: 480px; height: 480px;
+      border-radius: 50%;
+      border: 1px solid rgba(122,122,46,0.12);
+    }
+
+    .panel-left-inner {
+      position: relative; z-index: 2;
+    }
+
+    /* ── Logo ── */
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 4rem;
+    }
+
+    .logo-svg {
+      flex-shrink: 0;
+    }
+
+    .logo-text-block {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.04em;
+      line-height: 1.1;
+    }
+
+    .logo-sub {
+      font-family: 'Lato', sans-serif;
+      font-size: 0.62rem;
+      font-weight: 300;
+      color: var(--border);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      margin-top: 0.25rem;
+    }
+
+    .panel-headline {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.8rem;
+      font-weight: 400;
+      color: #fff;
+      line-height: 1.25;
+      margin-bottom: 1.5rem;
+    }
+
+    .panel-headline em {
+      font-style: italic;
+      color: var(--light-olive);
+    }
+
+    .panel-desc {
+      font-size: 0.9rem;
+      font-weight: 300;
+      color: var(--border);
+      line-height: 1.75;
+      max-width: 320px;
+    }
+
+    .panel-footer {
+      position: relative; z-index: 2;
+      font-size: 0.72rem;
+      color: var(--gray);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Decorative olive line ── */
+    .olive-line {
+      width: 48px;
+      height: 3px;
+      background: var(--olive);
+      margin-bottom: 2rem;
+    }
+
+    /* ── Right login panel ── */
+    .panel-right {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+      background: var(--cream);
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .login-card-header {
+      margin-bottom: 2.5rem;
+    }
+
+    .login-card-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--dark);
+      line-height: 1.2;
+    }
+
+    .login-card-header p {
+      margin-top: 0.6rem;
+      font-size: 0.85rem;
+      color: var(--gray);
+      font-weight: 300;
+    }
+
+    .form-group {
+      margin-bottom: 1.4rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-bottom: 0.5rem;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 0.85rem 1rem;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: 'Lato', sans-serif;
+      font-size: 0.95rem;
+      color: var(--dark);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus {
+      border-color: var(--olive);
+      box-shadow: 0 0 0 3px rgba(122,122,46,0.1);
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 0.95rem;
+      background: var(--dark);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-family: 'Lato', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-top: 0.5rem;
+      position: relative;
+    }
+
+    .btn-login:hover  { background: var(--olive); }
+    .btn-login:active { transform: translateY(1px); }
+
+    .btn-login.loading { opacity: 0.7; pointer-events: none; }
+
+    .error-msg {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background: #fdf0ef;
+      border-left: 3px solid #c0392b;
+      border-radius: 3px;
+      font-size: 0.83rem;
+      color: #a93226;
+      display: none;
+    }
+
+    .error-msg.visible { display: block; }
+
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: var(--border);
+      margin: 2rem 0;
+    }
+
+    .card-footer-note {
+      font-size: 0.76rem;
+      color: var(--gray);
+      text-align: center;
+      font-weight: 300;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .page { grid-template-columns: 1fr; }
+      .panel-left { display: none; }
+      .panel-right { padding: 2rem 1.5rem; min-height: 100vh; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ── Left decorative panel ── -->
+  <div class="panel-left">
+    <div class="panel-left-inner">
+      <div class="logo-wrap">
+        <!-- SVG Logo: stylised leaf / oasis mark -->
+        <svg class="logo-svg" width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="52" height="52" rx="10" fill="#7A7A2E" opacity="0.18"/>
+          <path d="M26 8 C18 16 14 26 26 44 C38 26 34 16 26 8Z" fill="#7A7A2E" opacity="0.8"/>
+          <path d="M26 44 C26 32 18 26 10 26" stroke="#A8A84A" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M26 44 C26 32 34 26 42 26" stroke="#A8A84A" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="26" cy="44" r="2" fill="#A8A84A"/>
+        </svg>
+        <div class="logo-text-block">
+          <span class="logo-name">ПУСЗ Оаза</span>
+          <span class="logo-sub">Портал за Вработени</span>
+        </div>
+      </div>
+
+      <div class="olive-line"></div>
+
+      <h1 class="panel-headline">
+        Добредојдовте<br>
+        на <em>Порталот</em><br>
+        за Вработени
+      </h1>
+
+      <p class="panel-desc">
+        Централизирана платформа за управување со задачи, евиденција и извештаи — сè на едно место.
+      </p>
+    </div>
+
+    <div class="panel-footer">
+      © 2025 ПУСЗ Оаза &nbsp;·&nbsp; Сите права задржани
+    </div>
+  </div>
+
+  <!-- ── Right login form ── -->
+  <div class="panel-right">
+    <div class="login-card">
+
+      <div class="login-card-header">
+        <h2>Најавете се</h2>
+        <p>Внесете ги вашите корисничко ime и лозинка.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="username">Корисничко Ime</label>
+        <input type="text" id="username" placeholder="вашето_корисничко_ime" autocomplete="username" />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Лозинка</label>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+
+      <button class="btn-login" id="loginBtn">Најава</button>
+
+      <div class="error-msg" id="errorMsg"></div>
+
+      <div class="divider"></div>
+
+      <p class="card-footer-note">
+        Проблем со пристап? Контактирајте го вашиот администратор.
+      </p>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Supabase config — REPLACE with your values ──
+  const SUPABASE_URL  = 'https://uhbfulofeqlvyslyfvsf.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVoYmZ1bG9mZXFsdnlzbHlmdnNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NDAwOTQsImV4cCI6MjA4OTQxNjA5NH0.1WDHtXZBkbZB8pcSOQEqXE-03xM-Vc6eZe8IfyocO1Q';
+
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON, {
+    auth: {
+      persistSession: true,
+      storageKey: 'oaza-portal-auth',   // must match auth-guard.js
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    }
+  });
+
+  // ── If already logged in, redirect immediately ──
+  (async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) window.location.href = 'dashboard.html';
+  })();
+
+  // ── Login handler ──
+  const loginBtn  = document.getElementById('loginBtn');
+  const errorMsg  = document.getElementById('errorMsg');
+  const usernameEl = document.getElementById('username');
+  const passwordEl = document.getElementById('password');
+
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.classList.add('visible');
+  }
+
+  function hideError() {
+    errorMsg.classList.remove('visible');
+  }
+
+  async function doLogin() {
+    hideError();
+    const username = usernameEl.value.trim();
+    const password = passwordEl.value;
+
+    if (!username || !password) {
+      showError('Ве молиме внесете корисничко ime и лозинка.');
+      return;
+    }
+
+    loginBtn.classList.add('loading');
+    loginBtn.textContent = 'Се најавувате…';
+
+    try {
+      // Username → email pattern: username@oaza.internal
+      const email = `${username}@oaza.internal`;
+
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        showError('Погрешно корисничко ime или лозинка.');
+      } else {
+        window.location.href = 'dashboard.html';
+      }
+    } catch (e) {
+      showError('Настана грешка. Обидете се повторно.');
+    } finally {
+      loginBtn.classList.remove('loading');
+      loginBtn.textContent = 'Најава';
+    }
+  }
+
+  loginBtn.addEventListener('click', doLogin);
+
+  // Allow Enter key on both fields
+  [usernameEl, passwordEl].forEach(el => {
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  });
+</script>
+
+</body>
+</html>

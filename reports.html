@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Извештаи — ПУСЗ Оаза Портал</title>
+  <link rel="stylesheet" href="shared.css"/>
+  <script src="auth-guard.js"></script>
+</head>
+<body>
+<div class="app">
+  <div id="sidebar-placeholder"></div>
+  <main class="main">
+    <div class="page-header">
+      <h1 class="page-title">Извештаи</h1>
+      <p class="page-subtitle">Генерирање и преглед на извештаи</p>
+    </div>
+    <div class="page-content">
+      <div class="card">
+        <div class="card-title">Извештаи</div>
+        <p style="font-size:0.9rem;color:var(--gray);line-height:1.75;">Содржината на овој модул ќе биде додадена подоцна.</p>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="sidebar.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const wait = setInterval(() => {
+      if (window._username !== undefined) { clearInterval(wait); buildSidebar('Извештаи'); }
+    }, 30);
+  });
+</script>
+</body>
+</html>
