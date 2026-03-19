@@ -90,50 +90,75 @@
     const dd = document.getElementById('nl_pt_dd');
     if (!val || val.trim().length < 2) { dd.classList.remove('show'); return; }
     _ptTimer = setTimeout(async () => {
-      const { data } = await window._sb.from('clients')
-        .select('id,ime_prezime,obrakanje,embg,maticen_broj,room_number,bed_number,floor_number,profile_pic_url')
-        .eq('status', 'completed')
-        .or(`ime_prezime.ilike.%${val}%,embg.ilike.%${val}%,maticen_broj.ilike.%${val}%`)
-        .limit(10);
+      // Three separate queries to avoid broken .or() syntax
+      const [byName, byEmbg, byMat] = await Promise.all([
+        window._sb.from('clients')
+          .select('id,ime_prezime,obrakanje,embg,maticen_broj,room_number,bed_number,floor_number,profile_pic_url')
+          .neq('status','discharged').ilike('ime_prezime', `%${val}%`).limit(6),
+        window._sb.from('clients')
+          .select('id,ime_prezime,obrakanje,embg,maticen_broj,room_number,bed_number,floor_number,profile_pic_url')
+          .neq('status','discharged').ilike('embg', `%${val}%`).limit(4),
+        window._sb.from('clients')
+          .select('id,ime_prezime,obrakanje,embg,maticen_broj,room_number,bed_number,floor_number,profile_pic_url')
+          .neq('status','discharged').ilike('maticen_broj', `%${val}%`).limit(4),
+      ]);
+      const seen = new Set();
+      const data = [...(byName.data||[]), ...(byEmbg.data||[]), ...(byMat.data||[])].filter(c => {
+        if (seen.has(c.id)) return false; seen.add(c.id); return true;
+      }).slice(0, 10);
+
       if (!dd) return;
-      if (!data || !data.length) { dd.innerHTML = `<div class="nl-pt-item" style="color:var(--gray);cursor:default;justify-content:center">Нема резултати</div>`; dd.classList.add('show'); return; }
-      dd.innerHTML = data.map(c => {
+      dd.innerHTML = '';
+      if (!data.length) {
+        const empty = document.createElement('div');
+        empty.className = 'nl-pt-item';
+        empty.style.cssText = 'color:var(--gray);cursor:default;justify-content:center';
+        empty.textContent = 'Нема резултати';
+        dd.appendChild(empty);
+        dd.classList.add('show');
+        return;
+      }
+      data.forEach(c => {
         const fl = c.floor_number || (window.roomToFloor ? window.roomToFloor(c.room_number) : '?');
         const loc = c.room_number ? `С${c.room_number} / Кр${c.bed_number} (Кат ${fl})` : '—';
-        const av = c.profile_pic_url
-          ? `<div class="nl-pt-av"><img src="${esc(c.profile_pic_url)}" alt=""/></div>`
-          : `<div class="nl-pt-av">${esc((c.ime_prezime||'?').charAt(0))}</div>`;
-        return `<div class="nl-pt-item" onclick='nlPickPatient(${JSON.stringify(JSON.stringify(c))})'>
-          ${av}
+        const item = document.createElement('div');
+        item.className = 'nl-pt-item';
+        item.innerHTML = `
+          <div class="nl-pt-av">${esc((c.ime_prezime||'?').charAt(0))}</div>
           <div>
             <div class="nl-pt-name">${esc(c.obrakanje ? c.obrakanje+' ' : '')}${esc(c.ime_prezime)}</div>
             <div class="nl-pt-meta">${esc(c.maticen_broj||c.embg||'—')} · ${esc(loc)}</div>
-          </div>
-        </div>`;
-      }).join('');
+          </div>`;
+        item.addEventListener('click', () => nlPickPatient(c));
+        dd.appendChild(item);
+      });
       dd.classList.add('show');
     }, 280);
   }
 
-window.nlPickPatient = async function (jsonStr) {
-  const c = JSON.parse(jsonStr);
-  const [clientRes, diagRes, therapyRes] = await Promise.all([
-    window._sb.from('clients').select(`
-      id,ime_prezime,obrakanje,maticen_broj,embg,adresa,telefon,
-      floor_number,room_number,bed_number,profile_pic_url,status,created_at,
-      priem_dijagnoza_kod,priem_dijagnoza_opis
-    `).eq('id', c.id).single(),
-    window._sb.from('client_chronic_diagnoses')
-      .select('kod,opis,added_at').eq('client_id', c.id),
-    window._sb.from('client_chronic_therapy')
-      .select('*').eq('client_id', c.id).order('added_at', { ascending: false }),
-  ]);
-  _client = { ...clientRes.data, client_chronic_diagnoses: diagRes.data || [] };
-  _therapy = therapyRes.data || [];
-  _newTherapyItems = [];
-  _drugObj = null;
-  showLogForm();
-};
+  window.nlPickPatient = async function (c) {
+    // c is a plain object passed directly from the event listener — no JSON.parse needed
+    const dd = document.getElementById('nl_pt_dd');
+    if (dd) dd.classList.remove('show');
+    // Show loading state
+    document.getElementById('nl-body').innerHTML = `<div style="padding:3rem;text-align:center;color:var(--gray)">Се вчитува…</div>`;
+    const [clientRes, diagRes, therapyRes] = await Promise.all([
+      window._sb.from('clients').select(`
+        id,ime_prezime,obrakanje,maticen_broj,embg,adresa,telefon,
+        floor_number,room_number,bed_number,profile_pic_url,status,created_at,
+        priem_dijagnoza_kod,priem_dijagnoza_opis
+      `).eq('id', c.id).single(),
+      window._sb.from('client_chronic_diagnoses')
+        .select('kod,opis,added_at').eq('client_id', c.id),
+      window._sb.from('client_chronic_therapy')
+        .select('*').eq('client_id', c.id).order('added_at', { ascending: false }),
+    ]);
+    _client = { ...clientRes.data, client_chronic_diagnoses: diagRes.data || [] };
+    _therapy = therapyRes.data || [];
+    _newTherapyItems = [];
+    _drugObj = null;
+    showLogForm();
+  };
 
   // ══════════════════════════════════════════════════════════════════
   //  STEP 2 — LOG FORM (doctor view)
@@ -182,7 +207,7 @@ window.nlPickPatient = async function (jsonStr) {
           <div class="nl-mkb-row">
             <div style="flex:0 0 110px;position:relative">
               <label class="nl-lbl">МКБ-10 код</label>
-              <input class="nl-inp" id="l_kod" placeholder="A00.1" style="text-transform:uppercase" autocomplete="off"/>
+              <input class="nl-inp" id="l_kod" placeholder="A00.1" style="text-transform:uppercase" autocomplete="off" oninput="nlMKBLive('l_kod','l_opis','l_kod_dd')"/>
               <div class="nl-mkb-dd" id="l_kod_dd"></div>
             </div>
             <div style="flex:1;min-width:0">
@@ -253,9 +278,9 @@ window.nlPickPatient = async function (jsonStr) {
         </button>
       </div>`;
 
-    // Wire MKB enter
+    // Wire MKB enter — also fires immediately on Enter without waiting for debounce
     document.getElementById('l_kod').addEventListener('keydown', ev => {
-      if (ev.key === 'Enter') { ev.preventDefault(); nlMKB('l_kod','l_opis','l_kod_dd'); }
+      if (ev.key === 'Enter') { ev.preventDefault(); clearTimeout(_mkbTimer); nlMKB('l_kod','l_opis','l_kod_dd'); }
     });
     // Wire drug search
     const drugInp = document.getElementById('nl_drug');
@@ -374,20 +399,38 @@ window.nlPickPatient = async function (jsonStr) {
     const dd = document.getElementById('nl_drug_dd');
     if (!val || val.trim().length < 3) { if (dd) dd.classList.remove('show'); return; }
     _drugTimer = setTimeout(async () => {
-      const { data } = await window._sb.from('drugs')
-        .select('id,latin_name,generic_name,strength,form')
-        .or(`latin_name.ilike.%${val}%,generic_name.ilike.%${val}%`)
-        .limit(10);
+      const [byLatin, byGeneric] = await Promise.all([
+        window._sb.from('drugs').select('id,latin_name,generic_name,strength,form')
+          .ilike('latin_name', `%${val}%`).limit(8),
+        window._sb.from('drugs').select('id,latin_name,generic_name,strength,form')
+          .ilike('generic_name', `%${val}%`).limit(8),
+      ]);
+      const seen = new Set();
+      const data = [...(byLatin.data||[]), ...(byGeneric.data||[])].filter(d => {
+        if (seen.has(d.id)) return false; seen.add(d.id); return true;
+      }).slice(0, 12);
       if (!dd) return;
-      if (!data || !data.length) {
-        dd.innerHTML = `<div class="nl-drug-item" style="color:var(--gray);cursor:default">Нема резултати за „${esc(val)}"</div>`;
+      dd.innerHTML = '';
+      if (!data.length) {
+        const empty = document.createElement('div');
+        empty.className = 'nl-drug-item';
+        empty.style.cssText = 'color:var(--gray);cursor:default';
+        empty.textContent = `Нема резултати за „${val}"`;
+        dd.appendChild(empty);
         dd.classList.add('show'); return;
       }
-      dd.innerHTML = data.map(d => `
-        <div class="nl-drug-item" onclick='nlPickDrug(${JSON.stringify(JSON.stringify(d))})'>
-          <div class="nl-ddi-name">${esc(d.latin_name)}</div>
-          <div class="nl-ddi-meta">${esc(d.generic_name||'')}${d.strength?' · '+esc(d.strength):''}${d.form?' · '+esc(d.form):''}</div>
-        </div>`).join('');
+      data.forEach(d => {
+        const item = document.createElement('div');
+        item.className = 'nl-drug-item';
+        item.innerHTML = `<div class="nl-ddi-name">${esc(d.latin_name)}</div><div class="nl-ddi-meta">${esc(d.generic_name||'')}${d.strength?' · '+esc(d.strength):''}${d.form?' · '+esc(d.form):''}</div>`;
+        item.addEventListener('click', () => {
+          _drugObj = d;
+          const inp = document.getElementById('nl_drug');
+          if (inp) inp.value = d.latin_name + (d.strength ? ' ' + d.strength : '') + (d.form ? ' (' + d.form + ')' : '');
+          dd.classList.remove('show');
+        });
+        dd.appendChild(item);
+      });
       dd.classList.add('show');
     }, 300);
   };
@@ -401,6 +444,8 @@ window.nlPickPatient = async function (jsonStr) {
   };
 
   // ── MKB lookup ───────────────────────────────────────────────────
+  let _mkbTimer = null;
+
   window.nlMKB = async function (codeId, opisId, ddId) {
     const codeEl = document.getElementById(codeId);
     const opisEl = document.getElementById(opisId);
@@ -408,18 +453,46 @@ window.nlPickPatient = async function (jsonStr) {
     if (!codeEl) return;
     const raw = (codeEl.value || '').trim().toUpperCase();
     codeEl.value = raw;
-    if (!raw) { if (opisEl) opisEl.value = ''; return; }
+    if (!raw) { if (opisEl) opisEl.value = ''; if (dd) dd.classList.remove('show'); return; }
+    // Exact match first
     const { data: ex } = await window._sb.from('mkb10').select('code,description').eq('code', raw).maybeSingle();
     if (ex) { if (opisEl) opisEl.value = ex.description; if (dd) dd.classList.remove('show'); return; }
-    const { data: fz } = await window._sb.from('mkb10').select('code,description')
-      .or(`code.ilike.${raw}%,description.ilike.%${raw}%`).limit(12);
+    // Two separate ilike queries — avoids broken .or() syntax
+    const [byCode, byDesc] = await Promise.all([
+      window._sb.from('mkb10').select('code,description').ilike('code', `${raw}%`).limit(8),
+      window._sb.from('mkb10').select('code,description').ilike('description', `%${raw}%`).limit(8),
+    ]);
+    const seen = new Set();
+    const fz = [...(byCode.data||[]), ...(byDesc.data||[])].filter(r => {
+      if (seen.has(r.code)) return false; seen.add(r.code); return true;
+    }).slice(0, 12);
     if (!dd) return;
-    if (!fz || !fz.length) { if (opisEl) opisEl.value = 'Кодот не е пронајден'; dd.classList.remove('show'); return; }
-    dd.innerHTML = fz.map(r => `
-      <div class="nl-mkb-item" onclick="nlMKBPick('${codeId}','${opisId}','${ddId}','${esc(r.code)}',${JSON.stringify(r.description)})">
-        <span class="nl-mkb-code">${esc(r.code)}</span>${esc(r.description)}
-      </div>`).join('');
+    if (!fz.length) { if (opisEl) opisEl.value = ''; dd.classList.remove('show'); return; }
+    dd.innerHTML = '';
+    fz.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'nl-mkb-item';
+      item.innerHTML = `<span class="nl-mkb-code">${esc(r.code)}</span>${esc(r.description)}`;
+      item.addEventListener('click', () => {
+        if (codeEl) codeEl.value = r.code;
+        if (opisEl) opisEl.value = r.description;
+        dd.classList.remove('show');
+      });
+      dd.appendChild(item);
+    });
     dd.classList.add('show');
+  };
+
+  // Live-typing trigger with debounce
+  window.nlMKBLive = function(codeId, opisId, ddId) {
+    clearTimeout(_mkbTimer);
+    const codeEl = document.getElementById(codeId);
+    if (!codeEl || codeEl.value.trim().length < 1) {
+      const dd = document.getElementById(ddId);
+      if (dd) dd.classList.remove('show');
+      return;
+    }
+    _mkbTimer = setTimeout(() => window.nlMKB(codeId, opisId, ddId), 350);
   };
 
   window.nlMKBPick = function (codeId, opisId, ddId, code, desc) {

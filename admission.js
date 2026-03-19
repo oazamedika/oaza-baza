@@ -177,7 +177,7 @@
       <div class="mkb-row">
         <div class="a-fg" style="flex:0 0 120px;position:relative">
           <label class="a-lbl">Код</label>
-          <input class="a-inp" id="d_kod" placeholder="A00.1" style="text-transform:uppercase"/>
+          <input class="a-inp" id="d_kod" placeholder="A00.1" style="text-transform:uppercase" oninput="admMKBLive('d_kod','d_opis','d_kod_dd')"/>
           <div class="adm-dd" id="d_kod_dd"></div>
         </div>
         <div class="a-fg" style="flex:1;min-width:150px">
@@ -211,7 +211,7 @@
       <div style="display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap">
         <div class="a-fg" style="flex:0 0 120px;position:relative">
           <label class="a-lbl">Код</label>
-          <input class="a-inp" id="cd_kod" placeholder="нпр. I10" style="text-transform:uppercase"/>
+          <input class="a-inp" id="cd_kod" placeholder="нпр. I10" style="text-transform:uppercase" oninput="admMKBLive('cd_kod','cd_opis','cd_kod_dd')"/>
           <div class="adm-dd" id="cd_kod_dd"></div>
         </div>
         <div class="a-fg" style="flex:1;min-width:150px"><label class="a-lbl">Опис</label><input class="a-inp" id="cd_opis" readonly placeholder="Се пополнува по пребарување"/></div>
@@ -348,6 +348,8 @@
   };
 
   // ── MKB-10 search ──────────────────────────────────────────────
+  let mkbTimer = null;
+
   window.admMKB = async function(codeId, opisId, ddId){
     const codeEl=document.getElementById(codeId);
     const opisEl=document.getElementById(opisId);
@@ -355,14 +357,46 @@
     if(!codeEl) return;
     const raw=(codeEl.value||'').trim().toUpperCase();
     codeEl.value=raw;
-    if(!raw){if(opisEl)opisEl.value='';return;}
+    if(!raw){if(opisEl)opisEl.value='';if(dd)dd.classList.remove('show');return;}
+    // Exact match first
     const{data:ex}=await window._sb.from('mkb10').select('code,description').eq('code',raw).maybeSingle();
     if(ex){if(opisEl)opisEl.value=ex.description;if(dd)dd.classList.remove('show');return;}
-    const{data:fz}=await window._sb.from('mkb10').select('code,description').or(`code.ilike.${raw}%,description.ilike.%${raw}%`).limit(12);
+    // Two separate ilike queries — avoids broken .or() syntax
+    const[byCode,byDesc]=await Promise.all([
+      window._sb.from('mkb10').select('code,description').ilike('code',`${raw}%`).limit(8),
+      window._sb.from('mkb10').select('code,description').ilike('description',`%${raw}%`).limit(8),
+    ]);
+    const seen=new Set();
+    const fz=[...(byCode.data||[]),...(byDesc.data||[])].filter(r=>{
+      if(seen.has(r.code))return false; seen.add(r.code); return true;
+    }).slice(0,12);
     if(!dd) return;
-    if(!fz||!fz.length){if(opisEl)opisEl.value='Кодот не е пронајден';dd.classList.remove('show');return;}
-    dd.innerHTML=fz.map(r=>`<div class="adm-dd-item" onclick="admMKBPick('${codeId}','${opisId}','${ddId}','${ee(r.code)}',${JSON.stringify(r.description)})"><span class="adm-dd-code">${ee(r.code)}</span>${ee(r.description)}</div>`).join('');
+    if(!fz.length){if(opisEl)opisEl.value='';dd.classList.remove('show');return;}
+    dd.innerHTML='';
+    fz.forEach(r=>{
+      const item=document.createElement('div');
+      item.className='adm-dd-item';
+      item.innerHTML=`<span class="adm-dd-code">${ee(r.code)}</span>${ee(r.description)}`;
+      item.addEventListener('click',()=>{
+        if(codeEl)codeEl.value=r.code;
+        if(opisEl)opisEl.value=r.description;
+        dd.classList.remove('show');
+      });
+      dd.appendChild(item);
+    });
     dd.classList.add('show');
+  };
+
+  // Live-typing trigger — fires after short pause on each keystroke
+  window.admMKBLive = function(codeId, opisId, ddId){
+    clearTimeout(mkbTimer);
+    const codeEl=document.getElementById(codeId);
+    if(!codeEl||codeEl.value.trim().length<1){
+      const dd=document.getElementById(ddId);
+      if(dd)dd.classList.remove('show');
+      return;
+    }
+    mkbTimer=setTimeout(()=>window.admMKB(codeId,opisId,ddId),350);
   };
 
   window.admMKBPick = function(codeId,opisId,ddId,code,desc){
@@ -376,10 +410,29 @@
     const dd=document.getElementById('ct_drug_dd');
     if(!val||val.trim().length<3){if(dd)dd.classList.remove('show');return;}
     drugTimer=setTimeout(async()=>{
-      const{data}=await window._sb.from('drugs').select('id,latin_name,generic_name,strength,form').or(`latin_name.ilike.%${val}%,generic_name.ilike.%${val}%`).limit(12);
+      const[byLatin,byGeneric]=await Promise.all([
+        window._sb.from('drugs').select('id,latin_name,generic_name,strength,form').ilike('latin_name',`%${val}%`).limit(8),
+        window._sb.from('drugs').select('id,latin_name,generic_name,strength,form').ilike('generic_name',`%${val}%`).limit(8),
+      ]);
+      const seen=new Set();
+      const data=[...(byLatin.data||[]),...(byGeneric.data||[])].filter(d=>{
+        if(seen.has(d.id))return false; seen.add(d.id); return true;
+      }).slice(0,12);
       if(!dd) return;
-      if(!data||!data.length){dd.innerHTML=`<div class="adm-dd-item" style="color:var(--gray);cursor:default">Нема резултати за „${ee(val)}"</div>`;dd.classList.add('show');return;}
-      dd.innerHTML=data.map(d=>`<div class="adm-dd-item" onclick='admDrugPick(${JSON.stringify(JSON.stringify(d))})'><div class="adm-dd-name">${ee(d.latin_name)}</div><div class="adm-dd-meta">${ee(d.generic_name||'')}${d.strength?' · '+ee(d.strength):''}${d.form?' · '+ee(d.form):''}</div></div>`).join('');
+      if(!data.length){dd.innerHTML=`<div class="adm-dd-item" style="color:var(--gray);cursor:default">Нема резултати за „${ee(val)}"</div>`;dd.classList.add('show');return;}
+      dd.innerHTML='';
+      data.forEach(d=>{
+        const item=document.createElement('div');
+        item.className='adm-dd-item';
+        item.innerHTML=`<div class="adm-dd-name">${ee(d.latin_name)}</div><div class="adm-dd-meta">${ee(d.generic_name||'')}${d.strength?' · '+ee(d.strength):''}${d.form?' · '+ee(d.form):''}</div>`;
+        item.addEventListener('click',()=>{
+          selectedDrugObj=d;
+          const inp=document.getElementById('ct_drug');
+          if(inp)inp.value=d.latin_name+(d.strength?' '+d.strength:'')+(d.form?' ('+d.form+')':'');
+          dd.classList.remove('show');
+        });
+        dd.appendChild(item);
+      });
       dd.classList.add('show');
     },350);
   };
