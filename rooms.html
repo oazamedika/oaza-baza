@@ -154,17 +154,17 @@ function floorLayout(floor) {
     // floors 2-5: 17 rooms, s = first room number
     const o = n => rm(s + n - 1);
     return [
-      {top:o(13), bot:o(14)},
-      {top:o(12), bot:o(15)},
-      {top:o(11), bot:o(16)},
-      {top:o(10), bot:sp('Скали')},
-      {top:o(9),  bot:sp('Геронто\nДомаќинки')},
-      {top:sp('Дневна'), bot:sp('Тоалети')},
-      {top:o(8),  bot:o(17)},
-      {top:o(7),  bot:sp('Скали')},
-      {top:o(6),  bot:o(1)},
-      {top:o(5),  bot:o(2)},
-      {top:o(4),  bot:o(3)},
+      {top:o(14), bot:o(13)},
+      {top:o(15), bot:o(12)},
+      {top:o(16), bot:o(11)},
+      {top:sp('Скали'),              bot:o(10)},
+      {top:sp('Геронто\nДомаќинки'), bot:o(9)},
+      {top:sp('Тоалети'), bot:sp('Дневна')},
+      {top:o(17), bot:o(8)},
+      {top:sp('Скали'), bot:o(7)},
+      {top:o(1),  bot:o(6)},
+      {top:o(2),  bot:o(5)},
+      {top:o(3),  bot:o(4)},
     ];
   }
 }
