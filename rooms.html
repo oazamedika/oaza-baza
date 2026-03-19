@@ -205,6 +205,7 @@
 </div>
 
 <script src="sidebar.js"></script>
+<script src="client-card.js"></script>
 <script>
 window.addEventListener('DOMContentLoaded', () => {
   const wait = setInterval(() => {
@@ -294,7 +295,7 @@ async function loadRooms() {
 
         const content = client
           ? `<div class="bed-content">
-               <div class="bed-client-name">${esc(client.obrakanje ? client.obrakanje+' ' : '')}${esc(client.ime_prezime)}</div>
+               <div class="bed-client-name" style="cursor:pointer;color:var(--olive)" onclick="openClientCard('${esc(client.id)}')">${esc(client.obrakanje ? client.obrakanje+' ' : '')}${esc(client.ime_prezime)}</div>
                <div class="bed-client-meta"><span class="badge ${STATUS_LABEL[client.status]?.cls||''}">${STATUS_LABEL[client.status]?.text||client.status}</span></div>
              </div>`
           : `<div class="bed-content"><div class="bed-empty-text">Слободен</div></div>`;
