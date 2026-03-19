@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="shared.css"/>
   <script src="auth-guard.js"></script>
   <style>
-    /* ── Toolbar ── */
     .logs-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem}
     .date-nav-wrap{display:flex;align-items:center;gap:0.65rem}
     .btn-date-nav{background:none;border:1px solid var(--border);border-radius:4px;padding:0.45rem 0.75rem;cursor:pointer;color:var(--gray);font-size:0.9rem;transition:all 0.15s;line-height:1}
@@ -17,7 +16,6 @@
     input[type=date].date-pick:focus{border-color:var(--olive)}
     .btn-new-log{display:inline-flex;align-items:center;gap:0.5rem;padding:0.65rem 1.25rem;background:var(--dark);color:#fff;border:none;border-radius:5px;font-family:'Lato',sans-serif;font-size:0.82rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:background 0.15s}
     .btn-new-log:hover{background:var(--olive)}
-    /* ── Feed ── */
     .log-feed{display:flex;flex-direction:column;gap:1rem}
     .log-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.25rem}
     .lc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.6rem}
@@ -38,66 +36,6 @@
     .link-btn:hover{text-decoration:underline}
     .empty-feed{text-align:center;padding:4rem 2rem;color:var(--gray)}
     .empty-feed svg{opacity:0.2;display:block;margin:0 auto 1rem}
-    /* ── Modal ── */
-    .modal-bd{display:none;position:fixed;inset:0;background:rgba(47,42,36,0.6);z-index:200;align-items:center;justify-content:center;padding:1rem}
-    .modal-bd.open{display:flex}
-    .modal-box{background:#fff;border-radius:10px;width:100%;max-width:720px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);display:flex;flex-direction:column}
-    .modal-hdr{padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;z-index:2;display:flex;align-items:center;justify-content:space-between}
-    .modal-ttl{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:600;color:var(--dark)}
-    .modal-x{background:none;border:none;cursor:pointer;color:var(--gray);padding:0.25rem;display:flex}.modal-x:hover{color:var(--dark)}
-    .modal-bdy{padding:1.25rem 1.5rem;flex:1}
-    .modal-ftr{padding:0.85rem 1.5rem 1.25rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:1rem;position:sticky;bottom:0;background:#fff}
-    .modal-err{font-size:0.82rem;color:#c0392b;flex:1}
-    /* ── Form ── */
-    .fg{display:flex;flex-direction:column;gap:0.35rem}
-    .fl{font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gray)}
-    .fl .req{color:#c0392b;margin-left:2px}
-    .fi,.fs{padding:0.65rem 0.8rem;border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif;font-size:0.88rem;color:var(--dark);background:#fff;outline:none;transition:border-color 0.15s,box-shadow 0.15s;width:100%}
-    .fi:focus,.fs:focus{border-color:var(--olive);box-shadow:0 0 0 3px rgba(122,122,46,0.1)}
-    .fi[readonly]{background:var(--cream);cursor:default}
-    .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:0.85rem 1.1rem}.fgrid .full{grid-column:1/-1}
-    .fsect{font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:600;color:var(--dark);margin:1.1rem 0 0.6rem;padding-top:0.85rem;border-top:1px solid var(--border)}
-    /* ── MKB row ── */
-    .mkb-row{display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap;position:relative}
-    .mkb-code-col{flex:0 0 120px;position:relative}
-    .mkb-desc-col{flex:1;min-width:160px}
-    .btn-mkb{padding:0.65rem 0.85rem;background:var(--olive);color:#fff;border:none;border-radius:4px;font-family:'Lato',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background 0.15s}
-    .btn-mkb:hover{background:#5a5a20}
-    /* ── MKB dropdown ── */
-    .mkb-dd{position:absolute;top:calc(100% + 3px);left:0;right:0;background:#fff;border:1px solid var(--olive);border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,0.15);z-index:500;max-height:220px;overflow-y:auto;display:none}
-    .mkb-dd.show{display:block}
-    .mkb-dd-item{padding:0.55rem 0.85rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.84rem}
-    .mkb-dd-item:last-child{border-bottom:none}.mkb-dd-item:hover{background:var(--cream)}
-    .mkb-dd-code{font-family:monospace;font-weight:700;color:var(--olive);margin-right:0.45rem}
-    /* ── Drug dropdown ── */
-    .drug-wrap{position:relative}
-    .drug-dd{position:absolute;top:calc(100% + 3px);left:0;right:0;background:#fff;border:1px solid var(--olive);border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,0.15);z-index:500;max-height:220px;overflow-y:auto;display:none}
-    .drug-dd.show{display:block}
-    .drug-dd-item{padding:0.6rem 0.85rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.84rem}
-    .drug-dd-item:last-child{border-bottom:none}.drug-dd-item:hover{background:var(--cream)}
-    .ddi-name{font-weight:700;color:var(--dark)}.ddi-meta{font-size:0.74rem;color:var(--gray);margin-top:0.1rem}
-    /* ── Added items ── */
-    .added-item{display:flex;align-items:center;gap:0.65rem;padding:0.5rem 0.75rem;background:var(--cream);border:1px solid var(--border);border-radius:4px;margin-bottom:0.4rem;font-size:0.84rem}
-    .ai-name{font-weight:700;flex:1}.ai-dose{color:var(--gray);flex-shrink:0}
-    .btn-rm{background:none;border:none;cursor:pointer;color:var(--gray);font-size:1.1rem;line-height:1;padding:0 0.25rem;flex-shrink:0}.btn-rm:hover{color:#c0392b}
-    /* ── Patient search ── */
-    .pt-search-wrap{position:relative}
-    .pt-dd{position:absolute;top:calc(100% + 3px);left:0;right:0;background:#fff;border:1px solid var(--olive);border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,0.15);z-index:500;max-height:220px;overflow-y:auto;display:none}
-    .pt-dd.show{display:block}
-    .pt-item{display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.85rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.85rem}
-    .pt-item:last-child{border-bottom:none}.pt-item:hover{background:var(--cream)}
-    .pt-av{width:26px;height:26px;border-radius:50%;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;flex-shrink:0}
-    .pt-name{font-weight:700}.pt-meta{font-size:0.72rem;color:var(--gray)}
-    .pt-selected{display:flex;align-items:center;gap:0.65rem;padding:0.55rem 0.8rem;background:var(--cream);border:1px solid var(--olive);border-radius:4px;margin-top:0.45rem;font-size:0.85rem}
-    .pt-sel-name{font-weight:700;flex:1}
-    /* ── Buttons ── */
-    .btn-prim{padding:0.65rem 1.4rem;background:var(--dark);border:none;border-radius:4px;font-family:'Lato',sans-serif;font-size:0.85rem;font-weight:700;letter-spacing:0.08em;color:#fff;cursor:pointer;transition:background 0.15s}
-    .btn-prim:hover{background:var(--olive)}.btn-prim:disabled{opacity:0.5;pointer-events:none}
-    .btn-add-sm{display:inline-flex;align-items:center;gap:0.35rem;padding:0.45rem 0.8rem;background:transparent;border:1px dashed var(--olive);border-radius:4px;color:var(--olive);font-family:'Lato',sans-serif;font-size:0.8rem;font-weight:700;cursor:pointer;transition:background 0.15s;flex-shrink:0}
-    .btn-add-sm:hover{background:rgba(122,122,46,0.07)}
-    .vitals-range{display:flex;align-items:center;gap:0.75rem}
-    .vitals-range input[type=range]{flex:1}
-    .range-val{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:var(--dark);min-width:1.5rem;text-align:center}
   </style>
 </head>
 <body>
@@ -128,28 +66,12 @@
   </main>
 </div>
 
-<!-- New Log Modal -->
-<div class="modal-bd" id="logModal">
-  <div class="modal-box">
-    <div class="modal-hdr">
-      <span class="modal-ttl">Нов Клинички Запис</span>
-      <button class="modal-x" id="logModalX">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="modal-bdy" id="logModalBody"></div>
-    <div class="modal-ftr">
-      <div class="modal-err" id="logModalErr"></div>
-      <button class="btn-prim" id="btnSaveLog">Зачувај запис</button>
-    </div>
-  </div>
-</div>
-
 <script src="sidebar.js"></script>
 <script src="client-card.js"></script>
+<script src="new-log.js"></script>
 <script>
-// ── Boot ─────────────────────────────────────────────────────────
 let currentDate = new Date();
+
 window.addEventListener('DOMContentLoaded', () => {
   const wait = setInterval(() => {
     if (window._username !== undefined) {
@@ -166,22 +88,32 @@ function initPage() {
   updateDateDisplay();
   loadFeed();
 
-  document.getElementById('btnPrev').addEventListener('click', () => { currentDate.setDate(currentDate.getDate()-1); dp.value=toDateStr(currentDate); updateDateDisplay(); loadFeed(); });
-  document.getElementById('btnNext').addEventListener('click', () => { currentDate.setDate(currentDate.getDate()+1); dp.value=toDateStr(currentDate); updateDateDisplay(); loadFeed(); });
-  dp.addEventListener('change', e => { currentDate = new Date(e.target.value + 'T12:00:00'); updateDateDisplay(); loadFeed(); });
-  document.getElementById('btnNewLog').addEventListener('click', openLogModal);
-  document.getElementById('logModalX').addEventListener('click', closeLogModal);
-  document.getElementById('logModal').addEventListener('click', e => { if (e.target.id === 'logModal') closeLogModal(); });
-  document.getElementById('btnSaveLog').addEventListener('click', saveLog);
+  document.getElementById('btnPrev').addEventListener('click', () => {
+    currentDate.setDate(currentDate.getDate() - 1);
+    dp.value = toDateStr(currentDate);
+    updateDateDisplay(); loadFeed();
+  });
+  document.getElementById('btnNext').addEventListener('click', () => {
+    currentDate.setDate(currentDate.getDate() + 1);
+    dp.value = toDateStr(currentDate);
+    updateDateDisplay(); loadFeed();
+  });
+  dp.addEventListener('change', e => {
+    currentDate = new Date(e.target.value + 'T12:00:00');
+    updateDateDisplay(); loadFeed();
+  });
+
+  // Delegate to new-log.js
+  document.getElementById('btnNewLog').addEventListener('click', () => {
+    openNewLog(loadFeed);
+  });
 }
 
 function toDateStr(d) { return d.toISOString().slice(0, 10); }
 function dispDate(d)  { return d.toLocaleDateString('mk-MK', { weekday:'long', day:'2-digit', month:'long', year:'numeric' }); }
 function updateDateDisplay() { document.getElementById('dateDisp').textContent = dispDate(currentDate); }
 function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function nv(id){ const v=document.getElementById(id)?.value; return(v&&v.trim())?parseFloat(v):null; }
 
-// ── Feed ──────────────────────────────────────────────────────────
 const TYPE_LABEL = { doctor:'Доктор', social:'Социјален', fizioterapevt:'Физио', supervisor:'Супервизор', other:'Друго' };
 const TYPE_CLS   = { doctor:'lt-doctor', social:'lt-social', fizioterapevt:'lt-other', supervisor:'lt-other', other:'lt-other' };
 
@@ -201,7 +133,7 @@ async function loadFeed() {
 
   feed.innerHTML = `<div class="log-feed">${data.map(l => {
     const c = l.clients || {};
-    const loc = c.floor_number ? `К${c.floor_number}/С${c.room_number}/Кр${c.bed_number}` : '—';
+    const loc = c.room_number ? `С${c.room_number}/Кр${c.bed_number}` : '—';
     const av = c.profile_pic_url
       ? `<div class="lc-av"><img src="${esc(c.profile_pic_url)}" alt=""/></div>`
       : `<div class="lc-av">${esc((c.ime_prezime||'?').charAt(0))}</div>`;
@@ -235,323 +167,6 @@ async function loadFeed() {
       ${l.parenteralna?`<div class="lc-field"><div class="lc-fl">Парентерална</div><div class="lc-fv">${esc(l.parenteralna)}</div></div>`:''}
     </div>`;
   }).join('')}</div>`;
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  LOG MODAL
-// ══════════════════════════════════════════════════════════════════
-let logPatient = null;
-let logDrugObj = null;
-let logTherapyItems = [];
-let ptTimer = null;
-let drugTimer = null;
-
-function openLogModal() {
-  logPatient = null; logDrugObj = null; logTherapyItems = [];
-  const u = (window._username||'').toLowerCase();
-  const typeOpts = ['doctor','social','fizioterapevt','supervisor','other'].map(t =>
-    `<option value="${t}"${
-      (u==='doktor'&&t==='doctor')||(u==='socijalenrabotnik'&&t==='social')||(u==='fizioterapevt'&&t==='fizioterapevt')?' selected':''
-    }>${TYPE_LABEL[t]}</option>`).join('');
-
-  document.getElementById('logModalBody').innerHTML = `
-    <!-- Patient search -->
-    <div class="fg" style="margin-bottom:1rem">
-      <label class="fl">Корисник <span class="req">*</span></label>
-      <div class="pt-search-wrap">
-        <input class="fi" id="pt_search" placeholder="Пребарај по ime, ЕМБГ или матичен број…" autocomplete="off"/>
-        <div class="pt-dd" id="pt_dd"></div>
-      </div>
-      <div id="pt_selected"></div>
-    </div>
-
-    <!-- Log type -->
-    <div class="fg" style="margin-bottom:1rem">
-      <label class="fl">Тип на запис</label>
-      <select class="fs" id="l_type">${typeOpts}</select>
-    </div>
-
-    <!-- Diagnosis with search button -->
-    <div class="fsect" style="margin-top:0;padding-top:0;border-top:none">Дијагноза <span class="req">*</span></div>
-    <div class="mkb-row" style="margin-bottom:0.4rem">
-      <div class="mkb-code-col">
-        <label class="fl">МКБ-10 Код</label>
-        <input class="fi" id="l_kod" placeholder="A00.1" style="text-transform:uppercase"/>
-        <div class="mkb-dd" id="l_kod_dd"></div>
-      </div>
-      <div class="mkb-desc-col">
-        <label class="fl">Опис</label>
-        <input class="fi" id="l_opis" readonly placeholder="Се пополнува по пребарување"/>
-      </div>
-      <div class="fg" style="flex-shrink:0">
-        <label class="fl">&nbsp;</label>
-        <button class="btn-mkb" onclick="logMKBLookup('l_kod','l_opis','l_kod_dd')">Пребарај</button>
-      </div>
-    </div>
-
-    <!-- Anamneza -->
-    <div class="fsect">Анамнеза</div>
-    <textarea class="fi" id="l_anamneza" rows="2" style="width:100%;resize:vertical" placeholder="Анамнестички податоци…"></textarea>
-
-    <!-- Vitals -->
-    <div class="fsect">Витални параметри</div>
-    <div class="fgrid">
-      <div class="fg"><label class="fl">КП Систоличен (mmHg)</label><input class="fi" id="l_kp_s" type="number" placeholder="120"/></div>
-      <div class="fg"><label class="fl">КП Дијастоличен (mmHg)</label><input class="fi" id="l_kp_d" type="number" placeholder="80"/></div>
-      <div class="fg"><label class="fl">Пулс (bpm)</label><input class="fi" id="l_puls" type="number" placeholder="72"/></div>
-      <div class="fg"><label class="fl">Температура (°C)</label><input class="fi" id="l_temp" type="number" step="0.1" placeholder="36.6"/></div>
-      <div class="fg"><label class="fl">SpO2 (%)</label><input class="fi" id="l_spo2" type="number" placeholder="98"/></div>
-      <div class="fg"><label class="fl">Респирации (/мин)</label><input class="fi" id="l_resp" type="number" placeholder="16"/></div>
-      <div class="fg"><label class="fl">Тежина (kg)</label><input class="fi" id="l_tezina" type="number" step="0.1" placeholder="72.5"/></div>
-      <div class="fg"><label class="fl">Крвен шеќер (mmol/L)</label><input class="fi" id="l_seker" type="number" step="0.1" placeholder="5.4"/></div>
-      <div class="fg full">
-        <label class="fl">Скала на болка (0–10)</label>
-        <div class="vitals-range">
-          <input type="range" id="l_bolka" min="0" max="10" value="0" oninput="document.getElementById('l_bv').textContent=this.value"/>
-          <span class="range-val" id="l_bv">0</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Naod -->
-    <div class="fsect">Наод</div>
-    <textarea class="fi" id="l_naod" rows="2" style="width:100%;resize:vertical" placeholder="Клинички наод…"></textarea>
-
-    <!-- Parenteral -->
-    <div class="fsect">Апликувана парентерална терапија</div>
-    <textarea class="fi" id="l_parenteralna" rows="2" style="width:100%;resize:vertical" placeholder="нпр. NaCl 0.9% 500ml iv, Ceftriaxone 1g iv…"></textarea>
-
-    <!-- Therapy changes -->
-    <div class="fsect">Промени во хронична терапија</div>
-    <div id="log-therapy-list"></div>
-    <div style="display:flex;gap:0.6rem;align-items:flex-end;flex-wrap:wrap;margin-top:0.5rem">
-      <div class="fg drug-wrap" style="flex:1;min-width:180px">
-        <label class="fl">Лек (мин. 3 знаци)</label>
-        <input class="fi" id="lt_drug" placeholder="нпр. Metformin…" autocomplete="off"/>
-        <div class="drug-dd" id="lt_drug_dd"></div>
-      </div>
-      <div class="fg" style="flex:0 0 150px"><label class="fl">Доза</label><input class="fi" id="lt_dose" placeholder="нпр. 1×1"/></div>
-      <div class="fg" style="flex-shrink:0">
-        <label class="fl">&nbsp;</label>
-        <button class="btn-add-sm" onclick="addLogTherapy()">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Додај
-        </button>
-      </div>
-    </div>`;
-
-  // Wire up patient search
-  document.getElementById('pt_search').addEventListener('input', e => searchPatient(e.target.value));
-
-  // Wire up drug search
-  document.getElementById('lt_drug').addEventListener('input', e => searchDrugLog(e.target.value));
-
-  // Wire up MKB Enter key
-  document.getElementById('l_kod').addEventListener('keydown', ev => {
-    if (ev.key === 'Enter') { ev.preventDefault(); logMKBLookup('l_kod','l_opis','l_kod_dd'); }
-  });
-
-  document.getElementById('logModalErr').textContent = '';
-  document.getElementById('btnSaveLog').disabled = false;
-  document.getElementById('logModal').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeLogModal() {
-  document.getElementById('logModal').classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-// ── Patient search ────────────────────────────────────────────────
-function searchPatient(val) {
-  clearTimeout(ptTimer);
-  logPatient = null;
-  const dd = document.getElementById('pt_dd');
-  if (!val || val.trim().length < 2) { dd.classList.remove('show'); return; }
-  ptTimer = setTimeout(async () => {
-    const { data } = await window._sb.from('clients')
-      .select('id,ime_prezime,obrakanje,embg,maticen_broj,floor_number,room_number,bed_number')
-      .eq('status','completed')
-      .or(`ime_prezime.ilike.%${val}%,embg.ilike.%${val}%,maticen_broj.ilike.%${val}%`)
-      .limit(8);
-    if (!dd) return;
-    if (!data || !data.length) { dd.classList.remove('show'); return; }
-    dd.innerHTML = data.map(c => `
-      <div class="pt-item" onclick='pickPatient(${JSON.stringify(JSON.stringify(c))})'>
-        <div class="pt-av">${esc((c.ime_prezime||'?').charAt(0))}</div>
-        <div><div class="pt-name">${esc(c.obrakanje?c.obrakanje+' ':'')}${esc(c.ime_prezime)}</div>
-        <div class="pt-meta">${esc(c.embg||'')} · ${c.floor_number?`К${c.floor_number}/С${c.room_number}/Кр${c.bed_number}`:'—'}</div></div>
-      </div>`).join('');
-    dd.classList.add('show');
-  }, 300);
-}
-
-function pickPatient(jsonStr) {
-  const c = JSON.parse(jsonStr);
-  logPatient = c;
-  document.getElementById('pt_search').value = '';
-  document.getElementById('pt_dd').classList.remove('show');
-  document.getElementById('pt_selected').innerHTML = `
-    <div class="pt-selected">
-      <div class="pt-av">${esc((c.ime_prezime||'?').charAt(0))}</div>
-      <div class="pt-sel-name">${esc(c.obrakање?c.obrakanje+' ':'')}${esc(c.ime_prezime)}</div>
-      <button class="btn-rm" onclick="clearPatient()">×</button>
-    </div>`;
-}
-
-function clearPatient() {
-  logPatient = null;
-  document.getElementById('pt_selected').innerHTML = '';
-}
-
-// ── MKB-10 lookup ─────────────────────────────────────────────────
-async function logMKBLookup(codeId, opisId, ddId) {
-  const codeEl = document.getElementById(codeId);
-  const opisEl = document.getElementById(opisId);
-  const dd     = document.getElementById(ddId);
-  if (!codeEl) return;
-
-  const raw = (codeEl.value || '').trim().toUpperCase();
-  codeEl.value = raw;
-  if (!raw) { if(opisEl) opisEl.value=''; return; }
-
-  // Exact match first
-  const { data: exact } = await window._sb.from('mkb10')
-    .select('code,description').eq('code', raw).maybeSingle();
-  if (exact) {
-    if (opisEl) opisEl.value = exact.description;
-    if (dd) dd.classList.remove('show');
-    return;
-  }
-
-  // Fuzzy — by code prefix OR description contains
-  const { data: fuzzy } = await window._sb.from('mkb10')
-    .select('code,description')
-    .or(`code.ilike.${raw}%,description.ilike.%${raw}%`)
-    .limit(10);
-
-  if (!dd) return;
-  if (!fuzzy || !fuzzy.length) {
-    opisEl && (opisEl.value = 'Кодот не е пронајден');
-    dd.classList.remove('show'); return;
-  }
-
-  dd.innerHTML = fuzzy.map(r => `
-    <div class="mkb-dd-item" onclick="pickMKB('${codeId}','${opisId}','${ddId}','${esc(r.code)}',${JSON.stringify(r.description)})">
-      <span class="mkb-dd-code">${esc(r.code)}</span>${esc(r.description)}
-    </div>`).join('');
-  dd.classList.add('show');
-}
-
-function pickMKB(codeId, opisId, ddId, code, desc) {
-  const codeEl = document.getElementById(codeId);
-  const opisEl = document.getElementById(opisId);
-  const dd     = document.getElementById(ddId);
-  if (codeEl) codeEl.value = code;
-  if (opisEl) opisEl.value = desc;
-  if (dd) dd.classList.remove('show');
-}
-
-// ── Drug search ───────────────────────────────────────────────────
-function searchDrugLog(val) {
-  clearTimeout(drugTimer);
-  logDrugObj = null;
-  const dd = document.getElementById('lt_drug_dd');
-  if (!val || val.trim().length < 3) { if(dd) dd.classList.remove('show'); return; }
-  drugTimer = setTimeout(async () => {
-    const { data } = await window._sb.from('drugs')
-      .select('id,latin_name,generic_name,strength,form')
-      .or(`latin_name.ilike.%${val}%,generic_name.ilike.%${val}%`)
-      .limit(10);
-    if (!dd) return;
-    if (!data || !data.length) {
-      dd.innerHTML = `<div class="drug-dd-item" style="color:var(--gray);cursor:default">Нема резултати</div>`;
-      dd.classList.add('show'); return;
-    }
-    dd.innerHTML = data.map(d => `
-      <div class="drug-dd-item" onclick='pickDrug(${JSON.stringify(JSON.stringify(d))})'>
-        <div class="ddi-name">${esc(d.latin_name)}</div>
-        <div class="ddi-meta">${esc(d.generic_name||'')}${d.strength?' · '+esc(d.strength):''}${d.form?' · '+esc(d.form):''}</div>
-      </div>`).join('');
-    dd.classList.add('show');
-  }, 350);
-}
-
-function pickDrug(jsonStr) {
-  const d = JSON.parse(jsonStr);
-  logDrugObj = d;
-  const inp = document.getElementById('lt_drug');
-  if (inp) inp.value = d.latin_name + (d.strength?' '+d.strength:'') + (d.form?' ('+d.form+')':'');
-  const dd = document.getElementById('lt_drug_dd');
-  if (dd) dd.classList.remove('show');
-}
-
-// ── Log therapy items ─────────────────────────────────────────────
-function addLogTherapy() {
-  const drugInput = (document.getElementById('lt_drug')?.value || '').trim();
-  const dose = (document.getElementById('lt_dose')?.value || '').trim();
-  const err = document.getElementById('logModalErr');
-  if (!drugInput) { err.textContent = 'Внесете или изберете лек.'; return; }
-  if (!dose) { err.textContent = 'Внесете доза.'; return; }
-  err.textContent = '';
-  const name = logDrugObj ? logDrugObj.latin_name : drugInput;
-  logTherapyItems.push({ drug_name: name, dosage: dose });
-  renderLogTherapyList();
-  document.getElementById('lt_drug').value = '';
-  document.getElementById('lt_dose').value = '';
-  logDrugObj = null;
-  const dd = document.getElementById('lt_drug_dd');
-  if (dd) dd.classList.remove('show');
-}
-
-function removeLogTherapy(i) { logTherapyItems.splice(i, 1); renderLogTherapyList(); }
-
-function renderLogTherapyList() {
-  const el = document.getElementById('log-therapy-list'); if (!el) return;
-  el.innerHTML = logTherapyItems.map((t, i) => `
-    <div class="added-item">
-      <span class="ai-name">${esc(t.drug_name)}</span>
-      <span class="ai-dose">${esc(t.dosage)}</span>
-      <button class="btn-rm" onclick="removeLogTherapy(${i})">×</button>
-    </div>`).join('');
-}
-
-// ── Save log ──────────────────────────────────────────────────────
-async function saveLog() {
-  const err = document.getElementById('logModalErr');
-  if (!logPatient) { err.textContent = 'Изберете корисник.'; return; }
-  const kod = (document.getElementById('l_kod')?.value || '').trim().toUpperCase();
-  if (!kod) { err.textContent = 'Дијагнозата е задолжителна.'; return; }
-  err.textContent = '';
-  document.getElementById('btnSaveLog').disabled = true;
-
-  const payload = {
-    client_id: logPatient.id,
-    created_by: window._user.id,
-    log_type: document.getElementById('l_type')?.value || 'doctor',
-    dijagnoza_kod: kod,
-    dijagnoza_opis: document.getElementById('l_opis')?.value || null,
-    anamneza: document.getElementById('l_anamneza')?.value || null,
-    naod: document.getElementById('l_naod')?.value || null,
-    parenteralna: document.getElementById('l_parenteralna')?.value || null,
-    kp_sistolicen: nv('l_kp_s'), kp_dijastolicen: nv('l_kp_d'),
-    puls: nv('l_puls'), temperatura: nv('l_temp'), spo2: nv('l_spo2'),
-    respiracii: nv('l_resp'), tezina: nv('l_tezina'), seker: nv('l_seker'),
-    bolka: parseInt(document.getElementById('l_bolka')?.value || '0'),
-  };
-
-  const { error } = await window._sb.from('client_logs').insert([payload]);
-  if (error) { err.textContent = 'Грешка: ' + error.message; document.getElementById('btnSaveLog').disabled = false; return; }
-
-  // Add new therapy to master list
-  if (logTherapyItems.length) {
-    await window._sb.from('client_chronic_therapy').insert(
-      logTherapyItems.map(t => ({ client_id: logPatient.id, drug_name: t.drug_name, dosage: t.dosage, added_by: window._user.id }))
-    );
-  }
-
-  document.getElementById('btnSaveLog').disabled = false;
-  closeLogModal();
-  loadFeed();
 }
 </script>
 </body>
