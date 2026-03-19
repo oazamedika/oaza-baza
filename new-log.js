@@ -115,25 +115,25 @@
     }, 280);
   }
 
-  window.nlPickPatient = async function (jsonStr) {
-    const c = JSON.parse(jsonStr);
-    // Fetch full client data + chronic therapy
-    const [clientRes, therapyRes] = await Promise.all([
-      window._sb.from('clients').select(`
-        id,ime_prezime,obrakanje,maticen_broj,embg,adresa,telefon,
-        floor_number,room_number,bed_number,profile_pic_url,status,created_at,
-        priem_dijagnoza_kod,priem_dijagnoza_opis,
-        client_chronic_diagnoses(kod,opis,added_at)
-      `).eq('id', c.id).single(),
-      window._sb.from('client_chronic_therapy')
-        .select('*').eq('client_id', c.id).order('added_at', { ascending: false }),
-    ]);
-    _client = clientRes.data;
-    _therapy = therapyRes.data || [];
-    _newTherapyItems = [];
-    _drugObj = null;
-    showLogForm();
-  };
+window.nlPickPatient = async function (jsonStr) {
+  const c = JSON.parse(jsonStr);
+  const [clientRes, diagRes, therapyRes] = await Promise.all([
+    window._sb.from('clients').select(`
+      id,ime_prezime,obrakanje,maticen_broj,embg,adresa,telefon,
+      floor_number,room_number,bed_number,profile_pic_url,status,created_at,
+      priem_dijagnoza_kod,priem_dijagnoza_opis
+    `).eq('id', c.id).single(),
+    window._sb.from('client_chronic_diagnoses')
+      .select('kod,opis,added_at').eq('client_id', c.id),
+    window._sb.from('client_chronic_therapy')
+      .select('*').eq('client_id', c.id).order('added_at', { ascending: false }),
+  ]);
+  _client = { ...clientRes.data, client_chronic_diagnoses: diagRes.data || [] };
+  _therapy = therapyRes.data || [];
+  _newTherapyItems = [];
+  _drugObj = null;
+  showLogForm();
+};
 
   // ══════════════════════════════════════════════════════════════════
   //  STEP 2 — LOG FORM (doctor view)
