@@ -125,6 +125,7 @@
   let _newTherapyItems = [];
   let _ptTimer = null;
   let _drugTimer = null;
+  let _mkbTimer = null;
   let _drugObj = null;
   let _injected = false;
 
@@ -316,20 +317,11 @@
 
           <!-- Current diagnosis -->
           <div class="nl-sect-title">Дијагноза <span class="req">*</span></div>
-          <div class="nl-mkb-row">
-            <div style="flex:0 0 110px;position:relative">
-              <label class="nl-lbl">МКБ-10 код</label>
-              <input class="nl-inp" id="l_kod" placeholder="A00.1" style="text-transform:uppercase" autocomplete="off" oninput="nlMKBLive('l_kod','l_opis','l_kod_dd')"/>
-              <div class="nl-mkb-dd" id="l_kod_dd"></div>
-            </div>
-            <div style="flex:1;min-width:0">
-              <label class="nl-lbl">Опис</label>
-              <input class="nl-inp" id="l_opis" readonly placeholder="По пребарување…"/>
-            </div>
-            <div style="flex-shrink:0;align-self:flex-end">
-              <button class="nl-btn-mkb" onclick="nlMKB('l_kod','l_opis','l_kod_dd')">Барај</button>
-            </div>
+          <div style="position:relative;margin-bottom:0.5rem">
+            <input class="nl-inp" id="l_kod" placeholder="Внеси МКБ-10 код или опис…" style="text-transform:uppercase" autocomplete="off"/>
+            <div class="nl-mkb-dd" id="l_kod_dd"></div>
           </div>
+          <input class="nl-inp" id="l_opis" readonly placeholder="Опис — се пополнува по избор" style="margin-bottom:0.25rem"/>
 
           <!-- Anamneza -->
           <div class="nl-sect-title" style="margin-top:1.1rem">Анамнеза</div>
@@ -390,8 +382,10 @@
         </button>
       </div>`;
 
-    // Wire MKB enter — also fires immediately on Enter without waiting for debounce
-    document.getElementById('l_kod').addEventListener('keydown', ev => {
+    // Wire MKB — live on every keystroke, immediate on Enter
+    const kodInp = document.getElementById('l_kod');
+    kodInp.addEventListener('input', () => nlMKBLive('l_kod', 'l_opis', 'l_kod_dd'));
+    kodInp.addEventListener('keydown', ev => {
       if (ev.key === 'Enter') { ev.preventDefault(); clearTimeout(_mkbTimer); nlMKB('l_kod','l_opis','l_kod_dd'); }
     });
     // Wire drug search
@@ -556,7 +550,6 @@
   };
 
   // ── MKB lookup ───────────────────────────────────────────────────
-  let _mkbTimer = null;
 
   window.nlMKB = async function (codeId, opisId, ddId) {
     const codeEl = document.getElementById(codeId);
