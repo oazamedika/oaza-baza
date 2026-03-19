@@ -7,194 +7,49 @@
   <link rel="stylesheet" href="shared.css"/>
   <script src="auth-guard.js"></script>
   <style>
-    .floor-block { margin-bottom: 3rem; }
-    .floor-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.2rem;
-      font-weight: 600;
-      color: var(--dark);
-      margin-bottom: 1rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 2px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    .floor-stats {
-      font-family: 'Lato', sans-serif;
-      font-size: 0.75rem;
-      font-weight: 400;
-      color: var(--gray);
-      letter-spacing: 0.08em;
-    }
+    .summary-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;margin-bottom:2rem}
+    .summary-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem}
+    .summary-card.hl{border-left:3px solid var(--olive)}
+    .sum-lbl{font-size:0.68rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--gray);margin-bottom:0.35rem}
+    .sum-val{font-family:'Playfair Display',serif;font-size:2rem;font-weight:600;color:var(--dark);line-height:1}
 
-    /* Row label + rooms in a flex row */
-    .rooms-row {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.75rem;
-      margin-bottom: 0.75rem;
-      flex-wrap: wrap;
-    }
-    .row-label {
-      writing-mode: vertical-rl;
-      text-orientation: mixed;
-      transform: rotate(180deg);
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--gray);
-      align-self: center;
-      flex-shrink: 0;
-      min-width: 16px;
-    }
-    .rooms-row-inner {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      flex: 1;
-    }
+    .floor-block{margin-bottom:3rem}
+    .floor-title{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:600;color:var(--dark);margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:0.75rem}
+    .floor-stats{font-family:'Lato',sans-serif;font-size:0.75rem;font-weight:400;color:var(--gray);letter-spacing:0.08em}
 
-    .room-card {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-      width: 160px;
-      flex-shrink: 0;
-    }
-    .room-card-header {
-      padding: 0.5rem 0.75rem;
-      background: var(--cream);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .room-card-title {
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--dark);
-    }
-    .room-occupancy-count {
-      font-size: 0.68rem;
-      color: var(--gray);
-    }
+    /* Single flex row of column-pairs */
+    .floor-cols{display:flex;flex-wrap:wrap;gap:0.6rem;align-items:flex-start}
 
-    .bed-list { padding: 0.25rem 0; }
+    /* Each column-pair stacks top+bottom tiles */
+    .col-pair{display:flex;flex-direction:column;gap:0.6rem;flex-shrink:0;width:148px}
+    .col-pair.wide{width:calc(148px * 2 + 0.6rem)}
 
-    .bed-row {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.45rem 0.75rem;
-      border-bottom: 1px solid var(--border);
-      transition: background 0.1s;
-    }
-    .bed-row:last-child { border-bottom: none; }
+    /* Live room card */
+    .room-card{background:#fff;border:1px solid var(--border);border-radius:7px;overflow:hidden;width:148px}
+    .room-hdr{padding:0.38rem 0.7rem;background:var(--cream);border-bottom:1px solid var(--border)}
+    .room-name{font-size:0.7rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--dark)}
+    .bed-list{padding:0.15rem 0}
+    .bed-row{display:flex;align-items:center;gap:0.45rem;padding:0.38rem 0.7rem;border-bottom:1px solid var(--border)}
+    .bed-row:last-child{border-bottom:none}
+    .bed-n{font-size:0.68rem;font-weight:700;color:var(--gray);flex-shrink:0;width:12px}
+    .bed-occ{font-size:0.78rem;font-weight:700;color:var(--olive);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+    .bed-occ:hover{text-decoration:underline}
+    .bed-free{font-size:0.75rem;color:var(--border);font-style:italic;flex:1}
 
-    .bed-icon {
-      width: 26px;
-      height: 26px;
-      border-radius: 5px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .bed-icon.occupied { background: rgba(122,122,46,0.12); color: var(--olive); }
-    .bed-icon.empty    { background: var(--cream2); color: var(--border); }
+    /* Inactive / special tile */
+    .special-tile{width:148px;border-radius:7px;border:1px dashed var(--border);background:#f5f3ee;display:flex;align-items:center;justify-content:center;padding:0.5rem;min-height:64px;box-sizing:border-box}
+    .special-tile.wide{width:calc(148px * 2 + 0.6rem)}
+    .special-tile.empty{background:transparent;border-color:transparent}
+    .sp-text{font-size:0.7rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--gray);text-align:center;line-height:1.4}
 
-    .bed-label {
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--gray);
-      flex-shrink: 0;
-      min-width: 42px;
-    }
+    /* Wide-pair bottom row */
+    .wide-bot{display:flex;gap:0.6rem}
 
-    .bed-content { flex: 1; min-width: 0; }
-
-    .bed-client-name {
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: var(--olive);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      cursor: pointer;
-    }
-    .bed-client-name:hover { text-decoration: underline; }
-    .bed-client-meta {
-      font-size: 0.67rem;
-      color: var(--gray);
-      margin-top: 0.05rem;
-    }
-    .bed-empty-text {
-      font-size: 0.75rem;
-      color: var(--border);
-      font-style: italic;
-    }
-
-    .badge { display:inline-block;padding:0.1rem 0.4rem;border-radius:20px;font-size:0.6rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase; }
-    .badge-draft{background:#f0ece2;color:#8a7a55}
-    .badge-social{background:#e8f0e8;color:#3a6e3a}
-    .badge-doctor{background:#e8ecf5;color:#2e4a8a}
-    .badge-completed{background:#e6f0e6;color:#2a6e2a;border:1px solid #b5d5b5}
-
-    .legend {
-      display: flex;
-      gap: 1.5rem;
-      margin-bottom: 1.5rem;
-      flex-wrap: wrap;
-    }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.8rem;
-      color: var(--gray);
-    }
-    .legend-dot {
-      width: 12px; height: 12px;
-      border-radius: 3px;
-    }
-    .legend-dot.occupied { background: rgba(122,122,46,0.25); }
-    .legend-dot.empty    { background: var(--cream2); border: 1px solid var(--border); }
-
-    .summary-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px,1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-    .summary-card {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1rem 1.25rem;
-    }
-    .summary-label {
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--gray);
-      margin-bottom: 0.35rem;
-    }
-    .summary-value {
-      font-family: 'Playfair Display', serif;
-      font-size: 2rem;
-      font-weight: 600;
-      color: var(--dark);
-      line-height: 1;
-    }
-    .summary-card.highlight { border-left: 3px solid var(--olive); }
+    .legend{display:flex;gap:1.5rem;margin-bottom:1.5rem;flex-wrap:wrap}
+    .legend-item{display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--gray)}
+    .leg-dot{width:12px;height:12px;border-radius:3px}
+    .leg-dot.occ{background:rgba(122,122,46,0.25)}
+    .leg-dot.free{background:var(--cream2);border:1px solid var(--border)}
   </style>
 </head>
 <body>
@@ -205,20 +60,15 @@
       <h1 class="page-title">Соби</h1>
       <p class="page-subtitle">Преглед на зафатеност на соби и кревети</p>
     </div>
-
     <div class="page-content">
-      <div id="rooms-loading" style="padding:2rem 0;text-align:center;color:var(--gray);">Се вчитува…</div>
-      <div id="rooms-content" style="display:none;">
-
+      <div id="rooms-loading" style="padding:2rem 0;text-align:center;color:var(--gray)">Се вчитува…</div>
+      <div id="rooms-content" style="display:none">
         <div class="summary-row" id="summary-row"></div>
-
         <div class="legend">
-          <div class="legend-item"><div class="legend-dot occupied"></div>Зафатен</div>
-          <div class="legend-item"><div class="legend-dot empty"></div>Слободен</div>
+          <div class="legend-item"><div class="leg-dot occ"></div>Зафатен</div>
+          <div class="legend-item"><div class="leg-dot free"></div>Слободен</div>
         </div>
-
         <div id="floors-container"></div>
-
       </div>
     </div>
   </main>
@@ -227,165 +77,182 @@
 <script src="sidebar.js"></script>
 <script src="client-card.js"></script>
 <script>
-// Floor definitions: floor → [room numbers]
-const FLOOR_ROOMS = {
-  1: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
-  2: [17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33],
-  3: [34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50],
-  4: [51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67],
-  5: [68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84],
-};
+const TOTAL_BEDS = 84 * 2;
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
-// Display row order per floor:
-// floor 1 (16 rooms): row1 = last3+first3, row2 = middle reversed
-// floor 2-5 (17 rooms): row1 = last4+first3, row2 = middle reversed
-function getDisplayRows(rooms) {
-  const n = rooms.length;
-  const tail = n === 16 ? 3 : 4;
-  const row1 = rooms.slice(n - tail).concat(rooms.slice(0, 3));
-  const row2 = rooms.slice(3, n - tail).slice().reverse();
-  return [row1, row2];
+// ─────────────────────────────────────────────────────────────────
+// TILE DEFINITIONS
+// rm(n)   = room tile, n = absolute room number
+// sp(lbl) = special/inactive tile with label
+// em()    = empty transparent placeholder
+// ─────────────────────────────────────────────────────────────────
+const rm  = n   => ({t:'room',    n});
+const sp  = lbl => ({t:'special', lbl});
+const em  = ()  => ({t:'empty'});
+
+// ─────────────────────────────────────────────────────────────────
+// FLOOR LAYOUTS
+// Each floor = array of column-pair objects rendered left→right.
+//
+// Normal pair:   { top, bot }
+//   top and bot are tiles stacked vertically, each 148px wide.
+//
+// Wide pair:     { wide:true, top, botL, botR }
+//   top is a tile spanning full pair width (2×148+gap).
+//   botL and botR are two 148px tiles side by side underneath.
+//
+// Floor 1 (rooms 1–16):
+//   [14,13][15,12][16,11][Скали,10][Геронто,9]
+//   [Дневна wide / 8 + РаботнаТерапија]
+//   [Скали,7][6,1][5,2][4,3]
+//
+// Floors 2–5 (17 rooms each, starting at s=17/34/51/68):
+//   Pattern (using offset n within floor, 1=first room of that floor):
+//   [off13,off14][off12,off15][off11,off16][off10,Скали][off9,Геронто]
+//   [Дневна wide / Тоалети + off17]
+//   [off8,off17] ← wait, off17 already used above
+// ─────────────────────────────────────────────────────────────────
+// Re-reading floor2 spec: "24-33" is a pair after the Дневна/Тоалети pair.
+// 24=off8, 33=off17. Дневна/Тоалети has no room underneath it.
+// So: wide pair bottom = [Тоалети, em()]
+// Then separate pair [off8, off17] = [24, 33]
+
+function floorLayout(floor) {
+  const s = [0,1,17,34,51,68][floor]; // absolute start of this floor's rooms
+
+  if (floor === 1) {
+    // rooms 1-16
+    return [
+      {top:rm(14), bot:rm(13)},
+      {top:rm(15), bot:rm(12)},
+      {top:rm(16), bot:rm(11)},
+      {top:sp('Скали'),              bot:rm(10)},
+      {top:sp('Геронто\nДомаќинки'), bot:rm(9) },
+      {wide:true, top:sp('Дневна'), botL:rm(8), botR:sp('Работна\nТерапија')},
+      {top:sp('Скали'), bot:rm(7)},
+      {top:rm(6), bot:rm(1)},
+      {top:rm(5), bot:rm(2)},
+      {top:rm(4), bot:rm(3)},
+    ];
+  } else {
+    // floors 2-5: 17 rooms, s = first room number
+    // offset helper: o(n) = room at position n within this floor
+    const o = n => rm(s + n - 1);
+    return [
+      {top:o(13), bot:o(14)},
+      {top:o(12), bot:o(15)},
+      {top:o(11), bot:o(16)},
+      {top:o(10), bot:sp('Скали')},
+      {top:o(9),  bot:sp('Геронто\nДомаќинки')},
+      {wide:true, top:sp('Дневна'), botL:sp('Тоалети'), botR:em()},
+      {top:o(8),  bot:o(17)},
+      {top:o(7),  bot:sp('Скали')},
+      {top:o(6),  bot:o(1)},
+      {top:o(5),  bot:o(2)},
+      {top:o(4),  bot:o(3)},
+    ];
+  }
 }
 
-const TOTAL_ROOMS = 84;
-const BEDS_PER_ROOM = 2;
-const TOTAL_BEDS = TOTAL_ROOMS * BEDS_PER_ROOM;
+// ─────────────────────────────────────────────────────────────────
+// HTML RENDERERS
+// ─────────────────────────────────────────────────────────────────
+function roomCardHtml(num, occupied) {
+  let beds = '';
+  for (let b = 1; b <= 2; b++) {
+    const c = occupied[`${num}-${b}`];
+    if (c) {
+      beds += `<div class="bed-row"><span class="bed-n">${b}</span><span class="bed-occ" onclick="openClientCard('${esc(c.id)}')">${esc(c.ime_prezime)}</span></div>`;
+    } else {
+      beds += `<div class="bed-row"><span class="bed-n">${b}</span><span class="bed-free">Слободен</span></div>`;
+    }
+  }
+  return `<div class="room-card"><div class="room-hdr"><span class="room-name">Соба ${num}</span></div><div class="bed-list">${beds}</div></div>`;
+}
 
-const STATUS_LABEL = {
-  draft:     { text:'Нацрт',          cls:'badge-draft'     },
-  social:    { text:'Чека социјален', cls:'badge-social'    },
-  doctor:    { text:'Чека доктор',    cls:'badge-doctor'    },
-  completed: { text:'Завршен прием',  cls:'badge-completed' },
-};
+function specialTileHtml(lbl, wide) {
+  const cls = `special-tile${wide?' wide':''}`;
+  if (!lbl) return `<div class="${cls} empty"></div>`;
+  const txt = lbl.split('\n').map(l=>esc(l)).join('<br>');
+  return `<div class="${cls}"><span class="sp-text">${txt}</span></div>`;
+}
 
-function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function tileHtml(tile, occupied, wide) {
+  if (!tile || tile.t === 'empty') return `<div class="special-tile${wide?' wide':''} empty"></div>`;
+  if (tile.t === 'room')    return roomCardHtml(tile.n, occupied);
+  if (tile.t === 'special') return specialTileHtml(tile.lbl, wide);
+  return '';
+}
 
+function colPairHtml(pair, occupied) {
+  if (pair.wide) {
+    return `<div class="col-pair wide">
+      ${tileHtml(pair.top, occupied, true)}
+      <div class="wide-bot">${tileHtml(pair.botL, occupied, false)}${tileHtml(pair.botR, occupied, false)}</div>
+    </div>`;
+  }
+  return `<div class="col-pair">${tileHtml(pair.top, occupied, false)}${tileHtml(pair.bot, occupied, false)}</div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   const wait = setInterval(() => {
-    if (window._username !== undefined) {
-      clearInterval(wait);
-      buildSidebar('Соби');
-      loadRooms();
-    }
+    if (window._username !== undefined) { clearInterval(wait); buildSidebar('Соби'); loadRooms(); }
   }, 30);
 });
 
 async function loadRooms() {
-  const { data, error } = await window._sb
+  const { data } = await window._sb
     .from('clients')
-    .select('id,ime_prezime,obrakanje,floor_number,room_number,bed_number,status')
+    .select('id,ime_prezime,room_number,bed_number,status')
     .neq('status','discharged')
     .not('room_number','is',null);
 
   document.getElementById('rooms-loading').style.display = 'none';
   document.getElementById('rooms-content').style.display = 'block';
 
-  // Build lookup: "room-bed" → client
   const occupied = {};
-  if (data) {
-    data.forEach(c => {
-      const key = `${c.room_number}-${c.bed_number}`;
-      occupied[key] = c;
-    });
-  }
+  (data||[]).forEach(c => { occupied[`${c.room_number}-${c.bed_number}`] = c; });
 
   const takenCount = Object.keys(occupied).length;
   const freeCount  = TOTAL_BEDS - takenCount;
 
   document.getElementById('summary-row').innerHTML = `
-    <div class="summary-card highlight">
-      <div class="summary-label">Вкупно кревети</div>
-      <div class="summary-value">${TOTAL_BEDS}</div>
-    </div>
-    <div class="summary-card highlight">
-      <div class="summary-label">Зафатени</div>
-      <div class="summary-value">${takenCount}</div>
-    </div>
-    <div class="summary-card highlight">
-      <div class="summary-label">Слободни</div>
-      <div class="summary-value">${freeCount}</div>
-    </div>
-    <div class="summary-card highlight">
-      <div class="summary-label">Пополнетост</div>
-      <div class="summary-value">${TOTAL_BEDS > 0 ? Math.round(takenCount/TOTAL_BEDS*100) : 0}%</div>
-    </div>`;
+    <div class="summary-card hl"><div class="sum-lbl">Вкупно кревети</div><div class="sum-val">${TOTAL_BEDS}</div></div>
+    <div class="summary-card hl"><div class="sum-lbl">Зафатени</div><div class="sum-val">${takenCount}</div></div>
+    <div class="summary-card hl"><div class="sum-lbl">Слободни</div><div class="sum-val">${freeCount}</div></div>
+    <div class="summary-card hl"><div class="sum-lbl">Пополнетост</div><div class="sum-val">${TOTAL_BEDS>0?Math.round(takenCount/TOTAL_BEDS*100):0}%</div></div>`;
 
   let html = '';
 
   for (let floor = 1; floor <= 5; floor++) {
-    const rooms = FLOOR_ROOMS[floor];
-    const [row1, row2] = getDisplayRows(rooms);
-    let floorTaken = 0;
-
-    function buildRoom(roomNum) {
-      let roomTaken = 0;
-      let bedsHtml = '';
-      for (let bed = 1; bed <= BEDS_PER_ROOM; bed++) {
-        const key = `${roomNum}-${bed}`;
-        const client = occupied[key];
-        if (client) { roomTaken++; floorTaken++; }
-
-        const icon = client
-          ? `<div class="bed-icon occupied"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>`
-          : `<div class="bed-icon empty"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.35"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>`;
-
-        const content = client
-          ? `<div class="bed-content">
-               <div class="bed-client-name" onclick="openClientCard('${esc(client.id)}')">${esc(client.obrakanje ? client.obrakanje+' ' : '')}${esc(client.ime_prezime)}</div>
-               <div class="bed-client-meta"><span class="badge ${STATUS_LABEL[client.status]?.cls||''}">${STATUS_LABEL[client.status]?.text||client.status}</span></div>
-             </div>`
-          : `<div class="bed-content"><div class="bed-empty-text">Слободен</div></div>`;
-
-        bedsHtml += `<div class="bed-row">${icon}<div class="bed-label">Кр${bed}</div>${content}</div>`;
-      }
-      const occ = roomTaken === BEDS_PER_ROOM ? 'Полна' : roomTaken > 0 ? `${roomTaken}/${BEDS_PER_ROOM}` : 'Слободна';
-      return `<div class="room-card">
-        <div class="room-card-header">
-          <span class="room-card-title">С${roomNum}</span>
-          <span class="room-occupancy-count">${occ}</span>
-        </div>
-        <div class="bed-list">${bedsHtml}</div>
-      </div>`;
-    }
-
-    // Build rows — we need floorTaken after both rows, but buildRoom mutates it via closure
-    // So build HTML strings, tally comes from closure
-    const row1Html = row1.map(buildRoom).join('');
-    const row2Html = row2.map(buildRoom).join('');
-    const floorBeds = rooms.length * BEDS_PER_ROOM;
-
-    html += `
-      <div class="floor-block">
-        <div class="floor-title">
-          Кат ${floor}
-          <span class="floor-stats" id="ft-${floor}">${floorBeds} кревети · ${rooms.length} соби</span>
-        </div>
-        <div class="rooms-row">
-          <div class="row-label">Ред А</div>
-          <div class="rooms-row-inner">${row1Html}</div>
-        </div>
-        <div class="rooms-row">
-          <div class="row-label">Ред Б</div>
-          <div class="rooms-row-inner">${row2Html}</div>
-        </div>
-      </div>`;
+    const layout = buildFloorLayout(floor, occupied);
+    html += layout;
   }
 
   document.getElementById('floors-container').innerHTML = html;
+}
 
-  // Update floor stats with actual occupancy now that floorTaken is computed per-floor
-  // (floorTaken is reset per floor in the loop above via closure — re-compute cleanly)
-  for (let floor = 1; floor <= 5; floor++) {
-    const rooms = FLOOR_ROOMS[floor];
-    let taken = 0;
-    rooms.forEach(r => {
-      for (let b = 1; b <= BEDS_PER_ROOM; b++) {
-        if (occupied[`${r}-${b}`]) taken++;
-      }
-    });
-    const el = document.getElementById(`ft-${floor}`);
-    if (el) el.textContent = `${taken} / ${rooms.length * BEDS_PER_ROOM} кревети зафатени`;
-  }
+function buildFloorLayout(floor, occupied) {
+  const pairs = floorLayout(floor);
+
+  // Collect all room numbers in this floor's layout to count occupancy
+  const roomNums = [];
+  pairs.forEach(p => {
+    [p.top, p.bot, p.botL, p.botR].forEach(t => { if (t && t.t==='room') roomNums.push(t.n); });
+  });
+  let taken = 0;
+  roomNums.forEach(n => { for(let b=1;b<=2;b++){if(occupied[`${n}-${b}`])taken++;} });
+  const totalBeds = roomNums.length * 2;
+
+  const colsHtml = pairs.map(p => colPairHtml(p, occupied)).join('');
+
+  return `<div class="floor-block">
+    <div class="floor-title">Кат ${floor}<span class="floor-stats">${taken} / ${totalBeds} кревети зафатени</span></div>
+    <div class="floor-cols">${colsHtml}</div>
+  </div>`;
 }
 </script>
 </body>
