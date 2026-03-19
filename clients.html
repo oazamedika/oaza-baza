@@ -7,86 +7,19 @@
   <link rel="stylesheet" href="shared.css"/>
   <script src="auth-guard.js"></script>
   <style>
-    .badge{display:inline-block;padding:0.2rem 0.65rem;border-radius:20px;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase}
-    .badge-draft{background:#f0ece2;color:#8a7a55}
-    .badge-doctor{background:#e8ecf5;color:#2e4a8a}
-    .badge-social{background:#e8f0e8;color:#3a6e3a}
-    .badge-completed{background:#e6f0e6;color:#2a6e2a;border:1px solid #b5d5b5}
-    .clients-table{width:100%;border-collapse:collapse;font-size:0.88rem}
-    .clients-table th{text-align:left;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gray);padding:0.75rem 1rem;border-bottom:2px solid var(--border)}
-    .clients-table td{padding:0.85rem 1rem;border-bottom:1px solid var(--border);color:var(--dark);vertical-align:middle}
-    .clients-table tr:last-child td{border-bottom:none}
-    .clients-table tr:hover td{background:#faf7f2}
-    .btn-new{display:inline-flex;align-items:center;gap:0.5rem;padding:0.65rem 1.25rem;background:var(--dark);color:#fff;border:none;border-radius:5px;font-family:'Lato',sans-serif;font-size:0.82rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:background 0.15s}
+    .badge{display:inline-block;padding:.2rem .65rem;border-radius:20px;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+    .badge-draft{background:#f0ece2;color:#8a7a55}.badge-doctor{background:#e8ecf5;color:#2e4a8a}.badge-social{background:#e8f0e8;color:#3a6e3a}.badge-completed{background:#e6f0e6;color:#2a6e2a;border:1px solid #b5d5b5}
+    .clients-table{width:100%;border-collapse:collapse;font-size:.88rem}
+    .clients-table th{text-align:left;font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gray);padding:.75rem 1rem;border-bottom:2px solid var(--border)}
+    .clients-table td{padding:.85rem 1rem;border-bottom:1px solid var(--border);color:var(--dark);vertical-align:middle}
+    .clients-table tr:last-child td{border-bottom:none}.clients-table tr:hover td{background:#faf7f2}
+    .btn-new{display:inline-flex;align-items:center;gap:.5rem;padding:.65rem 1.25rem;background:var(--dark);color:#fff;border:none;border-radius:5px;font-family:'Lato',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:background .15s}
     .btn-new:hover{background:var(--olive)}
-    .ci-avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:0.85rem;font-weight:700;overflow:hidden}
-    .ci-avatar img{width:100%;height:100%;object-fit:cover}
-    .ci-cell{display:flex;align-items:center;gap:0.75rem}
-    .link-view{font-size:0.82rem;color:var(--olive);text-decoration:none;font-weight:700;cursor:pointer;background:none;border:none;padding:0}
-    .link-view:hover{text-decoration:underline}
-    .empty-state{text-align:center;padding:4rem 2rem;color:var(--gray)}
-    .empty-state svg{opacity:0.25;margin-bottom:1rem;display:block;margin-left:auto;margin-right:auto}
-    /* Modal */
-    .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(47,42,36,0.55);z-index:100;align-items:center;justify-content:center;padding:1rem}
-    .modal-backdrop.open{display:flex}
-    .modal{background:#fff;border-radius:10px;width:100%;max-width:720px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);display:flex;flex-direction:column}
-    .modal-header{padding:1.5rem 1.75rem 1rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;z-index:2}
-    .modal-header-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem}
-    .modal-title{font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:600;color:var(--dark)}
-    .modal-close{background:none;border:none;cursor:pointer;color:var(--gray);padding:0.25rem;display:flex;transition:color 0.15s}.modal-close:hover{color:var(--dark)}
-    .step-indicator{display:flex}
-    .step{display:flex;align-items:center;gap:0.5rem;flex:1}
-    .step:not(:last-child)::after{content:'';flex:1;height:2px;background:var(--border);margin:0 0.5rem;transition:background 0.2s}
-    .step.done:not(:last-child)::after{background:var(--olive)}
-    .step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;background:var(--border);color:var(--gray);flex-shrink:0;transition:background 0.2s,color 0.2s}
-    .step.active .step-num{background:var(--dark);color:#fff}.step.done .step-num{background:var(--olive);color:#fff}
-    .step-label{font-size:0.72rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray);white-space:nowrap}
-    .step.active .step-label{color:var(--dark)}.step.done .step-label{color:var(--olive)}
-    .modal-body{padding:1.5rem 1.75rem;flex:1}
-    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem 1.25rem}.form-grid .full{grid-column:1/-1}
-    .fg{display:flex;flex-direction:column}
-    .fl{font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gray);margin-bottom:0.4rem}
-    .fl .req{color:#c0392b;margin-left:2px}
-    .fi,.fs{padding:0.7rem 0.85rem;border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif;font-size:0.9rem;color:var(--dark);background:#fff;outline:none;transition:border-color 0.15s,box-shadow 0.15s}
-    .fi:focus,.fs:focus{border-color:var(--olive);box-shadow:0 0 0 3px rgba(122,122,46,0.1)}
-    .fi.error{border-color:#c0392b}.fi[readonly]{background:var(--cream)}
-    .fsect{margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border)}
-    .fsect-title{font-family:'Playfair Display',serif;font-size:1rem;font-weight:600;color:var(--dark);margin-bottom:0.2rem}
-    .fsect-sub{font-size:0.8rem;color:var(--gray);margin-bottom:0.85rem}
-    .pic-wrap{display:flex;align-items:center;gap:1.25rem}
-    .pic-preview{width:72px;height:72px;border-radius:50%;background:var(--cream2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--gray);overflow:hidden;flex-shrink:0}
-    .pic-preview img{width:100%;height:100%;object-fit:cover}
-    .btn-upload{display:inline-flex;align-items:center;gap:0.4rem;padding:0.5rem 0.9rem;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--gray);font-family:'Lato',sans-serif;font-size:0.82rem;cursor:pointer;transition:all 0.15s}
-    .btn-upload:hover{border-color:var(--dark);color:var(--dark)}
-    .sr-item{background:var(--cream);border:1px solid var(--border);border-radius:6px;padding:1rem;margin-bottom:0.75rem;position:relative}
-    .sr-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem}
-    .sr-remove{position:absolute;top:0.6rem;right:0.6rem;background:none;border:none;cursor:pointer;color:var(--gray);font-size:1.1rem;padding:0.2rem 0.4rem;border-radius:3px}
-    .sr-remove:hover{background:#fdf0ef;color:#c0392b}
-    .btn-add-dashed{display:inline-flex;align-items:center;gap:0.4rem;padding:0.5rem 0.9rem;background:transparent;border:1px dashed var(--olive);border-radius:4px;color:var(--olive);font-family:'Lato',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;transition:background 0.15s}
-    .btn-add-dashed:hover{background:rgba(122,122,46,0.07)}
-    .file-dz{border:2px dashed var(--border);border-radius:6px;padding:1.5rem;text-align:center;color:var(--gray);font-size:0.85rem;cursor:pointer;transition:border-color 0.15s,background 0.15s}
-    .file-dz:hover{border-color:var(--olive);background:rgba(122,122,46,0.04)}
-    .file-list{margin-top:0.75rem;display:flex;flex-direction:column;gap:0.4rem}
-    .file-item{display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.75rem;background:var(--cream);border:1px solid var(--border);border-radius:4px;font-size:0.82rem}
-    .file-rm{background:none;border:none;cursor:pointer;color:var(--gray);font-size:1rem}.file-rm:hover{color:#c0392b}
-    .step-status-card{border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1rem}
-    .ssc-hdr{display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.1rem;background:var(--cream);border-bottom:1px solid var(--border)}
-    .ssc-title{font-weight:700;font-size:0.9rem;color:var(--dark)}
-    .ssc-body{padding:1rem 1.1rem;font-size:0.88rem;color:var(--gray);line-height:1.7}
-    .step-pending{display:flex;flex-direction:column;align-items:center;text-align:center;padding:2rem 1rem;color:var(--gray);gap:0.75rem}
-    .step-pending svg{opacity:0.3}.step-pending strong{font-size:1rem;color:var(--dark);font-family:'Playfair Display',serif}.step-pending p{font-size:0.85rem;max-width:360px;line-height:1.7}
-    .drug-wrap{position:relative}
-    .drug-sugg{position:absolute;top:calc(100% + 2px);left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:50;max-height:220px;overflow-y:auto;display:none}
-    .dsi{padding:0.6rem 0.85rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.85rem}
-    .dsi:hover{background:var(--cream)}
-    .dsi .dn{font-weight:700}.dsi .dm{font-size:0.75rem;color:var(--gray)}
-    .modal-footer{padding:1rem 1.75rem 1.5rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:1rem;position:sticky;bottom:0;background:#fff}
-    .modal-error{font-size:0.82rem;color:#c0392b;flex:1}
-    .modal-footer-btns{display:flex;gap:0.75rem}
-    .btn-secondary{padding:0.65rem 1.2rem;background:transparent;border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif;font-size:0.85rem;font-weight:700;color:var(--gray);cursor:pointer;transition:all 0.15s}
-    .btn-secondary:hover{border-color:var(--dark);color:var(--dark)}
-    .btn-primary{padding:0.65rem 1.4rem;background:var(--dark);border:none;border-radius:4px;font-family:'Lato',sans-serif;font-size:0.85rem;font-weight:700;letter-spacing:0.08em;color:#fff;cursor:pointer;transition:background 0.15s}
-    .btn-primary:hover{background:var(--olive)}.btn-primary:disabled{opacity:0.5;pointer-events:none}
+    .ci-av{width:34px;height:34px;border-radius:50%;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:.85rem;font-weight:700;overflow:hidden;flex-shrink:0}
+    .ci-av img{width:100%;height:100%;object-fit:cover}
+    .ci-cell{display:flex;align-items:center;gap:.75rem}
+    .lnk{font-size:.82rem;color:var(--olive);font-weight:700;cursor:pointer;background:none;border:none;padding:0;text-decoration:none}.lnk:hover{text-decoration:underline}
+    .empty-state{text-align:center;padding:4rem 2rem;color:var(--gray)}.empty-state svg{opacity:.25;margin-bottom:1rem;display:block;margin-left:auto;margin-right:auto}
   </style>
 </head>
 <body>
@@ -107,9 +40,7 @@
         <div id="clients-loading" style="padding:3rem;text-align:center;color:var(--gray)">Се вчитува…</div>
         <div id="clients-table-wrap" style="display:none">
           <table class="clients-table">
-            <thead><tr>
-              <th>Корисник</th><th>Кат/Соба/Кревет</th><th>ЕМБГ</th><th>Телефон</th><th>Статус</th><th>Датум</th><th></th>
-            </tr></thead>
+            <thead><tr><th>Корисник</th><th>Кат/Соба/Кревет</th><th>ЕМБГ</th><th>Телефон</th><th>Статус</th><th>Датум</th><th></th></tr></thead>
             <tbody id="clients-tbody"></tbody>
           </table>
         </div>
@@ -124,548 +55,60 @@
   </main>
 </div>
 
-<!-- New/Edit Client Modal -->
-<div class="modal-backdrop" id="modalBackdrop">
-  <div class="modal" role="dialog" aria-modal="true">
-    <div class="modal-header">
-      <div class="modal-header-top">
-        <h2 class="modal-title" id="modalTitle">Регистрација на нов корисник</h2>
-        <button class="modal-close" id="modalClose">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <div class="step-indicator" id="stepIndicator">
-        <div class="step active" data-step="1"><div class="step-num">1</div><span class="step-label">Општи податоци</span></div>
-        <div class="step" data-step="2"><div class="step-num">2</div><span class="step-label">Доктор</span></div>
-        <div class="step" data-step="3"><div class="step-num">3</div><span class="step-label">Социјален работник</span></div>
-      </div>
-    </div>
-    <div class="modal-body" id="modalBody"></div>
-    <div class="modal-footer">
-      <div class="modal-error" id="modalError"></div>
-      <div class="modal-footer-btns">
-        <button class="btn-secondary" id="btnBack" style="display:none">Назад</button>
-        <button class="btn-primary" id="btnNext">Следно</button>
-      </div>
-    </div>
-  </div>
-</div>
-<input type="file" id="f_pic_input" accept="image/*" style="display:none"/>
-<input type="file" id="f_files_input" multiple style="display:none"/>
-
 <script src="sidebar.js"></script>
+<script src="admission.js"></script>
 <script src="client-card.js"></script>
 <script>
-// ── Boot ──────────────────────────────────────────────────────────
+const STATUS_LABEL={draft:{t:'Нацрт',c:'badge-draft'},doctor:{t:'Чека доктор',c:'badge-doctor'},social:{t:'Чека социјален',c:'badge-social'},completed:{t:'Завршен прием',c:'badge-completed'}};
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function isDoc(){return(window._username||'').toLowerCase()==='doktor';}
+function isSoc(){return(window._username||'').toLowerCase()==='socijalenrabotnik';}
+
 window.addEventListener('DOMContentLoaded',()=>{
   const wait=setInterval(()=>{
-    if(window._username!==undefined){
-      clearInterval(wait);
-      buildSidebar('Корисници');
-      initPage();
-    }
+    if(window._username!==undefined){clearInterval(wait);buildSidebar('Корисници');initPage();}
   },30);
 });
 
-const STATUS_LABEL={
-  draft:     {text:'Нацрт',              cls:'badge-draft'},
-  doctor:    {text:'Чека доктор',        cls:'badge-doctor'},
-  social:    {text:'Чека социјален',     cls:'badge-social'},
-  completed: {text:'Завршен прием',      cls:'badge-completed'},
-};
-
-function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function numVal(id){const v=document.getElementById(id)?.value;if(!v||v.trim()==='')return null;return parseFloat(v);}
-
 async function loadClients(){
-  const{data}=await window._sb.from('clients')
-    .select('id,ime_prezime,floor_number,room_number,bed_number,embg,telefon,status,created_at,obrakanje,profile_pic_url')
-    .order('created_at',{ascending:false});
+  const{data}=await window._sb.from('clients').select('id,ime_prezime,floor_number,room_number,bed_number,embg,telefon,status,created_at,obrakanje,profile_pic_url').order('created_at',{ascending:false});
   document.getElementById('clients-loading').style.display='none';
   if(!data||!data.length){document.getElementById('clients-empty').style.display='block';return;}
   const tbody=document.getElementById('clients-tbody');
   tbody.innerHTML=data.map(c=>{
-    const st=STATUS_LABEL[c.status]||{text:c.status,cls:'badge-draft'};
+    const st=STATUS_LABEL[c.status]||{t:c.status,c:'badge-draft'};
     const loc=(c.floor_number&&c.room_number&&c.bed_number)?`К${c.floor_number}/С${c.room_number}/Кр${c.bed_number}`:'—';
-    const avatar=c.profile_pic_url
-      ?`<div class="ci-avatar"><img src="${esc(c.profile_pic_url)}" alt=""/></div>`
-      :`<div class="ci-avatar">${esc((c.ime_prezime||'?').charAt(0))}</div>`;
-    const statusCell=c.status!=='completed'?`<td><span class="badge ${st.cls}">${st.text}</span></td>`:`<td></td>`;
+    const avatar=c.profile_pic_url?`<div class="ci-av"><img src="${esc(c.profile_pic_url)}" alt=""/></div>`:`<div class="ci-av">${esc((c.ime_prezime||'?').charAt(0))}</div>`;
+    const statusCell=c.status!=='completed'?`<td><span class="badge ${st.c}">${st.t}</span></td>`:'<td></td>';
+    // Action buttons based on role
+    const actions=[];
+    actions.push(`<button class="lnk" onclick="openClientCard('${c.id}')">Преглед</button>`);
+    if(canManageClients()&&c.status!=='completed')actions.push(`<button class="lnk" onclick="openAdmissionForClient('${c.id}',loadClients)">Прием</button>`);
+    if(isDoc()&&c.status==='doctor')actions.push(`<button class="lnk" onclick="openAdmissionForClient('${c.id}',loadClients)">Заврши</button>`);
+    if(isSoc()&&c.status==='social')actions.push(`<button class="lnk" onclick="openAdmissionForClient('${c.id}',loadClients)">Заврши</button>`);
     return`<tr>
       <td><div class="ci-cell">${avatar}<div style="font-weight:700">${esc(c.obrakanje?c.obrakanje+' ':'')}${esc(c.ime_prezime)}</div></div></td>
-      <td style="font-size:0.82rem">${esc(loc)}</td>
-      <td style="font-family:monospace;font-size:0.82rem">${esc(c.embg||'—')}</td>
-      <td style="font-size:0.82rem">${esc(c.telefon||'—')}</td>
+      <td style="font-size:.82rem">${esc(loc)}</td>
+      <td style="font-family:monospace;font-size:.82rem">${esc(c.embg||'—')}</td>
+      <td style="font-size:.82rem">${esc(c.telefon||'—')}</td>
       ${statusCell}
-      <td style="color:var(--gray);font-size:0.82rem">${c.created_at?new Date(c.created_at).toLocaleDateString('mk-MK'):'—'}</td>
-      <td style="display:flex;gap:0.5rem;align-items:center">
-        <button class="link-view" onclick="openClientCard('${c.id}')">Преглед</button>
-        ${(c.status!=='completed'&&canManageClients())?`<button class="link-view" onclick="openAdmissionModal('${c.id}')">Прием</button>`:''}
-        ${(c.status==='doctor'&&isDoctor())?`<button class="link-view" onclick="openAdmissionModal('${c.id}')">Прием</button>`:''}
-        ${(c.status==='social'&&isSocial())?`<button class="link-view" onclick="openAdmissionModal('${c.id}')">Прием</button>`:''}
-      </td>
+      <td style="color:var(--gray);font-size:.82rem">${c.created_at?new Date(c.created_at).toLocaleDateString('mk-MK'):'—'}</td>
+      <td style="display:flex;gap:.5rem;align-items:center">${actions.join('')}</td>
     </tr>`;
   }).join('');
   document.getElementById('clients-table-wrap').style.display='block';
 }
 
-function isDoctor(){return(window._username||'').toLowerCase()==='doktor';}
-function isSocial(){return(window._username||'').toLowerCase()==='socijalenrabotnik';}
-
 function initPage(){
   if(canManageClients()){
     document.getElementById('new-btn-wrap').style.display='';
-    document.getElementById('btnNewClient').addEventListener('click',()=>openModal(null));
+    document.getElementById('btnNewClient').onclick=()=>openNewAdmission(loadClients);
   }
   loadClients();
-  // Check for ?edit= param
+  // Handle ?edit= param from client-card edit button
   const params=new URLSearchParams(window.location.search);
-  if(params.get('edit'))openClientCard(params.get('edit'));
+  if(params.get('edit'))setTimeout(()=>openClientCard(params.get('edit')),500);
 }
-
-// ══════════════════════════════════════════════════════════════════
-//  ADMISSION MODAL
-// ══════════════════════════════════════════════════════════════════
-let currentStep=1,savedClientId=null,srodstvoItems=[],picFile=null,uploadFiles=[];
-let chronicDiagItems=[],chronicTherapyItems=[],selectedDrugName='',drugTimer=null;
-let mkbCache={};
-let editingClientId=null; // for existing client admission continuation
-
-function openModal(clientId){
-  editingClientId=clientId;
-  currentStep=1;savedClientId=clientId;srodstvoItems=[];picFile=null;uploadFiles=[];
-  chronicDiagItems=[];chronicTherapyItems=[];selectedDrugName='';
-  document.getElementById('modalTitle').textContent=clientId?'Продолжи со прием':'Регистрација на нов корисник';
-  if(clientId){
-    // Jump to correct step based on client status
-    loadClientStatus(clientId);
-  } else {
-    renderStep();
-    document.getElementById('modalBackdrop').classList.add('open');
-    document.body.style.overflow='hidden';
-  }
-}
-
-async function openAdmissionModal(clientId){
-  const{data}=await window._sb.from('clients').select('status').eq('id',clientId).single();
-  editingClientId=clientId;
-  savedClientId=clientId;
-  chronicDiagItems=[];chronicTherapyItems=[];selectedDrugName='';
-  document.getElementById('modalTitle').textContent='Продолжи со прием';
-  if(data.status==='doctor')currentStep=2;
-  else if(data.status==='social')currentStep=3;
-  else currentStep=1;
-  renderStep();
-  document.getElementById('modalBackdrop').classList.add('open');
-  document.body.style.overflow='hidden';
-}
-
-async function loadClientStatus(clientId){
-  const{data}=await window._sb.from('clients').select('status').eq('id',clientId).single();
-  if(data.status==='doctor')currentStep=2;
-  else if(data.status==='social')currentStep=3;
-  else currentStep=1;
-  renderStep();
-  document.getElementById('modalBackdrop').classList.add('open');
-  document.body.style.overflow='hidden';
-}
-
-function closeModal(){
-  document.getElementById('modalBackdrop').classList.remove('open');
-  document.body.style.overflow='';
-  clearError();loadClients();
-}
-document.getElementById('modalClose').addEventListener('click',closeModal);
-document.getElementById('modalBackdrop').addEventListener('click',e=>{if(e.target===document.getElementById('modalBackdrop'))closeModal();});
-
-function renderStep(){
-  updateStepIndicator();clearError();
-  const isManager=canManageClients();
-  const btnNext=document.getElementById('btnNext');
-  const btnBack=document.getElementById('btnBack');
-  btnBack.style.display='none'; // no back — each step is saved to DB
-
-  if(currentStep===1){
-    // Only Menadzer/GS can do step 1
-    if(!isManager){document.getElementById('modalBody').innerHTML=renderReadOnly('Чекор 1 го пополнуваат Менаџерот или Главната Сестра.');btnNext.style.display='none';return;}
-    btnNext.textContent='Зачувај и продолжи';btnNext.style.display='';
-    document.getElementById('modalBody').innerHTML=renderStep1HTML();
-    setupStep1();
-  } else if(currentStep===2){
-    // Doctor does step 2
-    if(isDoctor()){
-      btnNext.textContent='Потврди — Доктор';btnNext.style.display='';
-      document.getElementById('modalBody').innerHTML=renderDoctorFormHTML();
-      // setup mkb lookup
-    } else if(isManager){
-      // Manager can view step 2 status
-      btnNext.style.display='none';
-      document.getElementById('modalBody').innerHTML=renderStatusView(2);
-    } else {
-      btnNext.style.display='none';
-      document.getElementById('modalBody').innerHTML=renderReadOnly('Чекор 2 го пополнува Докторот.');
-    }
-  } else if(currentStep===3){
-    // Social worker does step 3
-    if(isSocial()){
-      btnNext.textContent='Потврди — Социјален работник';btnNext.style.display='';
-      document.getElementById('modalBody').innerHTML=renderSocialFormHTML();
-    } else if(isManager){
-      btnNext.style.display='none';
-      document.getElementById('modalBody').innerHTML=renderStatusView(3);
-    } else {
-      btnNext.style.display='none';
-      document.getElementById('modalBody').innerHTML=renderReadOnly('Чекор 3 го пополнува Социјалниот работник.');
-    }
-  }
-}
-
-function updateStepIndicator(){
-  document.querySelectorAll('.step').forEach(el=>{
-    const s=parseInt(el.dataset.step);
-    el.classList.toggle('active',s===currentStep);
-    el.classList.toggle('done',s<currentStep);
-  });
-}
-
-function renderReadOnly(msg){
-  return`<div class="step-pending"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><strong>Информација</strong><p>${esc(msg)}</p></div>`;
-}
-
-function renderStatusView(upToStep){
-  const cards=[];
-  cards.push(`<div class="step-status-card"><div class="ssc-hdr"><span class="ssc-title">Чекор 1 — Општи податоци</span><span class="badge badge-completed">Завршен</span></div><div class="ssc-body">Основните информации за корисникот се снимени.</div></div>`);
-  if(upToStep>=3){
-    cards.push(`<div class="step-status-card"><div class="ssc-hdr"><span class="ssc-title">Чекор 2 — Доктор</span><span class="badge badge-completed">Завршен</span></div><div class="ssc-body">Докторот го завршил својот дел.</div></div>`);
-    cards.push(`<div class="step-status-card"><div class="ssc-hdr"><span class="ssc-title">Чекор 3 — Социјален работник</span><span class="badge badge-doctor">На чекање</span></div><div class="ssc-body">Чека на Социјалниот работник.</div></div>`);
-  } else {
-    cards.push(`<div class="step-status-card"><div class="ssc-hdr"><span class="ssc-title">Чекор 2 — Доктор</span><span class="badge badge-doctor">На чекање</span></div><div class="ssc-body">Чека на Докторот да го пополни.</div></div>`);
-  }
-  return cards.join('');
-}
-
-// ── Step 1 HTML ───────────────────────────────────────────────────
-function renderStep1HTML(){
-  return`
-  <div style="margin-bottom:1.25rem">
-    <div class="fsect-title">Профилна слика</div>
-    <div class="fsect-sub">Фотографија на корисникот (опционално)</div>
-    <div class="pic-wrap">
-      <div class="pic-preview" id="picPreview"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-      <div>
-        <button class="btn-upload" type="button" onclick="document.getElementById('f_pic_input').click()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Избери слика
-        </button>
-        <div style="font-size:0.75rem;color:var(--gray);margin-top:0.4rem">JPG, PNG до 5MB</div>
-      </div>
-    </div>
-  </div>
-  <div class="fsect" style="margin-top:0;padding-top:1rem">
-    <div class="fsect-title">Основни податоци</div>
-    <div class="form-grid" style="margin-top:0.75rem">
-      <div class="fg"><label class="fl">Обраќање <span class="req">*</span></label><select class="fs" id="f_obrakanje"><option value="">— Изберете —</option><option>Г-дин</option><option>Г-ѓа</option><option>Г-ца</option></select></div>
-      <div class="fg"><label class="fl">Број од матична книга <span class="req">*</span></label><input class="fi" id="f_maticen" type="text" placeholder="нпр. 123456"/></div>
-      <div class="fg full"><label class="fl">Ime и Презиме <span class="req">*</span></label><input class="fi" id="f_ime_prezime" type="text" placeholder="Марија Петровска"/></div>
-      <div class="fg full"><label class="fl">Адреса на живеење <span class="req">*</span></label><input class="fi" id="f_adresa" type="text" placeholder="ул. Климент Охридски 5, Скопје"/></div>
-      <div class="fg"><label class="fl">ЕМБГ <span class="req">*</span></label><input class="fi" id="f_embg" type="text" placeholder="0101950450001" maxlength="13"/></div>
-      <div class="fg"><label class="fl">Телефон <span class="req">*</span></label><input class="fi" id="f_telefon" type="tel" placeholder="+389 70 000 000"/></div>
-      <div class="fg full"><label class="fl">Бр. лична карта / пасош <span class="req">*</span></label><input class="fi" id="f_lk" type="text" placeholder="нпр. 1234567"/></div>
-    </div>
-  </div>
-  <div class="fsect">
-    <div class="fsect-title">Сместување <span class="req">*</span></div>
-    <div class="fsect-sub">Изберете кат, соба и кревет — слободноста се проверува автоматски.</div>
-    <div class="form-grid" style="margin-top:0.75rem">
-      <div class="fg"><label class="fl">Кат <span class="req">*</span></label><select class="fs" id="f_floor"><option value="">— Кат —</option><option value="1">Кат 1</option><option value="2">Кат 2</option></select></div>
-      <div class="fg"><label class="fl">Соба <span class="req">*</span></label><select class="fs" id="f_room"><option value="">— Соба —</option>${[1,2,3,4,5,6,7,8].map(i=>`<option value="${i}">Соба ${i}</option>`).join('')}</select></div>
-      <div class="fg"><label class="fl">Кревет <span class="req">*</span></label><select class="fs" id="f_bed"><option value="">— Кревет —</option><option value="1">Кревет 1</option><option value="2">Кревет 2</option></select></div>
-      <div class="fg" style="align-self:flex-end"><div id="bed-status" style="font-size:0.8rem;padding:0.5rem 0"></div></div>
-    </div>
-  </div>
-  <div class="fsect">
-    <div class="fsect-title">Сродство</div>
-    <div class="fsect-sub">Лица за контакт / роднини</div>
-    <div id="srodstvo-list"></div>
-    <button class="btn-add-dashed" type="button" id="btnAddSrodstvo">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Додај сродник
-    </button>
-  </div>
-  <div class="fsect">
-    <div class="fsect-title">Документи</div>
-    <div class="fsect-sub">Прикачете документи (опционално)</div>
-    <div class="file-dz" id="fileDropZone" onclick="document.getElementById('f_files_input').click()">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:0.5rem;opacity:0.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      <div>Кликнете за да изберете датотеки</div>
-    </div>
-    <div class="file-list" id="file-list"></div>
-  </div>`;
-}
-
-function setupStep1(){
-  document.getElementById('f_pic_input').onchange=function(){
-    const file=this.files[0];if(!file)return;picFile=file;
-    const r=new FileReader();r.onload=e=>{document.getElementById('picPreview').innerHTML=`<img src="${e.target.result}" alt=""/>`;};r.readAsDataURL(file);
-  };
-  document.getElementById('f_files_input').onchange=function(){uploadFiles=[...uploadFiles,...Array.from(this.files)];renderFileList();this.value='';};
-  const dz=document.getElementById('fileDropZone');
-  dz.addEventListener('dragover',e=>{e.preventDefault();dz.style.borderColor='var(--olive)';});
-  dz.addEventListener('dragleave',()=>{dz.style.borderColor='';});
-  dz.addEventListener('drop',e=>{e.preventDefault();dz.style.borderColor='';uploadFiles=[...uploadFiles,...Array.from(e.dataTransfer.files)];renderFileList();});
-  ['f_floor','f_room','f_bed'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',checkBed);});
-  renderSrodstvoList();
-  document.getElementById('btnAddSrodstvo').addEventListener('click',()=>{srodstvoItems.push({ime_prezime:'',adresa:'',telefon:''});renderSrodstvoList();});
-}
-
-function renderFileList(){
-  const list=document.getElementById('file-list');if(!list)return;
-  list.innerHTML=uploadFiles.map((f,i)=>`<div class="file-item"><span>${esc(f.name)}</span><button class="file-rm" onclick="removeFile(${i})">×</button></div>`).join('');
-}
-function removeFile(i){uploadFiles.splice(i,1);renderFileList();}
-
-async function checkBed(){
-  const floor=document.getElementById('f_floor')?.value;
-  const room=document.getElementById('f_room')?.value;
-  const bed=document.getElementById('f_bed')?.value;
-  const st=document.getElementById('bed-status');if(!st)return;
-  if(!floor||!room||!bed){st.textContent='';return;}
-  st.style.color='var(--gray)';st.textContent='Се проверува…';
-  const{data}=await window._sb.from('clients').select('id').eq('floor_number',parseInt(floor)).eq('room_number',parseInt(room)).eq('bed_number',parseInt(bed)).neq('status','discharged').maybeSingle();
-  if(data){st.style.color='#c0392b';st.textContent='⚠ Зафатен';}
-  else{st.style.color='#2a6e2a';st.textContent='✓ Слободен';}
-}
-
-function renderSrodstvoList(){
-  const list=document.getElementById('srodstvo-list');if(!list)return;
-  list.innerHTML=srodstvoItems.map((item,i)=>`
-    <div class="sr-item">
-      <button class="sr-remove" type="button" onclick="removeSrodstvo(${i})">×</button>
-      <div class="sr-grid">
-        <div class="fg"><label class="fl">Ime и Презиме</label><input class="fi" value="${esc(item.ime_prezime)}" oninput="updateSrodstvo(${i},'ime_prezime',this.value)" placeholder="Петар Петровски"/></div>
-        <div class="fg"><label class="fl">Адреса</label><input class="fi" value="${esc(item.adresa)}" oninput="updateSrodstvo(${i},'adresa',this.value)" placeholder="Адреса"/></div>
-        <div class="fg"><label class="fl">Телефон</label><input class="fi" value="${esc(item.telefon)}" oninput="updateSrodstvo(${i},'telefon',this.value)" placeholder="+389 70 000 000"/></div>
-      </div>
-    </div>`).join('');
-}
-function updateSrodstvo(i,f,v){srodstvoItems[i][f]=v;}
-function removeSrodstvo(i){srodstvoItems.splice(i,1);renderSrodstvoList();}
-
-// ── Doctor form (Step 2) ──────────────────────────────────────────
-function renderDoctorFormHTML(){
-  return`
-  <div class="step-status-card"><div class="ssc-hdr"><span class="ssc-title">Чекор 1 — Општи податоци</span><span class="badge badge-completed">Завршен</span></div><div class="ssc-body">Основните информации се снимени.</div></div>
-  <div class="fsect" style="margin-top:0;padding-top:1rem">
-    <div class="fsect-title">Дијагноза на прием <span class="req">*</span></div>
-    <div style="display:flex;gap:0.75rem">
-      <div class="fg" style="flex:0 0 140px"><label class="fl">МКБ-10 Код</label><input class="fi" id="d_kod" placeholder="нпр. A00.1" oninput="lookupMKB(this.value,'d_opis')"/></div>
-      <div class="fg" style="flex:1"><label class="fl">Опис</label><input class="fi" id="d_opis" readonly placeholder="Автоматски…"/></div>
-    </div>
-  </div>
-  <div class="fsect">
-    <div class="fsect-title">Анамнеза</div>
-    <textarea class="fi" id="d_anamneza" rows="3" style="width:100%;resize:vertical" placeholder="Анамнестички податоци…"></textarea>
-  </div>
-  <div class="fsect">
-    <div class="fsect-title">Витални параметри на прием</div>
-    <div class="form-grid" style="margin-top:0.75rem">
-      <div class="fg"><label class="fl">КП Систоличен (mmHg)</label><input class="fi" id="d_kp_s" type="number" placeholder="120"/></div>
-      <div class="fg"><label class="fl">КП Дијастоличен (mmHg)</label><input class="fi" id="d_kp_d" type="number" placeholder="80"/></div>
-      <div class="fg"><label class="fl">Пулс (bpm)</label><input class="fi" id="d_puls" type="number" placeholder="72"/></div>
-      <div class="fg"><label class="fl">Температура (°C)</label><input class="fi" id="d_temp" type="number" step="0.1" placeholder="36.6"/></div>
-      <div class="fg"><label class="fl">SpO2 (%)</label><input class="fi" id="d_spo2" type="number" placeholder="98"/></div>
-      <div class="fg"><label class="fl">Респирации (/мин)</label><input class="fi" id="d_resp" type="number" placeholder="16"/></div>
-      <div class="fg"><label class="fl">Тежина (kg)</label><input class="fi" id="d_tezina" type="number" step="0.1" placeholder="72.5"/></div>
-      <div class="fg"><label class="fl">Крвен шеќер (mmol/L)</label><input class="fi" id="d_seker" type="number" step="0.1" placeholder="5.4"/></div>
-      <div class="fg full">
-        <label class="fl">Скала на болка (0–10)</label>
-        <div style="display:flex;align-items:center;gap:1rem">
-          <input type="range" id="d_bolka" min="0" max="10" value="0" style="flex:1" oninput="document.getElementById('d_bolka_val').textContent=this.value"/>
-          <span id="d_bolka_val" style="font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:600;min-width:2rem;text-align:center">0</span>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="fsect"><div class="fsect-title">Наод</div><textarea class="fi" id="d_naod" rows="3" style="width:100%;resize:vertical" placeholder="Клинички наод…"></textarea></div>
-  <div class="fsect">
-    <div class="fsect-title">Хронични дијагнози</div>
-    <div id="cd-list" style="margin-bottom:0.75rem"></div>
-    <div style="display:flex;gap:0.75rem;align-items:flex-end">
-      <div class="fg" style="flex:0 0 130px"><label class="fl">МКБ-10 Код</label><input class="fi" id="cd_kod" placeholder="нпр. I10" oninput="lookupMKB(this.value,'cd_opis')"/></div>
-      <div class="fg" style="flex:1"><label class="fl">Опис</label><input class="fi" id="cd_opis" readonly placeholder="Автоматски…"/></div>
-      <button class="btn-add-dashed" type="button" onclick="addChronicDiag()" style="flex-shrink:0;margin-bottom:1px">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Додај
-      </button>
-    </div>
-  </div>
-  <div class="fsect">
-    <div class="fsect-title">Хронична терапија</div>
-    <div id="ct-list" style="margin-bottom:0.75rem"></div>
-    <div style="display:flex;gap:0.75rem;align-items:flex-end;flex-wrap:wrap">
-      <div class="fg drug-wrap" style="flex:1;min-width:180px">
-        <label class="fl">Лек</label>
-        <input class="fi" id="ct_drug" placeholder="Пребарај лек…" oninput="searchDrug(this.value)" autocomplete="off"/>
-        <div class="drug-sugg" id="ct_sugg"></div>
-      </div>
-      <div class="fg" style="flex:0 0 160px"><label class="fl">Доза</label><input class="fi" id="ct_dose" placeholder="нпр. 1×1 tabl."/></div>
-      <button class="btn-add-dashed" type="button" onclick="addChronicTherapy()" style="flex-shrink:0;margin-bottom:1px">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Додај
-      </button>
-    </div>
-  </div>
-  <div class="fsect"><div class="fsect-title">Белешки</div><textarea class="fi" id="d_notes" rows="2" style="width:100%;resize:vertical" placeholder="Дополнителни белешки…"></textarea></div>`;
-}
-
-// ── Social form (Step 3) ──────────────────────────────────────────
-function renderSocialFormHTML(){
-  return`
-  <div class="step-status-card"><div class="ssc-hdr"><span class="ssc-title">Чекор 1 — Општи податоци</span><span class="badge badge-completed">Завршен</span></div><div class="ssc-body">Основните информации се снимени.</div></div>
-  <div class="step-status-card"><div class="ssc-hdr"><span class="ssc-title">Чекор 2 — Доктор</span><span class="badge badge-completed">Завршен</span></div><div class="ssc-body">Докторот го завршил својот дел.</div></div>
-  <div class="step-pending">
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    <strong>Чекор 3 — Социјален Работник</strong>
-    <p>Полињата за социјалниот работник ќе бидат додадени подоцна. Кликнете „Потврди" за да го завршите приемот.</p>
-  </div>`;
-}
-
-// ── МКБ-10 lookup ─────────────────────────────────────────────────
-async function lookupMKB(kod,targetId){
-  kod=(kod||'').trim().toUpperCase();
-  const t=document.getElementById(targetId);if(!t)return;
-  if(!kod){t.value='';return;}
-  if(mkbCache[kod]){t.value=mkbCache[kod];return;}
-  const{data}=await window._sb.from('mkb10').select('description').eq('code',kod).maybeSingle();
-  if(data){mkbCache[kod]=data.description;t.value=data.description;}else t.value='';
-}
-
-// ── Drug search ───────────────────────────────────────────────────
-function searchDrug(val){
-  clearTimeout(drugTimer);selectedDrugName='';
-  const box=document.getElementById('ct_sugg');
-  if(!val||val.length<2){if(box)box.style.display='none';return;}
-  drugTimer=setTimeout(async()=>{
-    const{data}=await window._sb.from('drugs').select('id,latin_name,generic_name,strength,form').ilike('latin_name',`%${val}%`).limit(8);
-    if(!box)return;
-    if(!data||!data.length){box.style.display='none';return;}
-    box.innerHTML=data.map(d=>`<div class="dsi" onclick="selectDrug('${esc(d.latin_name)}','${esc(d.strength||'')}','${esc(d.form||'')}')"><div class="dn">${esc(d.latin_name)}</div><div class="dm">${esc(d.generic_name||'')} ${esc(d.strength||'')} — ${esc(d.form||'')}</div></div>`).join('');
-    box.style.display='block';
-  },300);
-}
-function selectDrug(name,strength,form){
-  selectedDrugName=name;
-  const inp=document.getElementById('ct_drug');
-  if(inp)inp.value=name+(strength?' '+strength:'')+(form?' ('+form+')':'');
-  const box=document.getElementById('ct_sugg');if(box)box.style.display='none';
-}
-
-// ── Chronic diag helpers ──────────────────────────────────────────
-function addChronicDiag(){
-  const kod=(document.getElementById('cd_kod')?.value||'').trim().toUpperCase();
-  const opis=(document.getElementById('cd_opis')?.value||'').trim();
-  if(!kod)return;
-  chronicDiagItems.push({kod,opis});
-  renderChronicDiagList();
-  document.getElementById('cd_kod').value='';document.getElementById('cd_opis').value='';
-}
-function removeChronicDiag(i){chronicDiagItems.splice(i,1);renderChronicDiagList();}
-function renderChronicDiagList(){
-  const el=document.getElementById('cd-list');if(!el)return;
-  el.innerHTML=chronicDiagItems.map((d,i)=>`
-    <div class="sr-item" style="padding:0.6rem 0.9rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
-      <span style="font-family:monospace;font-size:0.85rem;font-weight:700;color:var(--olive)">${esc(d.kod)}</span>
-      <span style="font-size:0.85rem;flex:1">${esc(d.opis||'—')}</span>
-      <button class="sr-remove" type="button" onclick="removeChronicDiag(${i})" style="position:static">×</button>
-    </div>`).join('');
-}
-
-// ── Chronic therapy helpers ───────────────────────────────────────
-function addChronicTherapy(){
-  const drug=(document.getElementById('ct_drug')?.value||'').trim();
-  const dose=(document.getElementById('ct_dose')?.value||'').trim();
-  if(!drug||!dose)return;
-  chronicTherapyItems.push({drug_name:selectedDrugName||drug,dosage:dose});
-  renderChronicTherapyList();
-  document.getElementById('ct_drug').value='';document.getElementById('ct_dose').value='';selectedDrugName='';
-}
-function removeChronicTherapy(i){chronicTherapyItems.splice(i,1);renderChronicTherapyList();}
-function renderChronicTherapyList(){
-  const el=document.getElementById('ct-list');if(!el)return;
-  el.innerHTML=chronicTherapyItems.map((t,i)=>`
-    <div class="sr-item" style="padding:0.6rem 0.9rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
-      <span style="font-size:0.85rem;font-weight:700;flex:1">${esc(t.drug_name)}</span>
-      <span style="font-size:0.82rem;color:var(--gray)">${esc(t.dosage)}</span>
-      <button class="sr-remove" type="button" onclick="removeChronicTherapy(${i})" style="position:static">×</button>
-    </div>`).join('');
-}
-
-// ── Next button handler ───────────────────────────────────────────
-document.getElementById('btnNext').addEventListener('click',async()=>{
-  clearError();
-  if(currentStep===1)await saveStep1();
-  else if(currentStep===2)await saveStep2Doctor();
-  else if(currentStep===3)await saveStep3Social();
-});
-
-// ── Save Step 1 ───────────────────────────────────────────────────
-async function saveStep1(){
-  const required=[['f_obrakanje','Обраќање'],['f_maticen','Број од матична книга'],['f_ime_prezime','Ime и Презиме'],['f_adresa','Адреса'],['f_embg','ЕМБГ'],['f_telefon','Телефон'],['f_lk','Лична карта / пасош'],['f_floor','Кат'],['f_room','Соба'],['f_bed','Кревет']];
-  for(const[id,label]of required){const el=document.getElementById(id);if(!el||!el.value.trim()){el&&el.classList.add('error');showError(`Полето „${label}" е задолжително.`);el&&el.focus();return;}el.classList.remove('error');}
-  const floor=parseInt(document.getElementById('f_floor').value);
-  const room=parseInt(document.getElementById('f_room').value);
-  const bed=parseInt(document.getElementById('f_bed').value);
-  const{data:taken}=await window._sb.from('clients').select('id').eq('floor_number',floor).eq('room_number',room).eq('bed_number',bed).neq('status','discharged').maybeSingle();
-  if(taken){showError('Избраниот кревет е веќе зафатен.');return;}
-  document.getElementById('btnNext').disabled=true;
-  let profilePicUrl=null;
-  if(picFile){
-    const ext=picFile.name.split('.').pop();
-    const path=`${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const{error:upErr}=await window._sb.storage.from('client-photos').upload(path,picFile);
-    if(!upErr){const{data:urlData}=window._sb.storage.from('client-photos').getPublicUrl(path);profilePicUrl=urlData?.publicUrl||null;}
-  }
-  const payload={obrakanje:document.getElementById('f_obrakanje').value,maticen_broj:document.getElementById('f_maticen').value.trim(),ime_prezime:document.getElementById('f_ime_prezime').value.trim(),adresa:document.getElementById('f_adresa').value.trim(),embg:document.getElementById('f_embg').value.trim(),telefon:document.getElementById('f_telefon').value.trim(),licna_karta_broj:document.getElementById('f_lk').value.trim(),floor_number:floor,room_number:room,bed_number:bed,profile_pic_url:profilePicUrl,status:'doctor',created_by:window._user.id};
-  const{data,error}=await window._sb.from('clients').insert([payload]).select('id').single();
-  document.getElementById('btnNext').disabled=false;
-  if(error){if(error.code==='23505')showError('Избраниот кревет е веќе зафатен.');else showError('Грешка: '+error.message);return;}
-  savedClientId=data.id;
-  const srRows=srodstvoItems.filter(s=>s.ime_prezime.trim()).map(s=>({client_id:savedClientId,...s}));
-  if(srRows.length)await window._sb.from('client_srodstvo').insert(srRows);
-  for(const file of uploadFiles){await window._sb.storage.from('client-files').upload(`${savedClientId}/${Date.now()}-${file.name}`,file);}
-  currentStep=2;renderStep();
-}
-
-// ── Save Step 2 (Doctor) ──────────────────────────────────────────
-async function saveStep2Doctor(){
-  const kod=(document.getElementById('d_kod')?.value||'').trim().toUpperCase();
-  if(!kod){showError('Дијагнозата на прием е задолжителна.');return;}
-  document.getElementById('btnNext').disabled=true;
-  const update={
-    priem_dijagnoza_kod:kod,priem_dijagnoza_opis:document.getElementById('d_opis')?.value||null,
-    priem_anamneza:document.getElementById('d_anamneza')?.value||null,priem_naod:document.getElementById('d_naod')?.value||null,
-    priem_notes:document.getElementById('d_notes')?.value||null,
-    priem_kp_sistolicen:numVal('d_kp_s'),priem_kp_dijastolicen:numVal('d_kp_d'),priem_puls:numVal('d_puls'),
-    priem_temperatura:numVal('d_temp'),priem_spo2:numVal('d_spo2'),priem_respiracii:numVal('d_resp'),
-    priem_tezina:numVal('d_tezina'),priem_seker:numVal('d_seker'),priem_bolka:parseInt(document.getElementById('d_bolka')?.value||'0'),
-    status:'social',doctor_completed_at:new Date().toISOString(),doctor_completed_by:window._user.id,
-  };
-  const{error}=await window._sb.from('clients').update(update).eq('id',savedClientId);
-  document.getElementById('btnNext').disabled=false;
-  if(error){showError('Грешка: '+error.message);return;}
-  if(chronicDiagItems.length){const rows=chronicDiagItems.map(d=>({client_id:savedClientId,kod:d.kod,opis:d.opis,added_by:window._user.id}));await window._sb.from('client_chronic_diagnoses').insert(rows);}
-  if(chronicTherapyItems.length){const rows=chronicTherapyItems.map(t=>({client_id:savedClientId,drug_name:t.drug_name,dosage:t.dosage,added_by:window._user.id}));await window._sb.from('client_chronic_therapy').insert(rows);}
-  currentStep=3;renderStep();
-}
-
-// ── Save Step 3 (Social) ──────────────────────────────────────────
-async function saveStep3Social(){
-  document.getElementById('btnNext').disabled=true;
-  const{error}=await window._sb.from('clients').update({status:'completed',social_completed_at:new Date().toISOString(),social_completed_by:window._user.id}).eq('id',savedClientId);
-  document.getElementById('btnNext').disabled=false;
-  if(error){showError('Грешка: '+error.message);return;}
-  closeModal();
-}
-
-function showError(msg){document.getElementById('modalError').textContent=msg;}
-function clearError(){document.getElementById('modalError').textContent='';}
 </script>
 </body>
 </html>
