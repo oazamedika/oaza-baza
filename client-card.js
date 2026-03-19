@@ -149,7 +149,8 @@ window.openClientCard = async function(clientId){
     avatarEl.textContent=initials;
   }
   document.getElementById('cc-name').textContent=(_client.obrakanje?_client.obrakanje+' ':'')+(_client.ime_prezime||'');
-  const loc=_client.floor_number?`Кат ${_client.floor_number} / Соба ${_client.room_number} / Кревет ${_client.bed_number}`:'—';
+  const _fl=_client.floor_number||(window.roomToFloor?window.roomToFloor(_client.room_number):null);
+  const loc=_client.room_number?`Кат ${_fl||'?'} / Соба ${_client.room_number} / Кревет ${_client.bed_number}`:'—';
   document.getElementById('cc-sub').textContent=loc;
 
   renderTab('info');
@@ -195,7 +196,7 @@ function renderInfo(){
       <div class="cc-field"><div class="cc-label">ЕМБГ</div><div class="cc-value" style="font-family:monospace">${e(c.embg||'—')}</div></div>
       <div class="cc-field"><div class="cc-label">Лична карта / Пасош</div><div class="cc-value">${e(c.licna_karta_broj||'—')}</div></div>
       <div class="cc-field"><div class="cc-label">Датум на прием</div><div class="cc-value">${c.created_at?new Date(c.created_at).toLocaleDateString('mk-MK'):'—'}</div></div>
-      <div class="cc-field"><div class="cc-label">Сместување</div><div class="cc-value">${c.floor_number?`Кат ${c.floor_number} / Соба ${c.room_number} / Кревет ${c.bed_number}`:'—'}</div></div>
+      <div class="cc-field"><div class="cc-label">Сместување</div><div class="cc-value">${c.room_number?`Соба ${c.room_number} / Кревет ${c.bed_number} (Кат ${c.floor_number||(window.roomToFloor?window.roomToFloor(c.room_number):'?')})`:'—'}</div></div>
     </div>
   </div>
   ${renderSrodstvo()}`;

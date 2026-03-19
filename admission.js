@@ -1,21 +1,37 @@
 /**
  * admission.js — Self-contained admission modal
  * Requires: auth-guard.js (window._sb, window._user, window._username)
- * API: window.Admission.openNew() | window.Admission.openExisting(clientId)
- * Callback: window.onAdmissionClose() — called when modal closes (refresh list)
+ * Requires: sidebar.js  (window.roomToFloor)
+ * Public API:
+ *   window.openNewAdmission(callback)
+ *   window.openAdmissionForClient(clientId, callback)
  */
-window.Admission = (function () {
+(function () {
 
   let step=1, clientId=null, picFile=null, uploadFiles=[], srodstvoItems=[];
   let chronicDiagItems=[], chronicTherapyItems=[], selectedDrugObj=null;
-  let drugTimer=null;
+  let drugTimer=null, _closeCallback=null;
 
   function u(){ return (window._username||'').toLowerCase(); }
   function isManager(){ return u()==='menadzer'||u()==='glavnasestra'; }
   function isDoctor(){  return u()==='doktor'; }
   function isSocial(){  return u()==='socijalenrabotnik'; }
 
-  // ── Inject styles + DOM ────────────────────────────────────────
+  // ── Room → Floor (84 rooms, 5 floors) ─────────────────────────
+  function roomToFloor(r){
+    r=parseInt(r);
+    if(r>=1  && r<=16) return 1;
+    if(r>=17 && r<=33) return 2;
+    if(r>=34 && r<=50) return 3;
+    if(r>=51 && r<=67) return 4;
+    if(r>=68 && r<=84) return 5;
+    return null;
+  }
+
+  // Room options 1-84
+  const ROOM_OPTIONS = Array.from({length:84},(_,i)=>`<option value="${i+1}">Соба ${i+1}</option>`).join('');
+
+  // ── Inject DOM once ────────────────────────────────────────────
   function inject() {
     if (document.getElementById('adm-bd')) return;
     document.head.insertAdjacentHTML('beforeend', ADM_CSS);
@@ -29,13 +45,15 @@ window.Admission = (function () {
   }
 
   // ── Public API ─────────────────────────────────────────────────
-  async function openNew() {
+  function openNew(cb) {
+    _closeCallback = cb || null;
     inject(); reset(); step=1; clientId=null;
     document.getElementById('adm-title').textContent='Регистрација на нов корисник';
     render(); show();
   }
 
-  async function openExisting(id) {
+  async function openExisting(id, cb) {
+    _closeCallback = cb || null;
     inject(); reset(); clientId=id;
     const {data}=await window._sb.from('clients').select('status').eq('id',id).single();
     const st=data?.status||'draft';
@@ -52,7 +70,13 @@ window.Admission = (function () {
   }
 
   function show(){ document.getElementById('adm-bd').classList.add('open'); document.body.style.overflow='hidden'; }
-  function close(){ document.getElementById('adm-bd').classList.remove('open'); document.body.style.overflow=''; if(typeof window.onAdmissionClose==='function') window.onAdmissionClose(); }
+  function close(){
+    document.getElementById('adm-bd').classList.remove('open');
+    document.body.style.overflow='';
+    if(typeof _closeCallback==='function') _closeCallback();
+    // Legacy support
+    if(typeof window.onAdmissionClose==='function') window.onAdmissionClose();
+  }
 
   // ── Step indicator ─────────────────────────────────────────────
   function updateSteps(){
@@ -110,11 +134,25 @@ window.Admission = (function () {
       <div class="a-fg full"><label class="a-lbl">Лична карта / Пасош <span class="req">*</span></label><input class="a-inp" id="f_lk" placeholder="нпр. 1234567"/></div>
     </div></div>
     <div class="a-sect"><div class="a-sect-t">Сместување <span class="req">*</span></div>
-    <div class="a-sect-s">Изберете кат, соба и кревет. Слободноста се проверува автоматски.</div>
+    <div class="a-sect-s">Изберете соба и кревет. Слободноста се проверува автоматски. Катот се одредува автоматски.</div>
     <div class="a-grid" style="margin-top:0.5rem">
-      <div class="a-fg"><label class="a-lbl">Кат <span class="req">*</span></label><select class="a-sel" id="f_fl" onchange="admBedCheck()"><option value="">— Кат —</option><option value="1">Кат 1</option><option value="2">Кат 2</option></select></div>
-      <div class="a-fg"><label class="a-lbl">Соба <span class="req">*</span></label><select class="a-sel" id="f_rm" onchange="admBedCheck()"><option value="">— Соба —</option>${[1,2,3,4,5,6,7,8].map(i=>`<option value="${i}">Соба ${i}</option>`).join('')}</select></div>
-      <div class="a-fg"><label class="a-lbl">Кревет <span class="req">*</span></label><select class="a-sel" id="f_bd" onchange="admBedCheck()"><option value="">— Кревет —</option><option value="1">Кревет 1</option><option value="2">Кревет 2</option></select></div>
+      <div class="a-fg"><label class="a-lbl">Соба <span class="req">*</span></label>
+        <select class="a-sel" id="f_rm" onchange="admBedCheck()">
+          <option value="">— Соба —</option>
+          ${ROOM_OPTIONS}
+        </select>
+      </div>
+      <div class="a-fg"><label class="a-lbl">Кревет <span class="req">*</span></label>
+        <select class="a-sel" id="f_bd" onchange="admBedCheck()">
+          <option value="">— Кревет —</option>
+          <option value="1">Кревет 1</option>
+          <option value="2">Кревет 2</option>
+        </select>
+      </div>
+      <div class="a-fg" id="a-floor-info-wrap" style="display:none">
+        <label class="a-lbl">Кат (автоматски)</label>
+        <div id="a-floor-info" style="padding:0.65rem 0.8rem;background:var(--cream);border:1px solid var(--border);border-radius:4px;font-size:0.9rem;color:var(--gray)">—</div>
+      </div>
       <div class="a-fg" style="justify-content:flex-end"><div id="a-bed-st" style="padding-bottom:0.65rem"></div></div>
     </div></div>
     <div class="a-sect"><div class="a-sect-t">Сродство</div><div class="a-sect-s">Лица за контакт (може повеќе)</div>
@@ -195,7 +233,6 @@ window.Admission = (function () {
       <div style="font-size:0.74rem;color:var(--gray);margin-top:0.35rem">Ако лекот не е во базата, може рачно да го внесете.</div>
     </div>
     <div class="a-sect"><div class="a-sect-t">Белешки</div><textarea class="a-ta" id="d_notes" rows="2" placeholder="Дополнителни белешки…"></textarea></div>`;
-    // Enter key on code fields
     ['d_kod','cd_kod'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();admMKB(id,id==='d_kod'?'d_opis':'cd_opis',id+'_dd');}});});
   }
 
@@ -224,12 +261,13 @@ window.Admission = (function () {
   function nv(id){const v=document.getElementById(id)?.value;return(v&&v.trim())?parseFloat(v):null;}
 
   async function save1(){
-    const reqs=[['f_ob','Обраќање'],['f_mat','Матичен број'],['f_ime','Ime и Презиме'],['f_adr','Адреса'],['f_emb','ЕМБГ'],['f_tel','Телефон'],['f_lk','Лична карта/Пасош'],['f_fl','Кат'],['f_rm','Соба'],['f_bd','Кревет']];
+    const reqs=[['f_ob','Обраќање'],['f_mat','Матичен број'],['f_ime','Ime и Презиме'],['f_adr','Адреса'],['f_emb','ЕМБГ'],['f_tel','Телефон'],['f_lk','Лична карта/Пасош'],['f_rm','Соба'],['f_bd','Кревет']];
     for(const[id,lbl]of reqs){const el=document.getElementById(id);if(!el||!el.value.trim()){if(el){el.classList.add('a-err');el.focus();}setErr(`Полето „${lbl}" е задолжително.`);return;}el.classList.remove('a-err');}
-    const fl=parseInt(document.getElementById('f_fl').value);
     const rm=parseInt(document.getElementById('f_rm').value);
     const bd=parseInt(document.getElementById('f_bd').value);
-    const{data:taken}=await window._sb.from('clients').select('id').eq('floor_number',fl).eq('room_number',rm).eq('bed_number',bd).neq('status','discharged').maybeSingle();
+    const fl=roomToFloor(rm);
+    if(!fl){setErr('Невалидна соба.');return;}
+    const{data:taken}=await window._sb.from('clients').select('id').eq('room_number',rm).eq('bed_number',bd).neq('status','discharged').maybeSingle();
     if(taken){setErr('Избраниот кревет е веќе зафатен. Изберете друг.');return;}
     let picUrl=null;
     if(picFile){const ext=picFile.name.split('.').pop();const path=`${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;const{error:ue}=await window._sb.storage.from('client-photos').upload(path,picFile);if(!ue){const{data:ud}=window._sb.storage.from('client-photos').getPublicUrl(path);picUrl=ud?.publicUrl||null;}}
@@ -270,11 +308,46 @@ window.Admission = (function () {
     close();
   }
 
-  // ══════════════════════════════════════════════════════════════
-  //  GLOBAL FUNCTIONS (called via inline onclick)
-  // ══════════════════════════════════════════════════════════════
+  // ── Helper renderers ───────────────────────────────────────────
+  function renderSR(){const el=document.getElementById('a-sr-list');if(!el)return;el.innerHTML=srodstvoItems.map((it,i)=>`<div class="sr-item"><button class="sr-rm" onclick="admRemSR(${i})">×</button><div class="sr-grid"><div class="a-fg"><label class="a-lbl">Ime и Презиме</label><input class="a-inp" value="${ee(it.ime_prezime)}" oninput="admUpdSR(${i},'ime_prezime',this.value)" placeholder="Петар Петровски"/></div><div class="a-fg"><label class="a-lbl">Адреса</label><input class="a-inp" value="${ee(it.adresa)}" oninput="admUpdSR(${i},'adresa',this.value)" placeholder="Адреса"/></div><div class="a-fg"><label class="a-lbl">Телефон</label><input class="a-inp" value="${ee(it.telefon)}" oninput="admUpdSR(${i},'telefon',this.value)" placeholder="+389 70 000 000"/></div></div></div>`).join('');}
+  window.admRemSR=function(i){srodstvoItems.splice(i,1);renderSR();};
+  window.admUpdSR=function(i,f,v){srodstvoItems[i][f]=v;};
 
-  // MKB-10 lookup — exact match first, then fuzzy prefix/description
+  function renderCD(){const el=document.getElementById('a-cd-list');if(!el)return;el.innerHTML=chronicDiagItems.map((d,i)=>`<div class="a-added"><span class="adm-dd-code">${ee(d.kod)}</span><span style="flex:1;font-size:0.85rem">${ee(d.opis||'—')}</span><button class="a-rm" onclick="admRemCD(${i})">×</button></div>`).join('');}
+  window.admRemCD=function(i){chronicDiagItems.splice(i,1);renderCD();};
+
+  function renderCT(){const el=document.getElementById('a-ct-list');if(!el)return;el.innerHTML=chronicTherapyItems.map((t,i)=>`<div class="a-added"><span style="font-weight:700;flex:1;font-size:0.85rem">${ee(t.drug_name)}</span><span style="color:var(--gray);font-size:0.82rem;flex-shrink:0">${ee(t.dosage)}</span><button class="a-rm" onclick="admRemCT(${i})">×</button></div>`).join('');}
+  window.admRemCT=function(i){chronicTherapyItems.splice(i,1);renderCT();};
+
+  function renderFiles(){const el=document.getElementById('a-file-list');if(!el)return;el.innerHTML=uploadFiles.map((f,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:0.45rem 0.7rem;background:var(--cream);border:1px solid var(--border);border-radius:4px;font-size:0.82rem"><span>${ee(f.name)}</span><button class="a-rm" onclick="admRemFile(${i})">×</button></div>`).join('');}
+  window.admRemFile=function(i){uploadFiles.splice(i,1);renderFiles();};
+
+  function handlePic(){const f=document.getElementById('adm-pic-file').files[0];if(!f)return;picFile=f;const r=new FileReader();r.onload=ev=>{const p=document.getElementById('a-pic-prev');if(p)p.innerHTML=`<img src="${ev.target.result}" alt=""/>`;};r.readAsDataURL(f);}
+  function handleDocs(){const inp=document.getElementById('adm-docs-file');uploadFiles=[...uploadFiles,...Array.from(inp.files)];inp.value='';renderFiles();}
+
+  // ── Bed availability check ─────────────────────────────────────
+  window.admBedCheck = async function(){
+    const rm=document.getElementById('f_rm')?.value;
+    const bd=document.getElementById('f_bd')?.value;
+    const st=document.getElementById('a-bed-st');
+    const flWrap=document.getElementById('a-floor-info-wrap');
+    const flInfo=document.getElementById('a-floor-info');
+    if(!st) return;
+    // Show floor info
+    if(rm){
+      const fl=roomToFloor(parseInt(rm));
+      if(flWrap) flWrap.style.display='';
+      if(flInfo) flInfo.textContent=fl?`Кат ${fl}`:'—';
+    } else {
+      if(flWrap) flWrap.style.display='none';
+    }
+    if(!rm||!bd){st.innerHTML='';return;}
+    st.innerHTML='<span style="color:var(--gray);font-size:0.8rem">Се проверува…</span>';
+    const{data}=await window._sb.from('clients').select('id').eq('room_number',parseInt(rm)).eq('bed_number',parseInt(bd)).neq('status','discharged').maybeSingle();
+    st.innerHTML=data?'<span style="color:#c0392b;font-size:0.8rem;font-weight:700">⚠ Зафатен</span>':'<span style="color:#2a6e2a;font-size:0.8rem;font-weight:700">✓ Слободен</span>';
+  };
+
+  // ── MKB-10 search ──────────────────────────────────────────────
   window.admMKB = async function(codeId, opisId, ddId){
     const codeEl=document.getElementById(codeId);
     const opisEl=document.getElementById(opisId);
@@ -283,14 +356,12 @@ window.Admission = (function () {
     const raw=(codeEl.value||'').trim().toUpperCase();
     codeEl.value=raw;
     if(!raw){if(opisEl)opisEl.value='';return;}
-    // Exact match
     const{data:ex}=await window._sb.from('mkb10').select('code,description').eq('code',raw).maybeSingle();
     if(ex){if(opisEl)opisEl.value=ex.description;if(dd)dd.classList.remove('show');return;}
-    // Fuzzy search
     const{data:fz}=await window._sb.from('mkb10').select('code,description').or(`code.ilike.${raw}%,description.ilike.%${raw}%`).limit(12);
     if(!dd) return;
     if(!fz||!fz.length){if(opisEl)opisEl.value='Кодот не е пронајден';dd.classList.remove('show');return;}
-    dd.innerHTML=fz.map(r=>`<div class="adm-dd-item" onclick="admMKBPick('${codeId}','${opisId}','${ddId}','${ee(r.code)}',${JSON.stringify(r.description)})""><span class="adm-dd-code">${ee(r.code)}</span>${ee(r.description)}</div>`).join('');
+    dd.innerHTML=fz.map(r=>`<div class="adm-dd-item" onclick="admMKBPick('${codeId}','${opisId}','${ddId}','${ee(r.code)}',${JSON.stringify(r.description)})"><span class="adm-dd-code">${ee(r.code)}</span>${ee(r.description)}</div>`).join('');
     dd.classList.add('show');
   };
 
@@ -299,7 +370,7 @@ window.Admission = (function () {
     if(c)c.value=code;if(o)o.value=desc;if(d)d.classList.remove('show');
   };
 
-  // Drug search — fires after 3 characters, searches latin + generic name
+  // ── Drug search ────────────────────────────────────────────────
   window.admDrugSearch = function(val){
     clearTimeout(drugTimer); selectedDrugObj=null;
     const dd=document.getElementById('ct_drug_dd');
@@ -328,8 +399,6 @@ window.Admission = (function () {
     document.getElementById('cd_kod').value=''; document.getElementById('cd_opis').value='';
     const dd=document.getElementById('cd_kod_dd');if(dd)dd.classList.remove('show');
   };
-  window.admRemCD=function(i){chronicDiagItems.splice(i,1);renderCD();};
-  function renderCD(){const el=document.getElementById('a-cd-list');if(!el)return;el.innerHTML=chronicDiagItems.map((d,i)=>`<div class="a-added"><span class="adm-dd-code">${ee(d.kod)}</span><span style="flex:1;font-size:0.85rem">${ee(d.opis||'—')}</span><button class="a-rm" onclick="admRemCD(${i})">×</button></div>`).join('');}
 
   window.admAddCT = function(){
     const drug=(document.getElementById('ct_drug')?.value||'').trim();
@@ -340,49 +409,22 @@ window.Admission = (function () {
     document.getElementById('ct_drug').value=''; document.getElementById('ct_dose').value='';
     selectedDrugObj=null; const dd=document.getElementById('ct_drug_dd');if(dd)dd.classList.remove('show');
   };
-  window.admRemCT=function(i){chronicTherapyItems.splice(i,1);renderCT();};
-  function renderCT(){const el=document.getElementById('a-ct-list');if(!el)return;el.innerHTML=chronicTherapyItems.map((t,i)=>`<div class="a-added"><span style="font-weight:700;flex:1;font-size:0.85rem">${ee(t.drug_name)}</span><span style="color:var(--gray);font-size:0.82rem;flex-shrink:0">${ee(t.dosage)}</span><button class="a-rm" onclick="admRemCT(${i})">×</button></div>`).join('');}
-
-  function renderSR(){const el=document.getElementById('a-sr-list');if(!el)return;el.innerHTML=srodstvoItems.map((it,i)=>`<div class="sr-item"><button class="sr-rm" onclick="admRemSR(${i})">×</button><div class="sr-grid"><div class="a-fg"><label class="a-lbl">Ime и Презиме</label><input class="a-inp" value="${ee(it.ime_prezime)}" oninput="admUpdSR(${i},'ime_prezime',this.value)" placeholder="Петар Петровски"/></div><div class="a-fg"><label class="a-lbl">Адреса</label><input class="a-inp" value="${ee(it.adresa)}" oninput="admUpdSR(${i},'adresa',this.value)" placeholder="Адреса"/></div><div class="a-fg"><label class="a-lbl">Телефон</label><input class="a-inp" value="${ee(it.telefon)}" oninput="admUpdSR(${i},'telefon',this.value)" placeholder="+389 70 000 000"/></div></div></div>`).join('');}
-  window.admRemSR=function(i){srodstvoItems.splice(i,1);renderSR();};
-  window.admUpdSR=function(i,f,v){srodstvoItems[i][f]=v;};
-
-  function renderFiles(){const el=document.getElementById('a-file-list');if(!el)return;el.innerHTML=uploadFiles.map((f,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:0.45rem 0.7rem;background:var(--cream);border:1px solid var(--border);border-radius:4px;font-size:0.82rem"><span>${ee(f.name)}</span><button class="a-rm" onclick="admRemFile(${i})">×</button></div>`).join('');}
-  window.admRemFile=function(i){uploadFiles.splice(i,1);renderFiles();};
-
-  function handlePic(){const f=document.getElementById('adm-pic-file').files[0];if(!f)return;picFile=f;const r=new FileReader();r.onload=ev=>{const p=document.getElementById('a-pic-prev');if(p)p.innerHTML=`<img src="${ev.target.result}" alt=""/>`;};r.readAsDataURL(f);}
-  function handleDocs(){const inp=document.getElementById('adm-docs-file');uploadFiles=[...uploadFiles,...Array.from(inp.files)];inp.value='';renderFiles();}
-
-  window.admBedCheck = async function(){
-    const fl=document.getElementById('f_fl')?.value;const rm=document.getElementById('f_rm')?.value;const bd=document.getElementById('f_bd')?.value;
-    const st=document.getElementById('a-bed-st');if(!st)return;
-    if(!fl||!rm||!bd){st.innerHTML='';return;}
-    st.innerHTML='<span style="color:var(--gray);font-size:0.8rem">Се проверува…</span>';
-    const{data}=await window._sb.from('clients').select('id').eq('floor_number',parseInt(fl)).eq('room_number',parseInt(rm)).eq('bed_number',parseInt(bd)).neq('status','discharged').maybeSingle();
-    st.innerHTML=data?'<span style="color:#c0392b;font-size:0.8rem;font-weight:700">⚠ Зафатен</span>':'<span style="color:#2a6e2a;font-size:0.8rem;font-weight:700">✓ Слободен</span>';
-  };
 
   function setErr(msg){const el=document.getElementById('adm-err');if(el)el.textContent=msg;}
   function clearErr(){const el=document.getElementById('adm-err');if(el)el.textContent='';}
   function ee(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
-  return { openNew, openExisting };
+  // ── Expose public API ──────────────────────────────────────────
+  window.Admission = { openNew, openExisting };
+
+  // Legacy wrapper names used in clients.html
+  window.openNewAdmission = function(cb){ openNew(cb); };
+  window.openAdmissionForClient = function(id, cb){ openExisting(id, cb); };
 
   // ══════════════════════════════════════════════════════════════
-  //  STYLES & HTML TEMPLATES (at bottom so they don't clutter top)
+  //  CSS
   // ══════════════════════════════════════════════════════════════
-  var ADM_CSS, ADM_HTML; // declared below via assignment trick
-
-})();
-
-// Templates defined outside the IIFE to keep it clean
-// We patch them in before any call can happen since inject() is lazy
-(function patchTemplates(){
-  var mod = window.Admission;
-
-  // Re-open the IIFE scope by storing templates on a hidden object
-  window._admTpl = {
-    css: `<style id="adm-css">
+  const ADM_CSS = `<style id="adm-css">
 #adm-bd{display:none;position:fixed;inset:0;background:rgba(47,42,36,0.62);z-index:300;align-items:center;justify-content:center;padding:1rem}
 #adm-bd.open{display:flex}
 #adm-box{background:#fff;border-radius:10px;width:100%;max-width:740px;max-height:93vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.22);overflow:hidden}
@@ -406,7 +448,8 @@ window.Admission = (function () {
 .a-fg{display:flex;flex-direction:column;gap:0.32rem}
 .a-lbl{font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gray)}
 .a-lbl .req{color:#c0392b;margin-left:2px}
-.a-inp,.a-sel,.a-ta{padding:0.65rem 0.8rem;border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif;font-size:0.9rem;color:var(--dark);background:#fff;outline:none;transition:border-color 0.15s,box-shadow 0.15s;width:100%}
+.req{color:#c0392b;margin-left:2px}
+.a-inp,.a-sel,.a-ta{padding:0.65rem 0.8rem;border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif;font-size:0.9rem;color:var(--dark);background:#fff;outline:none;transition:border-color 0.15s,box-shadow 0.15s;width:100%;box-sizing:border-box}
 .a-inp:focus,.a-sel:focus,.a-ta:focus{border-color:var(--olive);box-shadow:0 0 0 3px rgba(122,122,46,0.1)}
 .a-inp.a-err{border-color:#c0392b}.a-inp[readonly]{background:var(--cream);cursor:default}.a-ta{resize:vertical}
 .a-sect{margin-top:1.4rem;padding-top:1.1rem;border-top:1px solid var(--border)}
@@ -450,8 +493,12 @@ window.Admission = (function () {
 .btn-prim:hover{background:var(--olive)}.btn-prim:disabled{opacity:0.5;pointer-events:none}
 .btn-sec{padding:0.65rem 1.2rem;background:transparent;border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif;font-size:0.85rem;font-weight:700;color:var(--gray);cursor:pointer;transition:all 0.15s}
 .btn-sec:hover{border-color:var(--dark);color:var(--dark)}
-</style>`,
-    html: `<div id="adm-bd">
+</style>`;
+
+  // ══════════════════════════════════════════════════════════════
+  //  HTML SKELETON
+  // ══════════════════════════════════════════════════════════════
+  const ADM_HTML = `<div id="adm-bd">
   <div id="adm-box" role="dialog" aria-modal="true">
     <div id="adm-hdr">
       <div class="a-htop">
@@ -475,21 +522,6 @@ window.Admission = (function () {
   </div>
 </div>
 <input type="file" id="adm-pic-file" accept="image/*" style="display:none"/>
-<input type="file" id="adm-docs-file" multiple style="display:none"/>`
-  };
+<input type="file" id="adm-docs-file" multiple style="display:none"/>`;
+
 })();
-
-// Override inject to use the pre-built templates
-(function(){
-  var origOpenNew = window.Admission.openNew;
-  var origOpenExisting = window.Admission.openExisting;
-  var injected = false;
-
-  function injectNow(){
-    if(injected||document.getElementById('adm-bd')) return;
-    injected=true;
-    document.head.insertAdjacentHTML('beforeend', window._admTpl.css);
-    document.body.insertAdjacentHTML('beforeend', window._admTpl.html);
-    document.getElementById('adm-close-btn').addEventListener('click', function(){ document.getElementById('adm-bd').classList.remove('open'); document.body.style.overflow=''; if(typeof window.onAdmissionClose==='function')window.onAdmissionClose(); });
-    document.getElementById('adm-cancel-btn').addEventListener('click', function(){ document.getElementById('adm-bd').classList.remove('open'); document.body.style.overflow=''; if(typeof window.onAdmissionClose==='function')window.onAdmissionClose(); });
-    document.getElementById('adm-bd').addEventListener('click',function(e){if(e.target.id==='adm-bd'){document.getElementById('adm-bd').classList.remove('open');document.body.style.overflow='';if(typeof window.onAdmissionClose==='function')window.onAd
