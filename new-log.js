@@ -6,14 +6,126 @@
  */
 (function () {
 
+  // ══════════════════════════════════════════════════════════════════
+  //  TEMPLATES — must be defined first (const is not hoisted)
+  // ══════════════════════════════════════════════════════════════════
+  const NL_CSS = `<style id="nl-styles">
+/* ── Backdrop & box ── */
+#nl-bd{display:none;position:fixed;inset:0;background:rgba(47,42,36,0.65);z-index:300;align-items:flex-start;justify-content:center;padding:1.25rem;overflow-y:auto}
+#nl-bd.open{display:flex}
+#nl-box{background:#fff;border-radius:12px;width:100%;max-width:1100px;min-height:0;box-shadow:0 28px 72px rgba(0,0,0,0.24);display:flex;flex-direction:column;margin:auto}
+#nl-hdr{padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:space-between;border-radius:12px 12px 0 0;flex-shrink:0}
+#nl-title{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:600;color:var(--dark)}
+#nl-close{background:none;border:none;cursor:pointer;color:var(--gray);padding:0.25rem;display:flex;transition:color 0.15s}
+#nl-close:hover{color:var(--dark)}
+#nl-body{padding:1.5rem;flex:1;min-height:0}
+/* ── Search step ── */
+.nl-search-wrap{max-width:520px;margin:2rem auto}
+.nl-search-hero{display:flex;align-items:center;gap:0.9rem;margin-bottom:1.25rem}
+.nl-pt-search-wrap{position:relative}
+.nl-search-icon{position:absolute;left:0.8rem;top:50%;transform:translateY(-50%);color:var(--gray);pointer-events:none;display:flex}
+.nl-search-inp{width:100%;padding:0.75rem 0.9rem 0.75rem 2.4rem;border:1.5px solid var(--border);border-radius:7px;font-family:'Lato',sans-serif;font-size:0.95rem;color:var(--dark);outline:none;box-sizing:border-box;transition:border-color 0.15s,box-shadow 0.15s}
+.nl-search-inp:focus{border-color:var(--olive);box-shadow:0 0 0 3px rgba(122,122,46,0.1)}
+.nl-pt-dd{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid var(--olive);border-radius:6px;box-shadow:0 8px 28px rgba(0,0,0,0.16);z-index:400;max-height:300px;overflow-y:auto;display:none}
+.nl-pt-dd.show{display:block}
+.nl-pt-item{display:flex;align-items:center;gap:0.65rem;padding:0.65rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.1s}
+.nl-pt-item:last-child{border-bottom:none}.nl-pt-item:hover{background:var(--cream)}
+.nl-pt-av{width:28px;height:28px;border-radius:50%;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0;overflow:hidden}
+.nl-pt-av img{width:100%;height:100%;object-fit:cover}
+.nl-pt-name{font-weight:700;font-size:0.88rem;color:var(--dark)}
+.nl-pt-meta{font-size:0.72rem;color:var(--gray)}
+/* ── Client bar ── */
+.nl-client-bar{display:flex;align-items:center;gap:0.85rem;padding:0.85rem 1.1rem;background:var(--cream);border:1px solid var(--border);border-radius:8px;margin-bottom:1.25rem}
+.nl-av{width:42px;height:42px;border-radius:50%;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;flex-shrink:0;overflow:hidden}
+.nl-av img{width:100%;height:100%;object-fit:cover}
+.nl-cb-info{flex:1;min-width:0}
+.nl-cb-name{font-family:'Playfair Display',serif;font-size:1rem;font-weight:600;color:var(--dark)}
+.nl-cb-meta{font-size:0.75rem;color:var(--gray);margin-top:0.1rem}
+.nl-change-btn{padding:0.38rem 0.85rem;background:transparent;border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif;font-size:0.78rem;font-weight:700;color:var(--gray);cursor:pointer;transition:all 0.15s;flex-shrink:0}
+.nl-change-btn:hover{border-color:var(--dark);color:var(--dark)}
+/* ── Info block ── */
+.nl-info-block{padding:0.75rem 1rem;background:var(--cream2);border:1px solid var(--border);border-radius:6px;margin-bottom:1.25rem}
+.nl-ib-title{font-size:0.67rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gray)}
+.nl-diag-chip{display:inline-flex;align-items:center;padding:0.2rem 0.6rem;background:#fff;border:1px solid var(--border);border-radius:4px;font-size:0.8rem}
+/* ── Two-column form ── */
+.nl-form-cols{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start}
+@media(max-width:800px){.nl-form-cols{grid-template-columns:1fr}}
+.nl-col{display:flex;flex-direction:column;gap:0}
+/* ── Section title ── */
+.nl-sect-title{font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:600;color:var(--dark);margin-bottom:0.5rem;padding-top:0;border-bottom:1px solid var(--border);padding-bottom:0.35rem}
+.req{color:#c0392b;margin-left:2px}
+/* ── Inputs ── */
+.nl-lbl{font-size:0.67rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gray);display:block;margin-bottom:0.25rem}
+.nl-inp,.nl-ta{padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif;font-size:0.88rem;color:var(--dark);background:#fff;outline:none;transition:border-color 0.15s,box-shadow 0.15s;width:100%;box-sizing:border-box}
+.nl-inp:focus,.nl-ta:focus{border-color:var(--olive);box-shadow:0 0 0 3px rgba(122,122,46,0.1)}
+.nl-inp[readonly]{background:var(--cream);cursor:default}
+.nl-ta{resize:vertical}
+.nl-fg{display:flex;flex-direction:column}
+/* ── MKB row ── */
+.nl-mkb-row{display:flex;gap:0.5rem;align-items:flex-end}
+.nl-mkb-dd{position:absolute;top:calc(100% + 3px);left:0;right:0;background:#fff;border:1.5px solid var(--olive);border-radius:5px;box-shadow:0 6px 22px rgba(0,0,0,0.16);z-index:400;max-height:220px;overflow-y:auto;display:none}
+.nl-mkb-dd.show{display:block}
+.nl-mkb-item{padding:0.5rem 0.8rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.83rem}
+.nl-mkb-item:last-child{border-bottom:none}.nl-mkb-item:hover{background:var(--cream)}
+.nl-mkb-code{font-family:monospace;font-weight:700;color:var(--olive);margin-right:0.4rem}
+.nl-btn-mkb{padding:0.6rem 0.85rem;background:var(--olive);color:#fff;border:none;border-radius:4px;font-family:'Lato',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:background 0.15s}
+.nl-btn-mkb:hover{background:#5a5a1e}
+/* ── Vitals grid ── */
+.nl-vitals-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.65rem}
+.nl-bp-row{display:flex;align-items:flex-end;gap:0.3rem;grid-column:1/-1}
+.nl-bp-inp{max-width:90px}
+.nl-bp-slash{font-size:1.4rem;font-weight:300;color:var(--gray);line-height:1;padding-bottom:0.55rem;flex-shrink:0}
+.nl-bp-unit{font-size:0.75rem;color:var(--gray);padding-bottom:0.6rem;flex-shrink:0;margin-left:0.2rem}
+/* ── Chronic therapy ── */
+.nl-ct-active{margin-bottom:0.5rem}
+.nl-ct-row{display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.65rem;border-radius:4px;font-size:0.83rem;border:1px solid var(--border);margin-bottom:0.3rem}
+.nl-ct-staged{background:rgba(122,122,46,0.07);border-color:var(--olive)}
+.nl-ct-past{opacity:0.6;text-decoration:line-through}
+.nl-ct-drug{font-weight:700;color:var(--dark);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nl-ct-dose{color:var(--gray);font-size:0.78rem;flex-shrink:0}
+.nl-ct-since{color:var(--gray);font-size:0.72rem;flex-shrink:0;margin-left:auto}
+.nl-rm-btn{background:none;border:none;cursor:pointer;color:var(--gray);font-size:1.1rem;line-height:1;padding:0 0.2rem;flex-shrink:0}.nl-rm-btn:hover{color:#c0392b}
+.nl-ct-add-row{display:flex;gap:0.5rem;align-items:flex-end;margin-top:0.5rem}
+.nl-btn-add{display:inline-flex;align-items:center;gap:0.35rem;padding:0.55rem 0.85rem;background:transparent;border:1px dashed var(--olive);border-radius:4px;color:var(--olive);font-family:'Lato',sans-serif;font-size:0.8rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:background 0.15s;flex-shrink:0}
+.nl-btn-add:hover{background:rgba(122,122,46,0.07)}
+.nl-drug-dd{position:absolute;top:calc(100% + 3px);left:0;right:0;background:#fff;border:1.5px solid var(--olive);border-radius:5px;box-shadow:0 6px 22px rgba(0,0,0,0.16);z-index:400;max-height:220px;overflow-y:auto;display:none}
+.nl-drug-dd.show{display:block}
+.nl-drug-item{padding:0.55rem 0.85rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.84rem}
+.nl-drug-item:last-child{border-bottom:none}.nl-drug-item:hover{background:var(--cream)}
+.nl-ddi-name{font-weight:700;color:var(--dark)}.nl-ddi-meta{font-size:0.74rem;color:var(--gray);margin-top:0.1rem}
+.nl-past-details{margin-top:0.6rem;font-size:0.82rem}
+.nl-past-details summary{cursor:pointer;color:var(--olive);font-weight:700;font-size:0.78rem;padding:0.25rem 0;list-style:none}
+.nl-past-details summary::before{content:'▸ '}
+.nl-past-details[open] summary::before{content:'▾ '}
+.nl-past-list{margin-top:0.4rem}
+/* ── Form footer ── */
+.nl-form-ftr{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1.75rem;padding-top:1rem;border-top:1px solid var(--border)}
+.nl-err{font-size:0.82rem;color:#c0392b;flex:1}
+.nl-btn-prim{display:inline-flex;align-items:center;gap:0.5rem;padding:0.7rem 1.6rem;background:var(--dark);border:none;border-radius:5px;font-family:'Lato',sans-serif;font-size:0.88rem;font-weight:700;letter-spacing:0.08em;color:#fff;cursor:pointer;transition:background 0.15s}
+.nl-btn-prim:hover{background:var(--olive)}.nl-btn-prim:disabled{opacity:0.45;pointer-events:none}
+</style>`;
+
+  const NL_HTML = `
+<div id="nl-bd">
+  <div id="nl-box" role="dialog" aria-modal="true">
+    <div id="nl-hdr">
+      <span id="nl-title">Нов Клинички Запис</span>
+      <button id="nl-close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="nl-body"></div>
+  </div>
+</div>`;
+
   // ── State ────────────────────────────────────────────────────────
-  let _cb = null;               // refresh callback
-  let _client = null;           // selected patient full object
-  let _therapy = [];            // current chronic therapy rows from DB
-  let _newTherapyItems = [];    // items staged for this session
+  let _cb = null;
+  let _client = null;
+  let _therapy = [];
+  let _newTherapyItems = [];
   let _ptTimer = null;
   let _drugTimer = null;
-  let _drugObj = null;          // resolved drug from autocomplete
+  let _drugObj = null;
   let _injected = false;
 
   // ── Role helpers ─────────────────────────────────────────────────
@@ -556,130 +668,5 @@
   function clearErr()  { const el = document.getElementById('nl-err'); if (el) el.textContent = ''; }
   function esc(s)      { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function fmt(iso)    { return iso ? new Date(iso).toLocaleDateString('mk-MK') : '—'; }
-
-  // ══════════════════════════════════════════════════════════════════
-  //  CSS
-  // ══════════════════════════════════════════════════════════════════
-  const NL_CSS = `<style id="nl-styles">
-/* ── Backdrop & box ── */
-#nl-bd{display:none;position:fixed;inset:0;background:rgba(47,42,36,0.65);z-index:300;align-items:flex-start;justify-content:center;padding:1.25rem;overflow-y:auto}
-#nl-bd.open{display:flex}
-#nl-box{background:#fff;border-radius:12px;width:100%;max-width:1100px;min-height:0;box-shadow:0 28px 72px rgba(0,0,0,0.24);display:flex;flex-direction:column;margin:auto}
-#nl-hdr{padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:space-between;border-radius:12px 12px 0 0;flex-shrink:0}
-#nl-title{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:600;color:var(--dark)}
-#nl-close{background:none;border:none;cursor:pointer;color:var(--gray);padding:0.25rem;display:flex;transition:color 0.15s}
-#nl-close:hover{color:var(--dark)}
-#nl-body{padding:1.5rem;flex:1;min-height:0}
-
-/* ── Search step ── */
-.nl-search-wrap{max-width:520px;margin:2rem auto}
-.nl-search-hero{display:flex;align-items:center;gap:0.9rem;margin-bottom:1.25rem}
-.nl-pt-search-wrap{position:relative}
-.nl-search-icon{position:absolute;left:0.8rem;top:50%;transform:translateY(-50%);color:var(--gray);pointer-events:none;display:flex}
-.nl-search-inp{width:100%;padding:0.75rem 0.9rem 0.75rem 2.4rem;border:1.5px solid var(--border);border-radius:7px;font-family:'Lato',sans-serif;font-size:0.95rem;color:var(--dark);outline:none;box-sizing:border-box;transition:border-color 0.15s,box-shadow 0.15s}
-.nl-search-inp:focus{border-color:var(--olive);box-shadow:0 0 0 3px rgba(122,122,46,0.1)}
-.nl-pt-dd{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid var(--olive);border-radius:6px;box-shadow:0 8px 28px rgba(0,0,0,0.16);z-index:400;max-height:300px;overflow-y:auto;display:none}
-.nl-pt-dd.show{display:block}
-.nl-pt-item{display:flex;align-items:center;gap:0.65rem;padding:0.65rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.1s}
-.nl-pt-item:last-child{border-bottom:none}.nl-pt-item:hover{background:var(--cream)}
-.nl-pt-av{width:28px;height:28px;border-radius:50%;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0;overflow:hidden}
-.nl-pt-av img{width:100%;height:100%;object-fit:cover}
-.nl-pt-name{font-weight:700;font-size:0.88rem;color:var(--dark)}
-.nl-pt-meta{font-size:0.72rem;color:var(--gray)}
-
-/* ── Client bar ── */
-.nl-client-bar{display:flex;align-items:center;gap:0.85rem;padding:0.85rem 1.1rem;background:var(--cream);border:1px solid var(--border);border-radius:8px;margin-bottom:1.25rem}
-.nl-av{width:42px;height:42px;border-radius:50%;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;flex-shrink:0;overflow:hidden}
-.nl-av img{width:100%;height:100%;object-fit:cover}
-.nl-cb-info{flex:1;min-width:0}
-.nl-cb-name{font-family:'Playfair Display',serif;font-size:1rem;font-weight:600;color:var(--dark)}
-.nl-cb-meta{font-size:0.75rem;color:var(--gray);margin-top:0.1rem}
-.nl-change-btn{padding:0.38rem 0.85rem;background:transparent;border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif;font-size:0.78rem;font-weight:700;color:var(--gray);cursor:pointer;transition:all 0.15s;flex-shrink:0}
-.nl-change-btn:hover{border-color:var(--dark);color:var(--dark)}
-
-/* ── Info block (chronic diags preview) ── */
-.nl-info-block{padding:0.75rem 1rem;background:var(--cream2);border:1px solid var(--border);border-radius:6px;margin-bottom:1.25rem}
-.nl-ib-title{font-size:0.67rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gray)}
-.nl-diag-chip{display:inline-flex;align-items:center;padding:0.2rem 0.6rem;background:#fff;border:1px solid var(--border);border-radius:4px;font-size:0.8rem}
-
-/* ── Two-column form ── */
-.nl-form-cols{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start}
-@media(max-width:800px){.nl-form-cols{grid-template-columns:1fr}}
-.nl-col{display:flex;flex-direction:column;gap:0}
-
-/* ── Section title ── */
-.nl-sect-title{font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:600;color:var(--dark);margin-bottom:0.5rem;padding-top:0;border-bottom:1px solid var(--border);padding-bottom:0.35rem}
-.req{color:#c0392b;margin-left:2px}
-
-/* ── Inputs ── */
-.nl-lbl{font-size:0.67rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gray);display:block;margin-bottom:0.25rem}
-.nl-inp,.nl-ta{padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif;font-size:0.88rem;color:var(--dark);background:#fff;outline:none;transition:border-color 0.15s,box-shadow 0.15s;width:100%;box-sizing:border-box}
-.nl-inp:focus,.nl-ta:focus{border-color:var(--olive);box-shadow:0 0 0 3px rgba(122,122,46,0.1)}
-.nl-inp[readonly]{background:var(--cream);cursor:default}
-.nl-ta{resize:vertical}
-.nl-fg{display:flex;flex-direction:column}
-
-/* ── MKB row ── */
-.nl-mkb-row{display:flex;gap:0.5rem;align-items:flex-end}
-.nl-mkb-dd{position:absolute;top:calc(100% + 3px);left:0;right:0;background:#fff;border:1.5px solid var(--olive);border-radius:5px;box-shadow:0 6px 22px rgba(0,0,0,0.16);z-index:400;max-height:220px;overflow-y:auto;display:none}
-.nl-mkb-dd.show{display:block}
-.nl-mkb-item{padding:0.5rem 0.8rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.83rem}
-.nl-mkb-item:last-child{border-bottom:none}.nl-mkb-item:hover{background:var(--cream)}
-.nl-mkb-code{font-family:monospace;font-weight:700;color:var(--olive);margin-right:0.4rem}
-.nl-btn-mkb{padding:0.6rem 0.85rem;background:var(--olive);color:#fff;border:none;border-radius:4px;font-family:'Lato',sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:background 0.15s}
-.nl-btn-mkb:hover{background:#5a5a1e}
-
-/* ── Vitals grid ── */
-.nl-vitals-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.65rem}
-.nl-bp-row{display:flex;align-items:flex-end;gap:0.3rem;grid-column:1/-1}
-.nl-bp-inp{max-width:90px}
-.nl-bp-slash{font-size:1.4rem;font-weight:300;color:var(--gray);line-height:1;padding-bottom:0.55rem;flex-shrink:0}
-.nl-bp-unit{font-size:0.75rem;color:var(--gray);padding-bottom:0.6rem;flex-shrink:0;margin-left:0.2rem}
-
-/* ── Chronic therapy block ── */
-.nl-ct-active{margin-bottom:0.5rem}
-.nl-ct-row{display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.65rem;border-radius:4px;font-size:0.83rem;border:1px solid var(--border);margin-bottom:0.3rem}
-.nl-ct-staged{background:rgba(122,122,46,0.07);border-color:var(--olive)}
-.nl-ct-past{opacity:0.6;text-decoration:line-through}
-.nl-ct-drug{font-weight:700;color:var(--dark);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.nl-ct-dose{color:var(--gray);font-size:0.78rem;flex-shrink:0}
-.nl-ct-since{color:var(--gray);font-size:0.72rem;flex-shrink:0;margin-left:auto}
-.nl-rm-btn{background:none;border:none;cursor:pointer;color:var(--gray);font-size:1.1rem;line-height:1;padding:0 0.2rem;flex-shrink:0}.nl-rm-btn:hover{color:#c0392b}
-.nl-ct-add-row{display:flex;gap:0.5rem;align-items:flex-end;margin-top:0.5rem}
-.nl-btn-add{display:inline-flex;align-items:center;gap:0.35rem;padding:0.55rem 0.85rem;background:transparent;border:1px dashed var(--olive);border-radius:4px;color:var(--olive);font-family:'Lato',sans-serif;font-size:0.8rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:background 0.15s;flex-shrink:0}
-.nl-btn-add:hover{background:rgba(122,122,46,0.07)}
-.nl-drug-dd{position:absolute;top:calc(100% + 3px);left:0;right:0;background:#fff;border:1.5px solid var(--olive);border-radius:5px;box-shadow:0 6px 22px rgba(0,0,0,0.16);z-index:400;max-height:220px;overflow-y:auto;display:none}
-.nl-drug-dd.show{display:block}
-.nl-drug-item{padding:0.55rem 0.85rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.84rem}
-.nl-drug-item:last-child{border-bottom:none}.nl-drug-item:hover{background:var(--cream)}
-.nl-ddi-name{font-weight:700;color:var(--dark)}.nl-ddi-meta{font-size:0.74rem;color:var(--gray);margin-top:0.1rem}
-.nl-past-details{margin-top:0.6rem;font-size:0.82rem}
-.nl-past-details summary{cursor:pointer;color:var(--olive);font-weight:700;font-size:0.78rem;padding:0.25rem 0;list-style:none}
-.nl-past-details summary::before{content:'▸ '}
-.nl-past-details[open] summary::before{content:'▾ '}
-.nl-past-list{margin-top:0.4rem}
-
-/* ── Form footer ── */
-.nl-form-ftr{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1.75rem;padding-top:1rem;border-top:1px solid var(--border)}
-.nl-err{font-size:0.82rem;color:#c0392b;flex:1}
-.nl-btn-prim{display:inline-flex;align-items:center;gap:0.5rem;padding:0.7rem 1.6rem;background:var(--dark);border:none;border-radius:5px;font-family:'Lato',sans-serif;font-size:0.88rem;font-weight:700;letter-spacing:0.08em;color:#fff;cursor:pointer;transition:background 0.15s}
-.nl-btn-prim:hover{background:var(--olive)}.nl-btn-prim:disabled{opacity:0.45;pointer-events:none}
-</style>`;
-
-  // ══════════════════════════════════════════════════════════════════
-  //  HTML SKELETON
-  // ══════════════════════════════════════════════════════════════════
-  const NL_HTML = `
-<div id="nl-bd">
-  <div id="nl-box" role="dialog" aria-modal="true">
-    <div id="nl-hdr">
-      <span id="nl-title">Нов Клинички Запис</span>
-      <button id="nl-close">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div id="nl-body"></div>
-  </div>
-</div>`;
 
 })();
