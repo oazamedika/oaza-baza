@@ -87,6 +87,7 @@ const STYLE = `
 .le-type-doctor{background:#e8ecf5;color:#2e4a8a}
 .le-type-social{background:#e8f0e8;color:#3a6e3a}
 .le-type-other{background:#f0ece2;color:#8a7a55}
+.le-type-nurse{background:#f0e8f5;color:#6a3a8a}
 .le-field{margin-top:0.35rem}
 .le-fl{font-size:0.63rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray)}
 .le-fv{font-size:0.82rem;color:var(--dark);line-height:1.5}
@@ -214,11 +215,11 @@ window.openClientCard = async function(clientId){
       .eq('client_id',clientId).order('added_at',{ascending:false}),
 
     window._sb.from('client_logs')
-      .select('id,created_at,log_type,dijagnoza_kod,dijagnoza_opis,anamneza,naod,parenteralna,kp_sistolicen,kp_dijastolicen,puls,temperatura,spo2,respiracii,tezina,seker,bolka')
+      .select('id,created_at,log_type,dijagnoza_kod,dijagnoza_opis,anamneza,naod,parenteralna,kp_sistolicen,kp_dijastolicen,puls,temperatura,spo2,respiracii,tezina,seker,bolka,diureza,stolica,zabeleski')
       .eq('client_id',clientId).order('created_at',{ascending:false}).limit(LOGS_MAX+1),
 
     window._sb.from('client_logs')
-      .select('created_at,kp_sistolicen,kp_dijastolicen,puls,temperatura,spo2,respiracii,tezina,seker,bolka')
+      .select('created_at,kp_sistolicen,kp_dijastolicen,puls,temperatura,spo2,respiracii,tezina,seker,bolka,diureza,stolica')
       .eq('client_id',clientId).order('created_at',{ascending:false}).limit(25),
 
     window._sb.from('client_srodstvo')
@@ -251,7 +252,7 @@ window.openClientCard = async function(clientId){
   // Name
   document.getElementById('cc-name').textContent=(c.obrakanje?c.obrakanje+' ':'')+(c.ime_prezime||'');
 
-  // Badges
+  // Badges — age (from EMBG), location
   const age=ageFromEmbg(c.embg);
   const fl=c.floor_number||(window.roomToFloor?window.roomToFloor(c.room_number):null);
   const bp=[];
@@ -261,7 +262,8 @@ window.openClientCard = async function(clientId){
     bp.push(`<span class="cc-hbadge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Соба ${c.room_number} / Кревет ${c.bed_number}</span>`);
   }
   if(fl){bp.push('<span class="cc-dot"></span>');bp.push(`<span class="cc-hbadge">Кат ${fl}</span>`);}
-  if(c.status&&c.status!=='draft'){bp.push('<span class="cc-dot"></span>');bp.push(`<span class="cc-hbadge green">${e(c.status)}</span>`);}
+  // Admission date badge
+  if(c.created_at){bp.push('<span class="cc-dot"></span>');bp.push(`<span class="cc-hbadge">Прием: ${fmtDate(c.created_at)}</span>`);}
   document.getElementById('cc-hero-badges').innerHTML=bp.join('');
 
   // Pills
@@ -597,8 +599,8 @@ function renderLogs(){
     ${overflow?`<div class="overflow-note">Прикажани се ${LOGS_MAX} записи. За постари, користете го главниот Logs модул со филтрирање по датум.</div>`:''}`;
 }
 
-const _TL={doctor:'Доктор',social:'Социјален',fizioterapevt:'Физио',supervisor:'Супервизор',other:'Друго'};
-const _TC={doctor:'le-type-doctor',social:'le-type-social',fizioterapevt:'le-type-other',supervisor:'le-type-other',other:'le-type-other'};
+const _TL={doctor:'Доктор',nurse:'Сестра',social:'Социјален',fizioterapevt:'Физио',supervisor:'Супервизор',other:'Друго'};
+const _TC={doctor:'le-type-doctor',nurse:'le-type-nurse',social:'le-type-social',fizioterapevt:'le-type-other',supervisor:'le-type-other',other:'le-type-other'};
 
 function renderLogEntry(l){
   const v=[];
@@ -610,18 +612,21 @@ function renderLogEntry(l){
   if(l.tezina)      v.push(`Тежина: <span>${l.tezina} kg</span>`);
   if(l.seker)       v.push(`Шеќер: <span>${l.seker} mmol/L</span>`);
   if(l.bolka!=null) v.push(`Болка: <span>${l.bolka}/10</span>`);
+  if(l.diureza!=null)v.push(`Диуреза: <span>${l.diureza} ml</span>`);
+  if(l.stolica)     v.push(`Столица: <span>${e(l.stolica)}</span>`);
   return`<div class="log-entry">
     <div class="le-top">
       <div>
-        <span class="le-diag">${e(l.dijagnoza_kod||'—')}${l.dijagnoza_opis?' — '+e(l.dijagnoza_opis):''}</span>
+        ${l.dijagnoza_kod?`<span class="le-diag">${e(l.dijagnoza_kod)}${l.dijagnoza_opis?' — '+e(l.dijagnoza_opis):''}</span>`:''}
         <span class="le-type ${_TC[l.log_type||'doctor']||'le-type-other'}">${_TL[l.log_type||'doctor']||'Друго'}</span>
       </div>
       <span class="le-date">${fmtDateTime(l.created_at)}</span>
     </div>
     ${v.length?`<div class="vital-chips">${v.map(x=>`<div class="vc">${x}</div>`).join('')}</div>`:''}
-    ${l.anamneza   ?`<div class="le-field"><div class="le-fl">Анамнеза</div><div class="le-fv">${e(l.anamneza)}</div></div>`:''}
-    ${l.naod       ?`<div class="le-field"><div class="le-fl">Наод</div><div class="le-fv">${e(l.naod)}</div></div>`:''}
+    ${l.anamneza    ?`<div class="le-field"><div class="le-fl">Анамнеза</div><div class="le-fv">${e(l.anamneza)}</div></div>`:''}
+    ${l.naod        ?`<div class="le-field"><div class="le-fl">Наод</div><div class="le-fv">${e(l.naod)}</div></div>`:''}
     ${l.parenteralna?`<div class="le-field"><div class="le-fl">Парентерална</div><div class="le-fv">${e(l.parenteralna)}</div></div>`:''}
+    ${l.zabeleski   ?`<div class="le-field"><div class="le-fl">Забелешки</div><div class="le-fv">${e(l.zabeleski)}</div></div>`:''}
   </div>`;
 }
 
@@ -640,7 +645,15 @@ function bindLogsFilter(){
 // ══════════════════════════════════════════════════════════════════════
 function renderInfo(){
   const c=_client;
+  const age=ageFromEmbg(c.embg);
   const editBtn=isPrivileged()?`<button class="cc-edit-btn" onclick="editClientData('${e(c.id)}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Уреди</button>`:'';
+  const srodHtml=_srodstvo.length
+    ?_srodstvo.map(s=>`<div class="srodstvo-row">
+        <div><div class="cc-label">Ime и Презиме</div><div>${e(s.ime_prezime||'—')}</div></div>
+        <div><div class="cc-label">Адреса</div><div>${e(s.adresa||'—')}</div></div>
+        <div><div class="cc-label">Телефон</div><div>${e(s.telefon||'—')}</div></div>
+      </div>`).join('')
+    :'<div class="cc-empty" style="padding:0.5rem">Нема внесено сродство.</div>';
   return`
   <div class="cc-section">
     <div class="cc-section-title"><span>Лични податоци</span>${editBtn}</div>
@@ -651,9 +664,14 @@ function renderInfo(){
       <div class="cc-field cc-full"><div class="cc-label">Адреса</div><div class="cc-value">${e(c.adresa||'—')}</div></div>
       <div class="cc-field"><div class="cc-label">Телефон</div><div class="cc-value">${e(c.telefon||'—')}</div></div>
       <div class="cc-field"><div class="cc-label">ЕМБГ</div><div class="cc-value" style="font-family:monospace">${e(c.embg||'—')}</div></div>
+      ${age!==null?`<div class="cc-field"><div class="cc-label">Возраст</div><div class="cc-value">${age} години</div></div>`:''}
       <div class="cc-field"><div class="cc-label">Лична карта / Пасош</div><div class="cc-value">${e(c.licna_karta_broj||'—')}</div></div>
       <div class="cc-field"><div class="cc-label">Датум на прием</div><div class="cc-value">${fmtDate(c.created_at)}</div></div>
     </div>
+  </div>
+  <div class="cc-section">
+    <div class="cc-section-title"><span>Сродство / Контакт лица</span></div>
+    ${srodHtml}
   </div>`;
 }
 

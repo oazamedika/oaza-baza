@@ -132,6 +132,7 @@
   // ── Role helpers ─────────────────────────────────────────────────
   function u() { return (window._username || '').toLowerCase(); }
   function isDoctor()  { return u() === 'doktor'; }
+  function isNurse()   { return u() === 'glavnasestra'; }
 
   // ── Inject once ──────────────────────────────────────────────────
   function inject() {
@@ -274,125 +275,127 @@
   };
 
   // ══════════════════════════════════════════════════════════════════
-  //  STEP 2 — LOG FORM (doctor view)
+  //  STEP 2 — LOG FORM (role-aware)
   // ══════════════════════════════════════════════════════════════════
+  function clientBar(c, loc) {
+    return `<div class="nl-client-bar">
+      ${c.profile_pic_url
+        ? `<div class="nl-av"><img src="${esc(c.profile_pic_url)}" alt=""/></div>`
+        : `<div class="nl-av">${esc((c.ime_prezime||'?').charAt(0))}</div>`}
+      <div class="nl-cb-info">
+        <div class="nl-cb-name">${esc(c.obrakanje ? c.obrakanje+' ' : '')}${esc(c.ime_prezime)}</div>
+        <div class="nl-cb-meta">${esc(loc)} · ЕМБГ: ${esc(c.embg||'—')} · Матичен: ${esc(c.maticen_broj||'—')}</div>
+      </div>
+      <button class="nl-change-btn" onclick="nlChangePatient()">Промени</button>
+    </div>`;
+  }
+
+  function saveFtrHtml() {
+    return `<div class="nl-form-ftr">
+      <div class="nl-err" id="nl-err"></div>
+      <button class="nl-btn-prim" id="nl-save-btn" onclick="nlSave()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Зачувај запис
+      </button>
+    </div>`;
+  }
+
+  function vitalsGridHtml() {
+    return `<div class="nl-vitals-grid">
+      <div class="nl-bp-row">
+        <div class="nl-fg"><label class="nl-lbl">Систоличен</label><input class="nl-inp nl-bp-inp" id="l_kp_s" type="number" placeholder="120"/></div>
+        <div class="nl-bp-slash">/</div>
+        <div class="nl-fg"><label class="nl-lbl">Дијастоличен</label><input class="nl-inp nl-bp-inp" id="l_kp_d" type="number" placeholder="80"/></div>
+        <div class="nl-bp-unit">mmHg</div>
+      </div>
+      <div class="nl-fg"><label class="nl-lbl">Пулс (bpm)</label><input class="nl-inp" id="l_puls" type="number" placeholder="72"/></div>
+      <div class="nl-fg"><label class="nl-lbl">Температура (°C)</label><input class="nl-inp" id="l_temp" type="number" step="0.1" placeholder="36.6"/></div>
+      <div class="nl-fg"><label class="nl-lbl">SpO2 (%)</label><input class="nl-inp" id="l_spo2" type="number" placeholder="98"/></div>
+      <div class="nl-fg"><label class="nl-lbl">Респирации (/мин)</label><input class="nl-inp" id="l_resp" type="number" placeholder="16"/></div>
+      <div class="nl-fg"><label class="nl-lbl">Тежина (kg)</label><input class="nl-inp" id="l_tezina" type="number" step="0.1" placeholder="72.5"/></div>
+      <div class="nl-fg"><label class="nl-lbl">Крвен шеќер (mmol/L)</label><input class="nl-inp" id="l_seker" type="number" step="0.1" placeholder="5.4"/></div>
+      <div class="nl-fg"><label class="nl-lbl">Болка (0–10)</label><input class="nl-inp" id="l_bolka" type="number" min="0" max="10" placeholder="0"/></div>
+      <div class="nl-fg"><label class="nl-lbl">Диуреза (ml)</label><input class="nl-inp" id="l_diureza" type="number" placeholder="1500"/></div>
+      <div class="nl-fg">
+        <label class="nl-lbl">Столица</label>
+        <select class="nl-inp" id="l_stolica">
+          <option value="">—</option>
+          <option value="-">— (нема)</option>
+          <option value="+">+</option>
+          <option value="++">++</option>
+          <option value="+++">+++</option>
+          <option value="дијареа">Дијареа</option>
+        </select>
+      </div>
+    </div>`;
+  }
+
   function showLogForm() {
     const c = _client;
     const fl = c.floor_number || (window.roomToFloor ? window.roomToFloor(c.room_number) : '?');
     const loc = c.room_number ? `Соба ${c.room_number} / Кревет ${c.bed_number} · Кат ${fl}` : '—';
     const diags = (c.client_chronic_diagnoses || []);
-
     document.getElementById('nl-title').textContent = 'Нов Клинички Запис';
 
-    // Current chronic therapy (active = no ended_at)
-    const activeTherapy = _therapy.filter(t => !t.ended_at);
-
-    document.getElementById('nl-body').innerHTML = `
-      <!-- Client preview bar -->
-      <div class="nl-client-bar">
-        ${c.profile_pic_url
-          ? `<div class="nl-av"><img src="${esc(c.profile_pic_url)}" alt=""/></div>`
-          : `<div class="nl-av">${esc((c.ime_prezime||'?').charAt(0))}</div>`}
-        <div class="nl-cb-info">
-          <div class="nl-cb-name">${esc(c.obrakanje ? c.obrakanje+' ' : '')}${esc(c.ime_prezime)}</div>
-          <div class="nl-cb-meta">${esc(loc)} · ЕМБГ: ${esc(c.embg||'—')} · Матичен: ${esc(c.maticen_broj||'—')}</div>
-        </div>
-        <button class="nl-change-btn" onclick="nlChangePatient()">Промени</button>
-      </div>
-
-      <!-- Chronic diagnoses preview -->
-      ${diags.length ? `
-      <div class="nl-info-block">
-        <div class="nl-ib-title">Хронични дијагнози</div>
-        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.4rem">
-          ${diags.map(d=>`<span class="nl-diag-chip"><span style="font-family:monospace;font-weight:700;color:var(--olive);margin-right:0.3rem">${esc(d.kod)}</span>${esc(d.opis||'')}</span>`).join('')}
-        </div>
-      </div>` : ''}
-
-      <!-- Two-column form -->
-      <div class="nl-form-cols">
-
-        <!-- LEFT column -->
-        <div class="nl-col">
-
-          <!-- Current diagnosis -->
-          <div class="nl-sect-title">Дијагноза <span class="req">*</span></div>
-          <div style="position:relative;margin-bottom:0.5rem">
-            <input class="nl-inp" id="l_kod" placeholder="Внеси МКБ-10 код или опис…" style="text-transform:uppercase" autocomplete="off"/>
-            <div class="nl-mkb-dd" id="l_kod_dd"></div>
+    if (isNurse()) {
+      // ── NURSE FORM: vitals + diureza + stolica + zabeleski ──
+      document.getElementById('nl-body').innerHTML =
+        clientBar(c, loc) + `
+        <div class="nl-form-cols">
+          <div class="nl-col">
+            <div class="nl-sect-title">Витални параметри</div>
+            ${vitalsGridHtml()}
           </div>
-          <input class="nl-inp" id="l_opis" readonly placeholder="Опис — се пополнува по избор" style="margin-bottom:0.25rem"/>
-
-          <!-- Anamneza -->
-          <div class="nl-sect-title" style="margin-top:1.1rem">Анамнеза</div>
-          <textarea class="nl-ta" id="l_anamneza" rows="4" placeholder="Анамнестички податоци…"></textarea>
-
-          <!-- Naod -->
-          <div class="nl-sect-title" style="margin-top:1.1rem">Наод</div>
-          <textarea class="nl-ta" id="l_naod" rows="4" placeholder="Клинички наод…"></textarea>
-
-        </div><!-- /LEFT -->
-
-        <!-- RIGHT column -->
-        <div class="nl-col">
-
-          <!-- Vitals -->
-          <div class="nl-sect-title">Витални параметри</div>
-          <div class="nl-vitals-grid">
-            <!-- BP row — sys/dias side by side with slash -->
-            <div class="nl-bp-row">
-              <div class="nl-fg">
-                <label class="nl-lbl">Систоличен</label>
-                <input class="nl-inp nl-bp-inp" id="l_kp_s" type="number" placeholder="120"/>
-              </div>
-              <div class="nl-bp-slash">/</div>
-              <div class="nl-fg">
-                <label class="nl-lbl">Дијастоличен</label>
-                <input class="nl-inp nl-bp-inp" id="l_kp_d" type="number" placeholder="80"/>
-              </div>
-              <div class="nl-bp-unit">mmHg</div>
+          <div class="nl-col">
+            <div class="nl-sect-title">Забелешки</div>
+            <textarea class="nl-ta" id="l_zabeleski" rows="8" placeholder="Напомени, забелешки…"></textarea>
+          </div>
+        </div>` + saveFtrHtml();
+    } else {
+      // ── DOCTOR FORM (full) ──
+      document.getElementById('nl-body').innerHTML =
+        clientBar(c, loc) +
+        (diags.length ? `<div class="nl-info-block">
+          <div class="nl-ib-title">Хронични дијагнози</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.4rem">
+            ${diags.map(d=>`<span class="nl-diag-chip"><span style="font-family:monospace;font-weight:700;color:var(--olive);margin-right:0.3rem">${esc(d.kod)}</span>${esc(d.opis||''  )}</span>`).join('')}
+          </div></div>` : '') + `
+        <div class="nl-form-cols">
+          <div class="nl-col">
+            <div class="nl-sect-title">Дијагноза <span class="req">*</span></div>
+            <div style="position:relative;margin-bottom:0.5rem">
+              <input class="nl-inp" id="l_kod" placeholder="Внеси МКБ-10 код или опис…" style="text-transform:uppercase" autocomplete="off"/>
+              <div class="nl-mkb-dd" id="l_kod_dd"></div>
             </div>
-            <div class="nl-fg"><label class="nl-lbl">Пулс (bpm)</label><input class="nl-inp" id="l_puls" type="number" placeholder="72"/></div>
-            <div class="nl-fg"><label class="nl-lbl">Температура (°C)</label><input class="nl-inp" id="l_temp" type="number" step="0.1" placeholder="36.6"/></div>
-            <div class="nl-fg"><label class="nl-lbl">SpO2 (%)</label><input class="nl-inp" id="l_spo2" type="number" placeholder="98"/></div>
-            <div class="nl-fg"><label class="nl-lbl">Респирации (/мин)</label><input class="nl-inp" id="l_resp" type="number" placeholder="16"/></div>
-            <div class="nl-fg"><label class="nl-lbl">Тежина (kg)</label><input class="nl-inp" id="l_tezina" type="number" step="0.1" placeholder="72.5"/></div>
-            <div class="nl-fg"><label class="nl-lbl">Крвен шеќер (mmol/L)</label><input class="nl-inp" id="l_seker" type="number" step="0.1" placeholder="5.4"/></div>
-            <div class="nl-fg"><label class="nl-lbl">Болка (0–10)</label><input class="nl-inp" id="l_bolka" type="number" min="0" max="10" placeholder="0"/></div>
+            <input class="nl-inp" id="l_opis" readonly placeholder="Опис — се пополнува по избор" style="margin-bottom:0.25rem"/>
+            <div class="nl-sect-title" style="margin-top:1.1rem">Анамнеза</div>
+            <textarea class="nl-ta" id="l_anamneza" rows="4" placeholder="Анамнестички податоци…"></textarea>
+            <div class="nl-sect-title" style="margin-top:1.1rem">Наод</div>
+            <textarea class="nl-ta" id="l_naod" rows="4" placeholder="Клинички наод…"></textarea>
           </div>
+          <div class="nl-col">
+            <div class="nl-sect-title">Витални параметри</div>
+            ${vitalsGridHtml()}
+            <div class="nl-sect-title" style="margin-top:1.25rem">Хронична терапија</div>
+            <div id="nl-ct-block">${renderChronicTherapyBlock()}</div>
+            <div class="nl-sect-title" style="margin-top:1.1rem">Парентерална терапија</div>
+            <textarea class="nl-ta" id="l_parenteralna" rows="2" placeholder="нпр. NaCl 0.9% 500ml iv…"></textarea>
+            <div class="nl-sect-title" style="margin-top:1.1rem">Забелешки</div>
+            <textarea class="nl-ta" id="l_zabeleski" rows="2" placeholder="Напомени, забелешки…"></textarea>
+          </div>
+        </div>` + saveFtrHtml();
 
-          <!-- Chronic therapy -->
-          <div class="nl-sect-title" style="margin-top:1.25rem">Хронична терапија</div>
-          <div id="nl-ct-block">${renderChronicTherapyBlock()}</div>
-
-          <!-- Parenteral -->
-          <div class="nl-sect-title" style="margin-top:1.1rem">Парентерална терапија</div>
-          <textarea class="nl-ta" id="l_parenteralna" rows="2" placeholder="нпр. NaCl 0.9% 500ml iv…"></textarea>
-
-        </div><!-- /RIGHT -->
-
-      </div><!-- /cols -->
-
-      <!-- Footer save button area -->
-      <div class="nl-form-ftr">
-        <div class="nl-err" id="nl-err"></div>
-        <button class="nl-btn-prim" id="nl-save-btn" onclick="nlSave()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          Зачувај запис
-        </button>
-      </div>`;
-
-    // Wire MKB — live on every keystroke, immediate on Enter
-    const kodInp = document.getElementById('l_kod');
-    kodInp.addEventListener('input', () => nlMKBLive('l_kod', 'l_opis', 'l_kod_dd'));
-    kodInp.addEventListener('keydown', ev => {
-      if (ev.key === 'Enter') { ev.preventDefault(); clearTimeout(_mkbTimer); nlMKB('l_kod','l_opis','l_kod_dd'); }
-    });
-    // Wire drug search
-    const drugInp = document.getElementById('nl_drug');
-    if (drugInp) drugInp.addEventListener('input', e => nlDrugSearch(e.target.value));
-    // Focus diagnosis
-    setTimeout(() => document.getElementById('l_kod')?.focus(), 60);
+      // Wire MKB
+      const kodInp = document.getElementById('l_kod');
+      kodInp.addEventListener('input', () => nlMKBLive('l_kod', 'l_opis', 'l_kod_dd'));
+      kodInp.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter') { ev.preventDefault(); clearTimeout(_mkbTimer); nlMKB('l_kod','l_opis','l_kod_dd'); }
+      });
+      // Wire drug search
+      const drugInp = document.getElementById('nl_drug');
+      if (drugInp) drugInp.addEventListener('input', ev => nlDrugSearch(ev.target.value));
+      setTimeout(() => document.getElementById('l_kod')?.focus(), 60);
+    }
   }
 
   window.nlChangePatient = function () { reset(); showSearchStep(); };
@@ -610,39 +613,46 @@
   window.nlSave = async function () {
     clearErr();
     if (!_client) { setErr('Нема избран корисник.'); return; }
+
+    // Nurse: no diagnosis required. Doctor: diagnosis required.
+    const nurse = isNurse();
     const kod = (document.getElementById('l_kod')?.value || '').trim().toUpperCase();
-    if (!kod) { setErr('Дијагнозата е задолжителна.'); return; }
+    if (!nurse && !kod) { setErr('Дијагнозата е задолжителна.'); return; }
 
     const btn = document.getElementById('nl-save-btn');
     btn.disabled = true;
 
     function nv(id) { const v = document.getElementById(id)?.value; return (v && v.trim()) ? parseFloat(v) : null; }
+    function sv(id) { const v = document.getElementById(id)?.value; return (v && v.trim()) ? v.trim() : null; }
 
     const payload = {
-      client_id:     _client.id,
-      created_by:    window._user.id,
-      log_type:      'doctor',
-      dijagnoza_kod: kod,
-      dijagnoza_opis:    document.getElementById('l_opis')?.value || null,
-      anamneza:          document.getElementById('l_anamneza')?.value || null,
-      naod:              document.getElementById('l_naod')?.value || null,
-      parenteralna:      document.getElementById('l_parenteralna')?.value || null,
-      kp_sistolicen:     nv('l_kp_s'),
-      kp_dijastolicen:   nv('l_kp_d'),
-      puls:              nv('l_puls'),
-      temperatura:       nv('l_temp'),
-      spo2:              nv('l_spo2'),
-      respiracii:        nv('l_resp'),
-      tezina:            nv('l_tezina'),
-      seker:             nv('l_seker'),
-      bolka:             nv('l_bolka') != null ? parseInt(document.getElementById('l_bolka')?.value) : null,
+      client_id:       _client.id,
+      created_by:      window._user.id,
+      log_type:        nurse ? 'nurse' : 'doctor',
+      dijagnoza_kod:   kod || null,
+      dijagnoza_opis:  sv('l_opis'),
+      anamneza:        sv('l_anamneza'),
+      naod:            sv('l_naod'),
+      parenteralna:    sv('l_parenteralna'),
+      zabeleski:       sv('l_zabeleski'),
+      kp_sistolicen:   nv('l_kp_s'),
+      kp_dijastolicen: nv('l_kp_d'),
+      puls:            nv('l_puls'),
+      temperatura:     nv('l_temp'),
+      spo2:            nv('l_spo2'),
+      respiracii:      nv('l_resp'),
+      tezina:          nv('l_tezina'),
+      seker:           nv('l_seker'),
+      bolka:           nv('l_bolka') != null ? parseInt(document.getElementById('l_bolka')?.value) : null,
+      diureza:         nv('l_diureza') != null ? parseInt(document.getElementById('l_diureza')?.value) : null,
+      stolica:         sv('l_stolica'),
     };
 
     const { error: logErr } = await window._sb.from('client_logs').insert([payload]);
     if (logErr) { setErr('Грешка при зачувување: ' + logErr.message); btn.disabled = false; return; }
 
-    // Insert new chronic therapy items
-    if (_newTherapyItems.length) {
+    // Insert new chronic therapy items (doctor only)
+    if (!nurse && _newTherapyItems.length) {
       const rows = _newTherapyItems.map(t => ({
         client_id:  _client.id,
         drug_name:  t.drug_name,
