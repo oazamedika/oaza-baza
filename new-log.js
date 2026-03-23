@@ -103,6 +103,18 @@
 .nl-err{font-size:0.82rem;color:#c0392b;flex:1}
 .nl-btn-prim{display:inline-flex;align-items:center;gap:0.5rem;padding:0.7rem 1.6rem;background:var(--dark);border:none;border-radius:5px;font-family:'Lato',sans-serif;font-size:0.88rem;font-weight:700;letter-spacing:0.08em;color:#fff;cursor:pointer;transition:background 0.15s}
 .nl-btn-prim:hover{background:var(--olive)}.nl-btn-prim:disabled{opacity:0.45;pointer-events:none}
+/* ── Caregiver form ── */
+.nl-care-form{display:flex;flex-direction:column;gap:1.1rem}
+.nl-care-group{background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.nl-care-group-hdr{display:flex;align-items:center;gap:0.6rem;padding:0.6rem 1rem;background:var(--cream);border-bottom:1px solid var(--border)}
+.nl-care-group-icon{width:22px;height:22px;border-radius:50%;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.65rem;font-weight:700}
+.nl-care-group-title{font-family:'Playfair Display',serif;font-size:0.9rem;font-weight:600;color:var(--dark)}
+.nl-care-group-body{padding:0.75rem 1rem;display:grid;grid-template-columns:1fr 1fr;gap:0.65rem}
+.nl-care-group-body.full{grid-template-columns:1fr}
+.nl-care-field{display:flex;flex-direction:column;gap:0.25rem}
+.nl-smena-row{display:flex;gap:0.5rem;margin-bottom:1rem}
+.nl-smena-btn{flex:1;padding:0.6rem;border:1.5px solid var(--border);border-radius:6px;background:#fff;font-family:'Lato',sans-serif;font-size:0.85rem;font-weight:700;color:var(--gray);cursor:pointer;transition:all 0.15s;text-align:center}
+.nl-smena-btn.active{border-color:var(--olive);background:rgba(122,122,46,0.08);color:var(--olive)}
 </style>`;
 
   const NL_HTML = `
@@ -131,8 +143,9 @@
 
   // ── Role helpers ─────────────────────────────────────────────────
   function u() { return (window._username || '').toLowerCase(); }
-  function isDoctor()  { return u() === 'doktor'; }
-  function isNurse()   { return u() === 'glavnasestra'; }
+  function isDoctor()    { return u() === 'doktor'; }
+  function isNurse()     { return u() === 'glavnasestra'; }
+  function isCaregiver() { return u() === 'supervizornega'; }
 
   // ── Inject once ──────────────────────────────────────────────────
   function inject() {
@@ -351,6 +364,193 @@
             <textarea class="nl-ta" id="l_zabeleski" rows="8" placeholder="Напомени, забелешки…"></textarea>
           </div>
         </div>` + saveFtrHtml();
+
+    } else if (isCaregiver()) {
+      // ── SUPERVIZOR NEGA FORM ──
+      document.getElementById('nl-body').innerHTML =
+        clientBar(c, loc) + `
+
+        <!-- Смена picker -->
+        <div style="margin-bottom:1rem">
+          <label class="nl-lbl">Смена <span class="req">*</span></label>
+          <div class="nl-smena-row">
+            <button type="button" class="nl-smena-btn" data-smena="утро"   onclick="nlPickSmena(this)">🌅 Утро</button>
+            <button type="button" class="nl-smena-btn" data-smena="пладне" onclick="nlPickSmena(this)">☀️ Пладне</button>
+            <button type="button" class="nl-smena-btn" data-smena="вечер"  onclick="nlPickSmena(this)">🌙 Вечер</button>
+          </div>
+          <input type="hidden" id="l_smena" value=""/>
+        </div>
+
+        <div class="nl-care-form">
+
+          <!-- 1. ОПШТА ХИГИЕНА -->
+          <div class="nl-care-group">
+            <div class="nl-care-group-hdr">
+              <div class="nl-care-group-icon">1</div>
+              <span class="nl-care-group-title">Општа хигиена</span>
+            </div>
+            <div class="nl-care-group-body full">
+              <div class="nl-care-field">
+                <label class="nl-lbl">Миење на лице и раце / Орална хигиена</label>
+                <input class="nl-inp" id="cg_lice_race" placeholder="нпр. извршено / со помош…"/>
+              </div>
+              <div class="nl-care-field">
+                <label class="nl-lbl">Менување на облека</label>
+                <input class="nl-inp" id="cg_obleka" placeholder="нпр. целосно / горен дел…"/>
+              </div>
+              <div class="nl-care-field">
+                <label class="nl-lbl">Менување на пелена / долна облека</label>
+                <input class="nl-inp" id="cg_pelena" placeholder="нпр. 2× / нема потреба…"/>
+              </div>
+              <div class="nl-care-field">
+                <label class="nl-lbl">Капење</label>
+                <input class="nl-inp" id="cg_kapenje" placeholder="нпр. туш со помош / не денес…"/>
+              </div>
+              <div class="nl-care-field">
+                <label class="nl-lbl">Сечење на нокти (раце / нозе)</label>
+                <input class="nl-inp" id="cg_nokti" placeholder="нпр. раце сечени / не…"/>
+              </div>
+              <div class="nl-care-field">
+                <label class="nl-lbl">Менување на постелнина</label>
+                <input class="nl-inp" id="cg_postelnina" placeholder="нпр. извршено / не денес…"/>
+              </div>
+              <div class="nl-care-field">
+                <label class="nl-lbl">Проверка на crвенила / рани / модринки</label>
+                <input class="nl-inp" id="cg_rani" placeholder="нпр. нема / видено црвенило на…"/>
+              </div>
+              <div class="nl-care-field">
+                <label class="nl-lbl">Премачкување (со што / каде)</label>
+                <input class="nl-inp" id="cg_premackување" placeholder="нпр. Bepanthen на лактите…"/>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. ИСХРАНА И ХИДРАТАЦИЈА -->
+          <div class="nl-care-group">
+            <div class="nl-care-group-hdr">
+              <div class="nl-care-group-icon">2</div>
+              <span class="nl-care-group-title">Исхрана и хидратација</span>
+            </div>
+            <div class="nl-care-group-body">
+              <div class="nl-care-field">
+                <label class="nl-lbl">Вид на храна</label>
+                <input class="nl-inp" id="cg_vid_hrana" placeholder="нпр. нормална / мека / каша…"/>
+              </div>
+              <div class="nl-care-field">
+                <label class="nl-lbl">Начин на исхрана</label>
+                <input class="nl-inp" id="cg_nacin_ishrana" placeholder="нпр. самостојно / со помош / сонда…"/>
+              </div>
+              <div class="nl-care-field">
+                <label class="nl-lbl">Внес на течности</label>
+                <input class="nl-inp" id="cg_tecnosti" placeholder="нпр. 1200 ml / добар внес…"/>
+              </div>
+              <div class="nl-care-field">
+                <label class="nl-lbl">Апетит</label>
+                <select class="nl-inp" id="cg_apetit">
+                  <option value="">—</option>
+                  <option>Добар</option>
+                  <option>Намален</option>
+                  <option>Лош</option>
+                  <option>Одбива храна</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. ЕЛИМИНАЦИЈА (reuses existing diureza/stolica) -->
+          <div class="nl-care-group">
+            <div class="nl-care-group-hdr">
+              <div class="nl-care-group-icon">3</div>
+              <span class="nl-care-group-title">Елиминација</span>
+            </div>
+            <div class="nl-care-group-body">
+              <div class="nl-care-field">
+                <label class="nl-lbl">Диуреза (ml)</label>
+                <input class="nl-inp" id="l_diureza" type="number" placeholder="нпр. 1200"/>
+              </div>
+              <div class="nl-care-field">
+                <label class="nl-lbl">Дефекација</label>
+                <select class="nl-inp" id="l_stolica">
+                  <option value="">—</option>
+                  <option value="-">— (нема)</option>
+                  <option value="+">+</option>
+                  <option value="++">++</option>
+                  <option value="+++">+++</option>
+                  <option value="дијареа">Дијареа</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. МОБИЛНОСТ И ПОЗИЦИОНИРАЊЕ -->
+          <div class="nl-care-group">
+            <div class="nl-care-group-hdr">
+              <div class="nl-care-group-icon">4</div>
+              <span class="nl-care-group-title">Мобилност и позиционирање</span>
+            </div>
+            <div class="nl-care-group-body">
+              <div class="nl-care-field">
+                <label class="nl-lbl">Подигање и позиционирање</label>
+                <input class="nl-inp" id="cg_pozicioniranje" placeholder="нпр. во кревет / количка, 2h…"/>
+              </div>
+              <div class="nl-care-field">
+                <label class="nl-lbl">Одење / помош при движење</label>
+                <input class="nl-inp" id="cg_odenje" placeholder="нпр. 2× 10 мин со помош…"/>
+              </div>
+              <div class="nl-care-field" style="grid-column:1/-1">
+                <label class="nl-lbl">Користење на помагало</label>
+                <input class="nl-inp" id="cg_pomagalo" placeholder="нпр. патерици / рамка / инвалидска количка…"/>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. ПСИХО-СОЦИЈАЛНА СОСТОЈБА -->
+          <div class="nl-care-group">
+            <div class="nl-care-group-hdr">
+              <div class="nl-care-group-icon">5</div>
+              <span class="nl-care-group-title">Психо-социјална состојба</span>
+            </div>
+            <div class="nl-care-group-body">
+              <div class="nl-care-field">
+                <label class="nl-lbl">Расположение</label>
+                <select class="nl-inp" id="cg_raspolozenie">
+                  <option value="">—</option>
+                  <option>Добро</option>
+                  <option>Стабилно</option>
+                  <option>Вознемирено</option>
+                  <option>Тажно / депресивно</option>
+                  <option>Агресивно</option>
+                  <option>Апатично</option>
+                </select>
+              </div>
+              <div class="nl-care-field">
+                <label class="nl-lbl">Комуникација со персонал и корисници</label>
+                <input class="nl-inp" id="cg_komunikacija" placeholder="нпр. добра / ограничена / не комуницира…"/>
+              </div>
+              <div class="nl-care-field">
+                <label class="nl-lbl">Вклученост во активности / секции</label>
+                <input class="nl-inp" id="cg_aktivnosti" placeholder="нпр. учествуваше во арт-секција…"/>
+              </div>
+              <div class="nl-care-field">
+                <label class="nl-lbl">Посета</label>
+                <input class="nl-inp" id="cg_poseta" placeholder="нпр. ќерка 14:00–16:00…"/>
+              </div>
+            </div>
+          </div>
+
+          <!-- Забелешки -->
+          <div class="nl-care-group">
+            <div class="nl-care-group-hdr">
+              <div class="nl-care-group-icon" style="background:var(--gray)">Z</div>
+              <span class="nl-care-group-title">Забелешки</span>
+            </div>
+            <div class="nl-care-group-body full">
+              <textarea class="nl-ta" id="l_zabeleski" rows="3" placeholder="Дополнителни напомени…"></textarea>
+            </div>
+          </div>
+
+        </div>` + saveFtrHtml();
+
     } else {
       // ── DOCTOR FORM (full) ──
       document.getElementById('nl-body').innerHTML =
@@ -399,6 +599,14 @@
   }
 
   window.nlChangePatient = function () { reset(); showSearchStep(); };
+
+  // ── Смена picker ─────────────────────────────────────────────────
+  window.nlPickSmena = function(btn) {
+    document.querySelectorAll('.nl-smena-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const inp = document.getElementById('l_smena');
+    if (inp) inp.value = btn.dataset.smena;
+  };
 
   // ── Chronic therapy block renderer ──────────────────────────────
   function renderChronicTherapyBlock() {
@@ -614,10 +822,17 @@
     clearErr();
     if (!_client) { setErr('Нема избран корисник.'); return; }
 
-    // Nurse: no diagnosis required. Doctor: diagnosis required.
-    const nurse = isNurse();
+    const nurse     = isNurse();
+    const caregiver = isCaregiver();
+
+    // Caregiver: smena required. Doctor: diagnosis required.
+    if (caregiver) {
+      const smena = (document.getElementById('l_smena')?.value || '').trim();
+      if (!smena) { setErr('Изберете смена (утро / пладне / вечер).'); return; }
+    }
+
     const kod = (document.getElementById('l_kod')?.value || '').trim().toUpperCase();
-    if (!nurse && !kod) { setErr('Дијагнозата е задолжителна.'); return; }
+    if (!nurse && !caregiver && !kod) { setErr('Дијагнозата е задолжителна.'); return; }
 
     const btn = document.getElementById('nl-save-btn');
     btn.disabled = true;
@@ -625,34 +840,86 @@
     function nv(id) { const v = document.getElementById(id)?.value; return (v && v.trim()) ? parseFloat(v) : null; }
     function sv(id) { const v = document.getElementById(id)?.value; return (v && v.trim()) ? v.trim() : null; }
 
+    // Build caregiver composite text fields
+    function caregiverHigijenska() {
+      const parts = [];
+      const add = (lbl, id) => { const v = sv(id); if (v) parts.push(`${lbl}: ${v}`); };
+      add('Миење лице/раце + орална хигиена', 'cg_lice_race');
+      add('Менување облека', 'cg_obleka');
+      add('Менување пелена', 'cg_pelena');
+      add('Капење', 'cg_kapenje');
+      add('Сечење нокти', 'cg_nokti');
+      add('Менување постелнина', 'cg_postelnina');
+      add('Проверка рани/црвенила', 'cg_rani');
+      add('Премачкување', 'cg_premackување');
+      return parts.length ? parts.join(' | ') : null;
+    }
+
+    function caregiverIshrana() {
+      const parts = [];
+      const add = (lbl, id) => { const v = sv(id); if (v) parts.push(`${lbl}: ${v}`); };
+      add('Вид храна', 'cg_vid_hrana');
+      add('Начин', 'cg_nacin_ishrana');
+      add('Течности', 'cg_tecnosti');
+      add('Апетит', 'cg_apetit');
+      return parts.length ? parts.join(' | ') : null;
+    }
+
+    function caregiverMobilnost() {
+      const parts = [];
+      const add = (lbl, id) => { const v = sv(id); if (v) parts.push(`${lbl}: ${v}`); };
+      add('Позиционирање', 'cg_pozicioniranje');
+      add('Одење', 'cg_odenje');
+      add('Помагало', 'cg_pomagalo');
+      return parts.length ? parts.join(' | ') : null;
+    }
+
+    function caregiverPsiho() {
+      const parts = [];
+      const add = (lbl, id) => { const v = sv(id); if (v) parts.push(`${lbl}: ${v}`); };
+      add('Расположение', 'cg_raspolozenie');
+      add('Комуникација', 'cg_komunikacija');
+      add('Активности', 'cg_aktivnosti');
+      add('Посета', 'cg_poseta');
+      return parts.length ? parts.join(' | ') : null;
+    }
+
+    const logType = caregiver ? 'supervizornega' : nurse ? 'nurse' : 'doctor';
+
     const payload = {
-      client_id:       _client.id,
-      created_by:      window._user.id,
-      log_type:        nurse ? 'nurse' : 'doctor',
-      dijagnoza_kod:   kod || null,
-      dijagnoza_opis:  sv('l_opis'),
-      anamneza:        sv('l_anamneza'),
-      naod:            sv('l_naod'),
-      parenteralna:    sv('l_parenteralna'),
-      zabeleski:       sv('l_zabeleski'),
-      kp_sistolicen:   nv('l_kp_s'),
-      kp_dijastolicen: nv('l_kp_d'),
-      puls:            nv('l_puls'),
-      temperatura:     nv('l_temp'),
-      spo2:            nv('l_spo2'),
-      respiracii:      nv('l_resp'),
-      tezina:          nv('l_tezina'),
-      seker:           nv('l_seker'),
-      bolka:           nv('l_bolka') != null ? parseInt(document.getElementById('l_bolka')?.value) : null,
-      diureza:         nv('l_diureza') != null ? parseInt(document.getElementById('l_diureza')?.value) : null,
-      stolica:         sv('l_stolica'),
+      client_id:        _client.id,
+      created_by:       window._user.id,
+      log_type:         logType,
+      dijagnoza_kod:    kod || null,
+      dijagnoza_opis:   sv('l_opis'),
+      anamneza:         sv('l_anamneza'),
+      naod:             sv('l_naod'),
+      parenteralna:     sv('l_parenteralna'),
+      zabeleski:        sv('l_zabeleski'),
+      kp_sistolicen:    nv('l_kp_s'),
+      kp_dijastolicen:  nv('l_kp_d'),
+      puls:             nv('l_puls'),
+      temperatura:      nv('l_temp'),
+      spo2:             nv('l_spo2'),
+      respiracii:       nv('l_resp'),
+      tezina:           nv('l_tezina'),
+      seker:            nv('l_seker'),
+      bolka:            nv('l_bolka') != null ? parseInt(document.getElementById('l_bolka')?.value) : null,
+      diureza:          nv('l_diureza') != null ? parseInt(document.getElementById('l_diureza')?.value) : null,
+      stolica:          sv('l_stolica'),
+      // Caregiver-specific
+      smena:            sv('l_smena'),
+      higijenska_nega:  caregiver ? caregiverHigijenska() : null,
+      ishrana:          caregiver ? caregiverIshrana()    : null,
+      mobilnost:        caregiver ? caregiverMobilnost()  : null,
+      psihosocijalno:   caregiver ? caregiverPsiho()      : null,
     };
 
     const { error: logErr } = await window._sb.from('client_logs').insert([payload]);
     if (logErr) { setErr('Грешка при зачувување: ' + logErr.message); btn.disabled = false; return; }
 
     // Insert new chronic therapy items (doctor only)
-    if (!nurse && _newTherapyItems.length) {
+    if (!nurse && !caregiver && _newTherapyItems.length) {
       const rows = _newTherapyItems.map(t => ({
         client_id:  _client.id,
         drug_name:  t.drug_name,
