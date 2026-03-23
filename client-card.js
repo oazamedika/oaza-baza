@@ -156,6 +156,31 @@ const LOGS_MAX=50;
 // ── Helpers ────────────────────────────────────────────────────────────
 function e(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
+function ageDetailFromEmbg(embg){
+  if(!embg||String(embg).length<7)return null;
+  const d=String(embg).padStart(13,'0');
+  const day=parseInt(d.slice(0,2),10);
+  const mon=parseInt(d.slice(2,4),10)-1;
+  let yr=parseInt(d.slice(4,7),10);
+  if(yr<100) yr+=2000; else yr+=1900;
+  try{
+    const bd=new Date(yr,mon,day);
+    if(isNaN(bd.getTime()))return null;
+    const today=new Date();
+    let years=today.getFullYear()-bd.getFullYear();
+    let months=today.getMonth()-bd.getMonth();
+    let days=today.getDate()-bd.getDate();
+    if(days<0){
+      months--;
+      const prevMonth=new Date(today.getFullYear(),today.getMonth(),0);
+      days+=prevMonth.getDate();
+    }
+    if(months<0){years--;months+=12;}
+    if(years<0||years>130)return null;
+    return{years,months,days};
+  }catch{return null;}
+}
+
 function ageFromEmbg(embg){
   if(!embg||String(embg).length<7)return null;
   const d=String(embg).padStart(13,'0');
@@ -230,7 +255,7 @@ window.openClientCard = async function(clientId){
   _therapy  = therapyRes.data||[];
   _logs     = logsRes.data||[];
   _vitals   = (vitalsRes.data||[]).filter(v=>
-    v.kp_sistolicen||v.puls||v.temperatura||v.spo2||v.respiracii||v.tezina||v.seker||v.bolka!=null
+    v.kp_sistolicen||v.puls||v.temperatura||v.spo2||v.respiracii||v.tezina||v.seker||v.bolka!=null||v.diureza!=null||v.stolica
   );
   _srodstvo = srodRes.data||[];
 
@@ -262,8 +287,16 @@ window.openClientCard = async function(clientId){
     bp.push(`<span class="cc-hbadge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Соба ${c.room_number} / Кревет ${c.bed_number}</span>`);
   }
   if(fl){bp.push('<span class="cc-dot"></span>');bp.push(`<span class="cc-hbadge">Кат ${fl}</span>`);}
-  // Admission date badge
-  if(c.created_at){bp.push('<span class="cc-dot"></span>');bp.push(`<span class="cc-hbadge">Прием: ${fmtDate(c.created_at)}</span>`);}
+  // Detailed age badge from EMBG
+  const ageDetail=ageDetailFromEmbg(c.embg);
+  if(ageDetail!==null){
+    bp.push('<span class="cc-dot"></span>');
+    const parts=[];
+    if(ageDetail.years>0)parts.push(`${ageDetail.years} год`);
+    if(ageDetail.months>0)parts.push(`${ageDetail.months} мес`);
+    if(ageDetail.days>0||parts.length===0)parts.push(`${ageDetail.days} ден`);
+    bp.push(`<span class="cc-hbadge">${parts.join(' ')}</span>`);
+  }
   document.getElementById('cc-hero-badges').innerHTML=bp.join('');
 
   // Pills
@@ -405,15 +438,18 @@ function renderAdmissionVitals(c){
 }
 
 // ── Vitals widget ──────────────────────────────────────────────────────
+// Parameter order: Т° → Пулс → SpO2 → КП → Респ → Тежина → Шеќер → Болка → Диуреза
+// Столица is categorical — shown in list only, not chart
 const PARAMS=[
-  {key:'puls',       label:'Пулс',   unit:'bpm',    color:'#e07a27',field:'puls'},
-  {key:'kp',         label:'КП',     unit:'mmHg',   color:'#e05252',field:'kp_sistolicen'},
-  {key:'temperatura',label:'Т°',     unit:'°C',     color:'#d4a017',field:'temperatura'},
-  {key:'spo2',       label:'SpO2',   unit:'%',      color:'#2e8a5a',field:'spo2'},
-  {key:'respiracii', label:'Респ',   unit:'/мин',   color:'#2e6ba8',field:'respiracii'},
-  {key:'tezina',     label:'Тежина', unit:'kg',     color:'#7a4ea8',field:'tezina'},
-  {key:'seker',      label:'Шеќер',  unit:'mmol/L', color:'#c43e8a',field:'seker'},
-  {key:'bolka',      label:'Болка',  unit:'/10',    color:'#8a3a3a',field:'bolka'},
+  {key:'temperatura', label:'Т°',      unit:'°C',     color:'#d4a017', field:'temperatura'},
+  {key:'puls',        label:'Пулс',    unit:'bpm',    color:'#e07a27', field:'puls'},
+  {key:'spo2',        label:'SpO2',    unit:'%',      color:'#2e8a5a', field:'spo2'},
+  {key:'kp',          label:'КП',      unit:'mmHg',   color:'#e05252', field:'kp_sistolicen'},
+  {key:'respiracii',  label:'Респ',    unit:'/мин',   color:'#2e6ba8', field:'respiracii'},
+  {key:'tezina',      label:'Тежина',  unit:'kg',     color:'#7a4ea8', field:'tezina'},
+  {key:'seker',       label:'Шеќер',   unit:'mmol/L', color:'#c43e8a', field:'seker'},
+  {key:'bolka',       label:'Болка',   unit:'/10',    color:'#8a3a3a', field:'bolka'},
+  {key:'diureza',     label:'Диуреза', unit:'ml',     color:'#3a7a8a', field:'diureza'},
 ];
 
 function renderVitalsWidget(){
@@ -450,30 +486,40 @@ function renderVitalsChart(){
   return`<div class="vitals-chart-wrap">
     <div class="vpills">${pills}</div>
     <div class="chart-canvas-wrap" id="cc-chart-wrap"><canvas id="cc-vitals-canvas"></canvas></div>
-    <div class="chart-note" id="cc-chart-note">Последните 5 уникатни денови</div>
+    <div class="chart-note" id="cc-chart-note"></div>
   </div>`;
 }
 
 function renderVitalsList(){
-  const rows=_vitals.map(v=>{
+  // List shows all vitals records newest-first, up to 50
+  const rows=_vitals.slice(0,50).map(v=>{
     const kp=(v.kp_sistolicen&&v.kp_dijastolicen)?`${v.kp_sistolicen}/${v.kp_dijastolicen}`:null;
     const cells=[
-      {val:kp,has:!!kp},
-      {val:v.puls,has:!!v.puls},
-      {val:v.temperatura,has:v.temperatura!=null},
-      {val:v.spo2,has:!!v.spo2},
-      {val:v.respiracii,has:!!v.respiracii},
-      {val:v.tezina,has:v.tezina!=null},
-      {val:v.seker,has:v.seker!=null},
-      {val:v.bolka!=null?v.bolka:null,has:v.bolka!=null},
+      v.temperatura!=null?v.temperatura:null,
+      v.puls||null,
+      v.spo2||null,
+      kp,
+      v.respiracii||null,
+      v.tezina!=null?v.tezina:null,
+      v.seker!=null?v.seker:null,
+      v.bolka!=null?v.bolka:null,
+      v.diureza!=null?v.diureza+' ml':null,
+      v.stolica||null,
     ];
     return`<div class="vl-row">
-      <span class="vl-cell date">${new Date(v.created_at).toLocaleDateString('mk-MK',{day:'2-digit',month:'2-digit',year:'2-digit'})}</span>
-      ${cells.map(c=>`<span class="vl-cell ${c.has?'has':'empty'}">${c.has?c.val:'—'}</span>`).join('')}
+      <span class="vl-cell date">${new Date(v.created_at).toLocaleString('mk-MK',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
+      ${cells.map(c=>`<span class="vl-cell ${c!==null?'has':'empty'}">${c!==null?c:'—'}</span>`).join('')}
     </div>`;
   }).join('');
   return`<div class="vitals-list-wrap"><div class="vitals-list">
-    <div class="vl-row hdr"><span class="vl-cell date">Датум</span><span class="vl-cell">КП</span><span class="vl-cell">Пулс</span><span class="vl-cell">Т°</span><span class="vl-cell">SpO2</span><span class="vl-cell">Респ</span><span class="vl-cell">Кг</span><span class="vl-cell">Шеќ</span><span class="vl-cell">Болка</span></div>
+    <div class="vl-row hdr" style="grid-template-columns:1.6fr repeat(10,1fr)">
+      <span class="vl-cell date">Датум/Час</span>
+      <span class="vl-cell">Т°</span><span class="vl-cell">Пулс</span><span class="vl-cell">SpO2</span>
+      <span class="vl-cell">КП</span><span class="vl-cell">Респ</span><span class="vl-cell">Кг</span>
+      <span class="vl-cell">Шеќ</span><span class="vl-cell">Болка</span>
+      <span class="vl-cell">Диур.</span><span class="vl-cell">Столица</span>
+    </div>
+    <style>.vitals-list .vl-row{grid-template-columns:1.6fr repeat(10,1fr)}</style>
     ${rows||'<div class="cc-empty">Нема витали.</div>'}
   </div></div>`;
 }
@@ -487,88 +533,141 @@ function drawChart(paramKey){
   const note=document.getElementById('cc-chart-note');
   const param=PARAMS.find(p=>p.key===paramKey)||PARAMS[0];
 
-  // Day buckets
-  const dayMap=new Map();
-  for(const v of _vitals){
-    const day=v.created_at.slice(0,10);
-    if(!dayMap.has(day))dayMap.set(day,[]);
-    dayMap.get(day).push(v);
-  }
-  const daysWithData=[...dayMap.entries()]
-    .sort((a,b)=>a[0].localeCompare(b[0]))
-    .filter(([,entries])=>entries.some(v=>paramKey==='kp'?v.kp_sistolicen:(v[param.field]!=null)))
-    .slice(-5);
+  // Use up to 50 individual data points (not averaged by day), oldest→newest
+  const pts50=_vitals.slice(0,50).slice().reverse();
 
-  const labels=daysWithData.map(([day])=>new Date(day+'T12:00:00').toLocaleDateString('mk-MK',{day:'2-digit',month:'2-digit'}));
-  const values=daysWithData.map(([,entries])=>{
-    const vals=entries.map(v=>{
-      if(paramKey==='kp')return v.kp_sistolicen?parseFloat(v.kp_sistolicen):null;
-      return v[param.field]!=null?parseFloat(v[param.field]):null;
-    }).filter(x=>x!==null);
-    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
-  });
+  // For KP, filter to rows with sistolicen; for others filter to rows with the field
+  const relevant=pts50.filter(v=>paramKey==='kp'?v.kp_sistolicen!=null:v[param.field]!=null);
 
   const W=(wrap?wrap.offsetWidth:400)||400;
-  const H=155;
-  canvas.width=W;canvas.height=H;
+  const H=170;
+  canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext('2d');
   ctx.clearRect(0,0,W,H);
 
-  const hasData=values.some(v=>v!==null);
-  if(!hasData){
+  if(!relevant.length){
     ctx.fillStyle='#aaa';ctx.font='12px Lato,sans-serif';ctx.textAlign='center';
     ctx.fillText('Нема податоци за '+param.label,W/2,H/2);
     if(note)note.textContent='Нема вредности за '+param.label;
     return;
   }
-  if(note)note.textContent=`${param.label} (${param.unit}) · последни 5 денови со податоци`;
 
-  const pL=42,pR=14,pT=14,pB=34;
-  const cW=W-pL-pR,cH=H-pT-pB;
-  const nonNull=values.filter(v=>v!==null);
-  let minV=Math.min(...nonNull),maxV=Math.max(...nonNull);
-  if(minV===maxV){minV-=1;maxV+=1;}
+  const n=relevant.length;
+  if(note)note.textContent=`${param.label} (${param.unit}) · ${n} мерење${n===1?'':n<5?'а':'а'} · последните 50`;
+
+  const pL=44,pR=14,pT=18,pB=34;
+  const cW=W-pL-pR, cH=H-pT-pB;
+
+  // Determine value range
+  let allVals=[];
+  if(paramKey==='kp'){
+    relevant.forEach(v=>{
+      if(v.kp_sistolicen)allVals.push(parseFloat(v.kp_sistolicen));
+      if(v.kp_dijastolicen)allVals.push(parseFloat(v.kp_dijastolicen));
+    });
+  } else {
+    relevant.forEach(v=>allVals.push(parseFloat(v[param.field])));
+  }
+  let minV=Math.min(...allVals), maxV=Math.max(...allVals);
+  const pad=(maxV-minV)*0.12||1;
+  minV-=pad; maxV+=pad;
   const range=maxV-minV;
-  const xS=i=>pL+(daysWithData.length>1?i/(daysWithData.length-1)*cW:cW/2);
+
+  const xS=i=>pL+(n>1?i/(n-1)*cW:cW/2);
   const yS=v=>pT+(1-(v-minV)/range)*cH;
 
-  // Grid
-  ctx.strokeStyle='#eae7e0';ctx.lineWidth=1;
-  for(let i=0;i<=3;i++){
-    const y=pT+i/3*cH;
+  // Grid lines
+  ctx.strokeStyle='#eae7e0'; ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=pT+i/4*cH;
     ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(W-pR,y);ctx.stroke();
-    const lv=maxV-i*(range/3);
+    const lv=maxV-i*(range/4);
     ctx.fillStyle='#b0a898';ctx.font='10px Lato,sans-serif';ctx.textAlign='right';
     ctx.fillText(lv%1===0?lv:lv.toFixed(1),pL-4,y+3.5);
   }
+
+  // X-axis labels — show up to 6 evenly spaced
   ctx.fillStyle='#b0a898';ctx.font='10px Lato,sans-serif';ctx.textAlign='center';
-  labels.forEach((lbl,i)=>ctx.fillText(lbl,xS(i),H-pB+16));
-
-  const pts=values.map((v,i)=>({x:xS(i),y:v!==null?yS(v):null,v}));
-  const color=param.color;
-  const fi=pts.findIndex(p=>p.y!==null);
-  const li=pts.reduce((a,p,i)=>p.y!==null?i:a,-1);
-
-  if(fi>=0){
-    const grad=ctx.createLinearGradient(0,pT,0,H-pB);
-    grad.addColorStop(0,color+'55');grad.addColorStop(1,color+'08');
-    ctx.save();ctx.beginPath();let s=false;
-    pts.forEach(p=>{if(p.y===null)return;if(!s){ctx.moveTo(p.x,p.y);s=true;}else ctx.lineTo(p.x,p.y);});
-    ctx.lineTo(pts[li].x,H-pB);ctx.lineTo(pts[fi].x,H-pB);ctx.closePath();
-    ctx.fillStyle=grad;ctx.fill();ctx.restore();
-  }
-
-  ctx.beginPath();let ls=false;
-  pts.forEach(p=>{if(p.y===null)return;if(!ls){ctx.moveTo(p.x,p.y);ls=true;}else ctx.lineTo(p.x,p.y);});
-  ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
-
-  pts.forEach(p=>{
-    if(p.y===null)return;
-    ctx.beginPath();ctx.arc(p.x,p.y,4.5,0,2*Math.PI);
-    ctx.fillStyle='#fff';ctx.strokeStyle=color;ctx.lineWidth=2;ctx.fill();ctx.stroke();
-    ctx.fillStyle=color;ctx.font='bold 10px Lato,sans-serif';ctx.textAlign='center';
-    ctx.fillText(p.v%1===0?p.v:p.v.toFixed(1),p.x,p.y-9);
+  const labelStep=Math.max(1,Math.floor(n/6));
+  relevant.forEach((v,i)=>{
+    if(i%labelStep!==0&&i!==n-1)return;
+    const lbl=new Date(v.created_at).toLocaleDateString('mk-MK',{day:'2-digit',month:'2-digit'});
+    ctx.fillText(lbl,xS(i),H-pB+14);
   });
+
+  if(paramKey==='kp'){
+    // BP: draw area fill using systolic, then dots + vertical dotted link sys↔dias
+    const sysVals=relevant.map((v,i)=>({x:xS(i),y:yS(parseFloat(v.kp_sistolicen)),v:parseFloat(v.kp_sistolicen)}));
+    const diaVals=relevant.map((v,i)=>({x:xS(i),y:v.kp_dijastolicen?yS(parseFloat(v.kp_dijastolicen)):null,v:v.kp_dijastolicen?parseFloat(v.kp_dijastolicen):null}));
+
+    // Area fill under systolic line
+    const fi=0,li=sysVals.length-1;
+    const grad=ctx.createLinearGradient(0,pT,0,H-pB);
+    grad.addColorStop(0,'#e0525244');grad.addColorStop(1,'#e0525208');
+    ctx.save();ctx.beginPath();
+    sysVals.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+    ctx.lineTo(sysVals[li].x,H-pB);ctx.lineTo(sysVals[0].x,H-pB);ctx.closePath();
+    ctx.fillStyle=grad;ctx.fill();ctx.restore();
+
+    // Systolic line
+    ctx.beginPath();
+    sysVals.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+    ctx.strokeStyle='#e05252';ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();
+
+    // Diastolic line
+    ctx.beginPath();let dStarted=false;
+    diaVals.forEach(p=>{if(!p.y)return;if(!dStarted){ctx.moveTo(p.x,p.y);dStarted=true;}else ctx.lineTo(p.x,p.y);});
+    ctx.strokeStyle='#e07a7a';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
+
+    // Vertical dotted lines linking sys↔dias
+    relevant.forEach((v,i)=>{
+      if(!v.kp_dijastolicen)return;
+      const x=xS(i);
+      const ys=yS(parseFloat(v.kp_sistolicen));
+      const yd=yS(parseFloat(v.kp_dijastolicen));
+      ctx.beginPath();ctx.moveTo(x,ys);ctx.lineTo(x,yd);
+      ctx.strokeStyle='#e05252';ctx.lineWidth=1;ctx.setLineDash([2,3]);ctx.stroke();ctx.setLineDash([]);
+    });
+
+    // Dots — systolic
+    sysVals.forEach(p=>{
+      ctx.beginPath();ctx.arc(p.x,p.y,4,0,2*Math.PI);
+      ctx.fillStyle='#fff';ctx.strokeStyle='#e05252';ctx.lineWidth=2;ctx.fill();ctx.stroke();
+      ctx.fillStyle='#e05252';ctx.font='bold 9px Lato,sans-serif';ctx.textAlign='center';
+      ctx.fillText(p.v,p.x,p.y-8);
+    });
+    // Dots — diastolic
+    diaVals.forEach(p=>{
+      if(!p.y)return;
+      ctx.beginPath();ctx.arc(p.x,p.y,3.5,0,2*Math.PI);
+      ctx.fillStyle='#fff';ctx.strokeStyle='#e07a7a';ctx.lineWidth=1.5;ctx.fill();ctx.stroke();
+      ctx.fillStyle='#e07a7a';ctx.font='9px Lato,sans-serif';ctx.textAlign='center';
+      ctx.fillText(p.v,p.x,p.y+14);
+    });
+
+  } else {
+    // Normal param — line + area fill + dots
+    const vals=relevant.map((v,i)=>({x:xS(i),y:yS(parseFloat(v[param.field])),v:parseFloat(v[param.field])}));
+    const color=param.color;
+
+    const grad=ctx.createLinearGradient(0,pT,0,H-pB);
+    grad.addColorStop(0,color+'44');grad.addColorStop(1,color+'08');
+    ctx.save();ctx.beginPath();
+    vals.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+    ctx.lineTo(vals[vals.length-1].x,H-pB);ctx.lineTo(vals[0].x,H-pB);ctx.closePath();
+    ctx.fillStyle=grad;ctx.fill();ctx.restore();
+
+    ctx.beginPath();
+    vals.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+    ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
+
+    vals.forEach(p=>{
+      ctx.beginPath();ctx.arc(p.x,p.y,4.5,0,2*Math.PI);
+      ctx.fillStyle='#fff';ctx.strokeStyle=color;ctx.lineWidth=2;ctx.fill();ctx.stroke();
+      ctx.fillStyle=color;ctx.font='bold 10px Lato,sans-serif';ctx.textAlign='center';
+      ctx.fillText(p.v%1===0?p.v:p.v.toFixed(1),p.x,p.y-9);
+    });
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════
