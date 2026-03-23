@@ -162,7 +162,7 @@ function ageDetailFromEmbg(embg){
   const day=parseInt(d.slice(0,2),10);
   const mon=parseInt(d.slice(2,4),10)-1;
   let yr=parseInt(d.slice(4,7),10);
-  if(yr<100) yr+=2000; else yr+=1900;
+  yr = yr < 100 ? 2000 + yr : 1000 + yr;
   try{
     const bd=new Date(yr,mon,day);
     if(isNaN(bd.getTime()))return null;
@@ -187,7 +187,7 @@ function ageFromEmbg(embg){
   const day=parseInt(d.slice(0,2),10);
   const mon=parseInt(d.slice(2,4),10)-1;
   let yr=parseInt(d.slice(4,7),10);
-  if(yr<100) yr+=2000; else yr+=1900;
+  yr = yr < 100 ? 2000 + yr : 1000 + yr;
   try{
     const bd=new Date(yr,mon,day);
     if(isNaN(bd.getTime()))return null;
@@ -204,6 +204,21 @@ function fmtDateTime(ts){return ts?new Date(ts).toLocaleString('mk-MK'):'—';}
 function isPrivileged(){const u=(window._username||'').toLowerCase();return u==='menadzer'||u==='glavnasestra';}
 function isDoctor(){return(window._username||'').toLowerCase()==='doktor';}
 function canSeeAll(){return isPrivileged()||isDoctor();}
+
+// Visibility: who can see which log types
+// doctor/nurse logs: menadzer, glavnasestra, doktor
+// social logs: menadzer, socijalenrabotnik
+// nurse logs: menadzer, glavnasestra, doktor (clinical staff)
+// all staff see all if privileged (menadzer/glavnasestra)
+function canSeeLogType(logType){
+  const u=(window._username||'').toLowerCase();
+  if(u==='menadzer')return true; // sees everything
+  if(logType==='doctor'||logType==='nurse')return u==='doktor'||u==='glavnasestra';
+  if(logType==='social')return u==='socijalenrabotnik'||u==='doktor'||u==='glavnasestra';
+  if(logType==='fizioterapevt')return u==='fizioterapevt'||u==='doktor'||u==='glavnasestra';
+  if(logType==='supervisor')return u==='doktor'||u==='glavnasestra';
+  return isPrivileged();
+}
 
 // ── Open ────────────────────────────────────────────────────────────────
 window.openClientCard = async function(clientId){
@@ -277,26 +292,23 @@ window.openClientCard = async function(clientId){
   // Name
   document.getElementById('cc-name').textContent=(c.obrakanje?c.obrakanje+' ':'')+(c.ime_prezime||'');
 
-  // Badges — age (from EMBG), location
-  const age=ageFromEmbg(c.embg);
+  // Badges — detailed age first, then location
   const fl=c.floor_number||(window.roomToFloor?window.roomToFloor(c.room_number):null);
   const bp=[];
-  if(age!==null) bp.push(`<span class="cc-hbadge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg>${age} год</span>`);
+  // Detailed age from EMBG (years + months + days)
+  const ageDetail=ageDetailFromEmbg(c.embg);
+  if(ageDetail!==null){
+    const parts=[];
+    if(ageDetail.years>0)parts.push(`${ageDetail.years} год`);
+    if(ageDetail.months>0)parts.push(`${ageDetail.months} мес`);
+    if(ageDetail.days>0||parts.length===0)parts.push(`${ageDetail.days} ден`);
+    bp.push(`<span class="cc-hbadge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg>${parts.join(' ')}</span>`);
+  }
   if(c.room_number){
     if(bp.length)bp.push('<span class="cc-dot"></span>');
     bp.push(`<span class="cc-hbadge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Соба ${c.room_number} / Кревет ${c.bed_number}</span>`);
   }
   if(fl){bp.push('<span class="cc-dot"></span>');bp.push(`<span class="cc-hbadge">Кат ${fl}</span>`);}
-  // Detailed age badge from EMBG
-  const ageDetail=ageDetailFromEmbg(c.embg);
-  if(ageDetail!==null){
-    bp.push('<span class="cc-dot"></span>');
-    const parts=[];
-    if(ageDetail.years>0)parts.push(`${ageDetail.years} год`);
-    if(ageDetail.months>0)parts.push(`${ageDetail.months} мес`);
-    if(ageDetail.days>0||parts.length===0)parts.push(`${ageDetail.days} ден`);
-    bp.push(`<span class="cc-hbadge">${parts.join(' ')}</span>`);
-  }
   document.getElementById('cc-hero-badges').innerHTML=bp.join('');
 
   // Pills
@@ -680,7 +692,7 @@ function renderLogs(){
     return`<option value="${m}" ${_logsMonth===m?'selected':''}>${lbl}</option>`;
   }).join('');
 
-  let filtered=_logsMonth?_logs.filter(l=>l.created_at.startsWith(_logsMonth)):_logs;
+  let filtered=(_logsMonth?_logs.filter(l=>l.created_at.startsWith(_logsMonth)):_logs).filter(l=>canSeeLogType(l.log_type||'doctor'));
   const overflow=filtered.length>LOGS_MAX;
   if(overflow)filtered=filtered.slice(0,LOGS_MAX);
 
@@ -702,11 +714,12 @@ const _TL={doctor:'Доктор',nurse:'Сестра',social:'Социјален
 const _TC={doctor:'le-type-doctor',nurse:'le-type-nurse',social:'le-type-social',fizioterapevt:'le-type-other',supervisor:'le-type-other',other:'le-type-other'};
 
 function renderLogEntry(l){
+  // Vitals in display order: Т° → Пулс → SpO2 → КП → Респ → Тежина → Шеќер → Болка → Диуреза → Столица
   const v=[];
-  if(l.kp_sistolicen&&l.kp_dijastolicen)v.push(`КП: <span>${l.kp_sistolicen}/${l.kp_dijastolicen} mmHg</span>`);
-  if(l.puls)        v.push(`Пулс: <span>${l.puls} bpm</span>`);
   if(l.temperatura) v.push(`Т°: <span>${l.temperatura}°C</span>`);
+  if(l.puls)        v.push(`Пулс: <span>${l.puls} bpm</span>`);
   if(l.spo2)        v.push(`SpO2: <span>${l.spo2}%</span>`);
+  if(l.kp_sistolicen&&l.kp_dijastolicen)v.push(`КП: <span>${l.kp_sistolicen}/${l.kp_dijastolicen} mmHg</span>`);
   if(l.respiracii)  v.push(`Респ: <span>${l.respiracii}/мин</span>`);
   if(l.tezina)      v.push(`Тежина: <span>${l.tezina} kg</span>`);
   if(l.seker)       v.push(`Шеќер: <span>${l.seker} mmol/L</span>`);
@@ -714,14 +727,16 @@ function renderLogEntry(l){
   if(l.diureza!=null)v.push(`Диуреза: <span>${l.diureza} ml</span>`);
   if(l.stolica)     v.push(`Столица: <span>${e(l.stolica)}</span>`);
   return`<div class="log-entry">
+    <!-- Header: role badge LEFT, date RIGHT -->
     <div class="le-top">
-      <div>
-        ${l.dijagnoza_kod?`<span class="le-diag">${e(l.dijagnoza_kod)}${l.dijagnoza_opis?' — '+e(l.dijagnoza_opis):''}</span>`:''}
-        <span class="le-type ${_TC[l.log_type||'doctor']||'le-type-other'}">${_TL[l.log_type||'doctor']||'Друго'}</span>
-      </div>
+      <span class="le-type ${_TC[l.log_type||'doctor']||'le-type-other'}">${_TL[l.log_type||'doctor']||'Друго'}</span>
       <span class="le-date">${fmtDateTime(l.created_at)}</span>
     </div>
+    <!-- Diagnosis (if present) -->
+    ${l.dijagnoza_kod?`<div style="margin:0.3rem 0 0.2rem"><span class="le-diag">${e(l.dijagnoza_kod)}${l.dijagnoza_opis?' — '+e(l.dijagnoza_opis):''}</span></div>`:''}
+    <!-- Vitals -->
     ${v.length?`<div class="vital-chips">${v.map(x=>`<div class="vc">${x}</div>`).join('')}</div>`:''}
+    <!-- Text fields -->
     ${l.anamneza    ?`<div class="le-field"><div class="le-fl">Анамнеза</div><div class="le-fv">${e(l.anamneza)}</div></div>`:''}
     ${l.naod        ?`<div class="le-field"><div class="le-fl">Наод</div><div class="le-fv">${e(l.naod)}</div></div>`:''}
     ${l.parenteralna?`<div class="le-field"><div class="le-fl">Парентерална</div><div class="le-fv">${e(l.parenteralna)}</div></div>`:''}

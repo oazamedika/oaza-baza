@@ -26,7 +26,7 @@
     .lc-cmeta{font-size:0.72rem;color:var(--gray)}
     .lc-diag{font-family:monospace;font-size:0.82rem;font-weight:700;color:var(--olive)}
     .lc-type-badge{display:inline-block;padding:0.1rem 0.45rem;border-radius:10px;font-size:0.64rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-left:0.4rem}
-    .lt-doctor{background:#e8ecf5;color:#2e4a8a}.lt-social{background:#e8f0e8;color:#3a6e3a}.lt-other{background:#f0ece2;color:#8a7a55}
+    .lt-doctor{background:#e8ecf5;color:#2e4a8a}.lt-nurse{background:#f0e8f5;color:#6a3a8a}.lt-social{background:#e8f0e8;color:#3a6e3a}.lt-other{background:#f0ece2;color:#8a7a55}
     .vitals-pills{display:flex;flex-wrap:wrap;gap:0.35rem 0.9rem;padding:0.5rem 0.7rem;background:var(--cream);border-radius:5px;border:1px solid var(--border);margin:0.45rem 0;font-size:0.78rem}
     .vc span{font-weight:700}
     .lc-field{margin-top:0.4rem}
@@ -114,15 +114,26 @@ function dispDate(d)  { return d.toLocaleDateString('mk-MK', { weekday:'long', d
 function updateDateDisplay() { document.getElementById('dateDisp').textContent = dispDate(currentDate); }
 function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-const TYPE_LABEL = { doctor:'Доктор', social:'Социјален', fizioterapevt:'Физио', supervisor:'Супервизор', other:'Друго' };
-const TYPE_CLS   = { doctor:'lt-doctor', social:'lt-social', fizioterapevt:'lt-other', supervisor:'lt-other', other:'lt-other' };
+const TYPE_LABEL = { doctor:'Доктор', nurse:'Сестра', social:'Социјален', fizioterapevt:'Физио', supervisor:'Супервизор', other:'Друго' };
+const TYPE_CLS   = { doctor:'lt-doctor', nurse:'lt-nurse', social:'lt-social', fizioterapevt:'lt-other', supervisor:'lt-other', other:'lt-other' };
+
+// Visibility: which log types the current user is allowed to see
+function canSeeLogType(logType) {
+  const u = (window._username || '').toLowerCase();
+  if (u === 'menadzer') return true;
+  if (logType === 'doctor' || logType === 'nurse') return u === 'doktor' || u === 'glavnasestra';
+  if (logType === 'social')       return u === 'socijalenrabotnik' || u === 'doktor' || u === 'glavnasestra';
+  if (logType === 'fizioterapevt') return u === 'fizioterapevt'   || u === 'doktor' || u === 'glavnasestra';
+  if (logType === 'supervisor')   return u === 'doktor' || u === 'glavnasestra';
+  return u === 'menadzer' || u === 'glavnasestra';
+}
 
 async function loadFeed() {
   const feed = document.getElementById('log-feed');
   feed.innerHTML = '<div class="empty-feed"><p>Се вчитува…</p></div>';
   const ds = toDateStr(currentDate);
   const { data } = await window._sb.from('client_logs')
-    .select('*, clients(id,ime_prezime,obrakanje,profile_pic_url,floor_number,room_number,bed_number)')
+    .select('*, clients(id,ime_prezime,obrakanje,profile_pic_url,room_number,bed_number)')
     .gte('created_at', ds + 'T00:00:00').lte('created_at', ds + 'T23:59:59')
     .order('created_at', { ascending: false });
 
@@ -131,22 +142,34 @@ async function loadFeed() {
     return;
   }
 
-  feed.innerHTML = `<div class="log-feed">${data.map(l => {
+  // Filter to only log types the current user may see
+  const visible = data.filter(l => canSeeLogType(l.log_type || 'doctor'));
+
+  if (!visible.length) {
+    feed.innerHTML = `<div class="empty-feed"><p>Нема записи за ${dispDate(currentDate)} со вашата улога.</p></div>`;
+    return;
+  }
+
+  feed.innerHTML = `<div class="log-feed">${visible.map(l => {
     const c = l.clients || {};
     const loc = c.room_number ? `С${c.room_number}/Кр${c.bed_number}` : '—';
     const av = c.profile_pic_url
       ? `<div class="lc-av"><img src="${esc(c.profile_pic_url)}" alt=""/></div>`
       : `<div class="lc-av">${esc((c.ime_prezime||'?').charAt(0))}</div>`;
+    // Vitals in order: Т° → Пулс → SpO2 → КП → Респ → Тежина → Шеќер → Болка → Диуреза → Столица
     const v = [];
+    if(l.temperatura)  v.push(`Т°: <span>${l.temperatura}°C</span>`);
+    if(l.puls)         v.push(`Пулс: <span>${l.puls} bpm</span>`);
+    if(l.spo2)         v.push(`SpO2: <span>${l.spo2}%</span>`);
     if(l.kp_sistolicen&&l.kp_dijastolicen) v.push(`КП: <span>${l.kp_sistolicen}/${l.kp_dijastolicen} mmHg</span>`);
-    if(l.puls)        v.push(`Пулс: <span>${l.puls} bpm</span>`);
-    if(l.temperatura) v.push(`Т°: <span>${l.temperatura}°C</span>`);
-    if(l.spo2)        v.push(`SpO2: <span>${l.spo2}%</span>`);
-    if(l.respiracii)  v.push(`Респ: <span>${l.respiracii}/мин</span>`);
-    if(l.tezina)      v.push(`Тежина: <span>${l.tezina} kg</span>`);
-    if(l.seker)       v.push(`Шеќер: <span>${l.seker} mmol/L</span>`);
-    if(l.bolka!=null) v.push(`Болка: <span>${l.bolka}/10</span>`);
+    if(l.respiracii)   v.push(`Респ: <span>${l.respiracii}/мин</span>`);
+    if(l.tezina)       v.push(`Тежина: <span>${l.tezina} kg</span>`);
+    if(l.seker)        v.push(`Шеќер: <span>${l.seker} mmol/L</span>`);
+    if(l.bolka!=null)  v.push(`Болка: <span>${l.bolka}/10</span>`);
+    if(l.diureza!=null)v.push(`Диуреза: <span>${l.diureza} ml</span>`);
+    if(l.stolica)      v.push(`Столица: <span>${esc(l.stolica)}</span>`);
     return `<div class="log-card">
+      <!-- Top row: client info left, Досие button right -->
       <div class="lc-top">
         <div class="lc-client">
           ${av}
@@ -157,14 +180,18 @@ async function loadFeed() {
         </div>
         <button class="link-btn" onclick="openClientCard('${c.id}')">Досие →</button>
       </div>
-      <div>
-        <span class="lc-diag">${esc(l.dijagnoza_kod||'—')}${l.dijagnoza_opis?' — '+esc(l.dijagnoza_opis):''}</span>
+      <!-- Role badge LEFT, date RIGHT -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem">
         <span class="lc-type-badge ${TYPE_CLS[l.log_type||'doctor']||'lt-other'}">${TYPE_LABEL[l.log_type||'doctor']||'Друго'}</span>
+        <span style="font-size:0.72rem;color:var(--gray)">${new Date(l.created_at).toLocaleDateString('mk-MK')}</span>
       </div>
+      <!-- Diagnosis above vitals -->
+      ${l.dijagnoza_kod?`<div style="margin-bottom:0.3rem"><span class="lc-diag">${esc(l.dijagnoza_kod)}${l.dijagnoza_opis?' — '+esc(l.dijagnoza_opis):''}</span></div>`:''}
       ${v.length?`<div class="vitals-pills">${v.map(x=>`<div class="vc">${x}</div>`).join('')}</div>`:''}
-      ${l.anamneza?`<div class="lc-field"><div class="lc-fl">Анамнеза</div><div class="lc-fv">${esc(l.anamneza)}</div></div>`:''}
-      ${l.naod?`<div class="lc-field"><div class="lc-fl">Наод</div><div class="lc-fv">${esc(l.naod)}</div></div>`:''}
+      ${l.anamneza    ?`<div class="lc-field"><div class="lc-fl">Анамнеза</div><div class="lc-fv">${esc(l.anamneza)}</div></div>`:''}
+      ${l.naod        ?`<div class="lc-field"><div class="lc-fl">Наод</div><div class="lc-fv">${esc(l.naod)}</div></div>`:''}
       ${l.parenteralna?`<div class="lc-field"><div class="lc-fl">Парентерална</div><div class="lc-fv">${esc(l.parenteralna)}</div></div>`:''}
+      ${l.zabeleski   ?`<div class="lc-field"><div class="lc-fl">Забелешки</div><div class="lc-fv">${esc(l.zabeleski)}</div></div>`:''}
     </div>`;
   }).join('')}</div>`;
 }
