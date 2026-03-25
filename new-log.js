@@ -141,6 +141,11 @@
     document.getElementById('nl-close').addEventListener('click', close);
     document.getElementById('nl-bd').addEventListener('click', e => { if (e.target.id === 'nl-bd') close(); });
   }
+  //── Check if active ───────────────────────────────────────────────
+    if (client.client_status !== 'active') {
+    alert('Не може да се додаде запис за одјавен или починат корисник.');
+    return;
+  }
 
   // ── Public API ───────────────────────────────────────────────────
   window.openNewLog = function (cb) {
