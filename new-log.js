@@ -1,6 +1,7 @@
 /**
  * new-log.js — Standalone "Нов Запис" modal
  * Requires: auth-guard.js, sidebar.js (window._sb, window._user, window._username, window.roomToFloor)
+ * Requires: chronic-th.js (window.openChronicTherapy)
  * Public API:
  *   window.openNewLog(callback)   — opens the search-first modal
  */
@@ -76,28 +77,14 @@
 .nl-bp-inp{max-width:90px}
 .nl-bp-slash{font-size:1.4rem;font-weight:300;color:var(--gray);line-height:1;padding-bottom:0.55rem;flex-shrink:0}
 .nl-bp-unit{font-size:0.75rem;color:var(--gray);padding-bottom:0.6rem;flex-shrink:0;margin-left:0.2rem}
-/* ── Chronic therapy ── */
+/* ── Chronic therapy block ── */
 .nl-ct-active{margin-bottom:0.5rem}
 .nl-ct-row{display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.65rem;border-radius:4px;font-size:0.83rem;border:1px solid var(--border);margin-bottom:0.3rem}
-.nl-ct-staged{background:rgba(122,122,46,0.07);border-color:var(--olive)}
-.nl-ct-past{opacity:0.6;text-decoration:line-through}
 .nl-ct-drug{font-weight:700;color:var(--dark);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nl-ct-form{color:var(--gray);font-size:0.76rem;flex-shrink:0}
 .nl-ct-dose{color:var(--gray);font-size:0.78rem;flex-shrink:0}
-.nl-ct-since{color:var(--gray);font-size:0.72rem;flex-shrink:0;margin-left:auto}
-.nl-rm-btn{background:none;border:none;cursor:pointer;color:var(--gray);font-size:1.1rem;line-height:1;padding:0 0.2rem;flex-shrink:0}.nl-rm-btn:hover{color:#c0392b}
-.nl-ct-add-row{display:flex;gap:0.5rem;align-items:flex-end;margin-top:0.5rem}
 .nl-btn-add{display:inline-flex;align-items:center;gap:0.35rem;padding:0.55rem 0.85rem;background:transparent;border:1px dashed var(--olive);border-radius:4px;color:var(--olive);font-family:'Lato',sans-serif;font-size:0.8rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:background 0.15s;flex-shrink:0}
 .nl-btn-add:hover{background:rgba(122,122,46,0.07)}
-.nl-drug-dd{position:absolute;top:calc(100% + 3px);left:0;right:0;background:#fff;border:1.5px solid var(--olive);border-radius:5px;box-shadow:0 6px 22px rgba(0,0,0,0.16);z-index:400;max-height:220px;overflow-y:auto;display:none}
-.nl-drug-dd.show{display:block}
-.nl-drug-item{padding:0.55rem 0.85rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.84rem}
-.nl-drug-item:last-child{border-bottom:none}.nl-drug-item:hover{background:var(--cream)}
-.nl-ddi-name{font-weight:700;color:var(--dark)}.nl-ddi-meta{font-size:0.74rem;color:var(--gray);margin-top:0.1rem}
-.nl-past-details{margin-top:0.6rem;font-size:0.82rem}
-.nl-past-details summary{cursor:pointer;color:var(--olive);font-weight:700;font-size:0.78rem;padding:0.25rem 0;list-style:none}
-.nl-past-details summary::before{content:'▸ '}
-.nl-past-details[open] summary::before{content:'▾ '}
-.nl-past-list{margin-top:0.4rem}
 /* ── Form footer ── */
 .nl-form-ftr{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1.75rem;padding-top:1rem;border-top:1px solid var(--border)}
 .nl-err{font-size:0.82rem;color:#c0392b;flex:1}
@@ -133,12 +120,10 @@
   // ── State ────────────────────────────────────────────────────────
   let _cb = null;
   let _client = null;
-  let _therapy = [];
-  let _newTherapyItems = [];
+  let _therapy = [];          // drugs from active session (display only)
+  let _activeSession = null;  // active session object
   let _ptTimer = null;
-  let _drugTimer = null;
   let _mkbTimer = null;
-  let _drugObj = null;
   let _injected = false;
 
   // ── Role helpers ─────────────────────────────────────────────────
@@ -174,7 +159,7 @@
   }
 
   function reset() {
-    _client = null; _therapy = []; _newTherapyItems = []; _drugObj = null;
+    _client = null; _therapy = []; _activeSession = null;
     clearErr();
   }
 
@@ -200,7 +185,6 @@
           <div class="nl-pt-dd" id="nl_pt_dd"></div>
         </div>
       </div>`;
-    // Focus after render
     setTimeout(() => document.getElementById('nl_pt_search')?.focus(), 60);
     document.getElementById('nl_pt_search').addEventListener('input', e => searchPatient(e.target.value));
     document.getElementById('nl_pt_search').addEventListener('keydown', e => {
@@ -217,7 +201,6 @@
     const dd = document.getElementById('nl_pt_dd');
     if (!val || val.trim().length < 2) { dd.classList.remove('show'); return; }
     _ptTimer = setTimeout(async () => {
-      // Three separate queries to avoid broken .or() syntax
       const [byName, byEmbg, byMat] = await Promise.all([
         window._sb.from('clients')
           .select('id,ime_prezime,obrakanje,embg,maticen_broj,room_number,bed_number,floor_number,profile_pic_url')
@@ -264,26 +247,35 @@
   }
 
   window.nlPickPatient = async function (c) {
-    // c is a plain object passed directly from the event listener — no JSON.parse needed
     const dd = document.getElementById('nl_pt_dd');
     if (dd) dd.classList.remove('show');
-    // Show loading state
     document.getElementById('nl-body').innerHTML = `<div style="padding:3rem;text-align:center;color:var(--gray)">Се вчитува…</div>`;
-    const [clientRes, diagRes, therapyRes] = await Promise.all([
+
+    const [clientRes, diagRes, sessionRes] = await Promise.all([
       window._sb.from('clients').select(`
         id,ime_prezime,obrakanje,maticen_broj,embg,adresa,telefon,
         floor_number,room_number,bed_number,profile_pic_url,status,created_at,
         priem_dijagnoza_kod,priem_dijagnoza_opis
       `).eq('id', c.id).single(),
+
       window._sb.from('client_chronic_diagnoses')
         .select('kod,opis,added_at').eq('client_id', c.id),
-      window._sb.from('client_chronic_therapy')
-        .select('*').eq('client_id', c.id).order('added_at', { ascending: false }),
+
+      // Active session only
+      window._sb.from('chronic_therapy_sessions')
+        .select('id,started_at,chronic_therapy_drugs(id,generic_name,form,dosage,sort_order)')
+        .eq('client_id', c.id)
+        .is('ended_at', null)
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
+
     _client = { ...clientRes.data, client_chronic_diagnoses: diagRes.data || [] };
-    _therapy = therapyRes.data || [];
-    _newTherapyItems = [];
-    _drugObj = null;
+    _activeSession = sessionRes.data || null;
+    _therapy = (_activeSession?.chronic_therapy_drugs || [])
+      .sort((a, b) => a.sort_order - b.sort_order);
+
     showLogForm();
   };
 
@@ -291,23 +283,24 @@
   //  STEP 2 — LOG FORM (role-aware)
   // ══════════════════════════════════════════════════════════════════
   function clientBar(c, loc) {
+    const av = c.profile_pic_url
+      ? `<div class="nl-av"><img src="${esc(c.profile_pic_url)}" alt=""/></div>`
+      : `<div class="nl-av">${esc((c.ime_prezime||'?').charAt(0))}</div>`;
     return `<div class="nl-client-bar">
-      ${c.profile_pic_url
-        ? `<div class="nl-av"><img src="${esc(c.profile_pic_url)}" alt=""/></div>`
-        : `<div class="nl-av">${esc((c.ime_prezime||'?').charAt(0))}</div>`}
+      ${av}
       <div class="nl-cb-info">
-        <div class="nl-cb-name">${esc(c.obrakanje ? c.obrakanje+' ' : '')}${esc(c.ime_prezime)}</div>
-        <div class="nl-cb-meta">${esc(loc)} · ЕМБГ: ${esc(c.embg||'—')} · Матичен: ${esc(c.maticen_broj||'—')}</div>
+        <div class="nl-cb-name">${esc(c.obrakanje ? c.obrakanje+' ' : '')}${esc(c.ime_prezime||'')}</div>
+        <div class="nl-cb-meta">${esc(c.maticen_broj||c.embg||'—')} · ${esc(loc)}</div>
       </div>
-      <button class="nl-change-btn" onclick="nlChangePatient()">Промени</button>
+      <button class="nl-change-btn" onclick="nlChangePatient()">Промени корисник</button>
     </div>`;
   }
 
   function saveFtrHtml() {
     return `<div class="nl-form-ftr">
-      <div class="nl-err" id="nl-err"></div>
+      <span class="nl-err" id="nl-err"></span>
       <button class="nl-btn-prim" id="nl-save-btn" onclick="nlSave()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         Зачувај запис
       </button>
     </div>`;
@@ -316,10 +309,15 @@
   function vitalsGridHtml() {
     return `<div class="nl-vitals-grid">
       <div class="nl-bp-row">
-        <div class="nl-fg"><label class="nl-lbl">Систоличен</label><input class="nl-inp nl-bp-inp" id="l_kp_s" type="number" placeholder="120"/></div>
-        <div class="nl-bp-slash">/</div>
-        <div class="nl-fg"><label class="nl-lbl">Дијастоличен</label><input class="nl-inp nl-bp-inp" id="l_kp_d" type="number" placeholder="80"/></div>
-        <div class="nl-bp-unit">mmHg</div>
+        <div class="nl-fg" style="flex:0 0 auto">
+          <label class="nl-lbl">КП (mmHg)</label>
+          <div style="display:flex;align-items:flex-end;gap:0.3rem">
+            <input class="nl-inp nl-bp-inp" id="l_kp_s" type="number" placeholder="120"/>
+            <span class="nl-bp-slash">/</span>
+            <input class="nl-inp nl-bp-inp" id="l_kp_d" type="number" placeholder="80"/>
+            <span class="nl-bp-unit">mmHg</span>
+          </div>
+        </div>
       </div>
       <div class="nl-fg"><label class="nl-lbl">Пулс (bpm)</label><input class="nl-inp" id="l_puls" type="number" placeholder="72"/></div>
       <div class="nl-fg"><label class="nl-lbl">Температура (°C)</label><input class="nl-inp" id="l_temp" type="number" step="0.1" placeholder="36.6"/></div>
@@ -351,7 +349,6 @@
     document.getElementById('nl-title').textContent = 'Нов Клинички Запис';
 
     if (isNurse()) {
-      // ── NURSE FORM: vitals + diureza + stolica + zabeleski ──
       document.getElementById('nl-body').innerHTML =
         clientBar(c, loc) + `
         <div class="nl-form-cols">
@@ -366,7 +363,6 @@
         </div>` + saveFtrHtml();
 
     } else if (isCaregiver()) {
-      // ── SUPERVIZOR NEGA FORM ──
       document.getElementById('nl-body').innerHTML =
         clientBar(c, loc) + `
 
@@ -383,169 +379,79 @@
 
         <div class="nl-care-form">
 
-          <!-- 1. ОПШТА ХИГИЕНА -->
           <div class="nl-care-group">
             <div class="nl-care-group-hdr">
               <div class="nl-care-group-icon">1</div>
               <span class="nl-care-group-title">Општа хигиена</span>
             </div>
             <div class="nl-care-group-body full">
-              <div class="nl-care-field">
-                <label class="nl-lbl">Миење на лице и раце / Орална хигиена</label>
-                <input class="nl-inp" id="cg_lice_race" placeholder="нпр. извршено / со помош…"/>
-              </div>
-              <div class="nl-care-field">
-                <label class="nl-lbl">Менување на облека</label>
-                <input class="nl-inp" id="cg_obleka" placeholder="нпр. целосно / горен дел…"/>
-              </div>
-              <div class="nl-care-field">
-                <label class="nl-lbl">Менување на пелена / долна облека</label>
-                <input class="nl-inp" id="cg_pelena" placeholder="нпр. 2× / нема потреба…"/>
-              </div>
-              <div class="nl-care-field">
-                <label class="nl-lbl">Капење</label>
-                <input class="nl-inp" id="cg_kapenje" placeholder="нпр. туш со помош / не денес…"/>
-              </div>
-              <div class="nl-care-field">
-                <label class="nl-lbl">Сечење на нокти (раце / нозе)</label>
-                <input class="nl-inp" id="cg_nokti" placeholder="нпр. раце сечени / не…"/>
-              </div>
-              <div class="nl-care-field">
-                <label class="nl-lbl">Менување на постелнина</label>
-                <input class="nl-inp" id="cg_postelnina" placeholder="нпр. извршено / не денес…"/>
-              </div>
-              <div class="nl-care-field">
-                <label class="nl-lbl">Проверка на crвенила / рани / модринки</label>
-                <input class="nl-inp" id="cg_rani" placeholder="нпр. нема / видено црвенило на…"/>
-              </div>
-              <div class="nl-care-field">
-                <label class="nl-lbl">Премачкување (со што / каде)</label>
-                <input class="nl-inp" id="cg_premackување" placeholder="нпр. Bepanthen на лактите…"/>
-              </div>
+              <div class="nl-care-field"><label class="nl-lbl">Миење на лице и раце / Орална хигиена</label><input class="nl-inp" id="cg_lice_race" placeholder="нпр. извршено / со помош…"/></div>
+              <div class="nl-care-field"><label class="nl-lbl">Менување на облека</label><input class="nl-inp" id="cg_obleka" placeholder="нпр. целосно / горен дел…"/></div>
+              <div class="nl-care-field"><label class="nl-lbl">Менување на пелена / долна облека</label><input class="nl-inp" id="cg_pelena" placeholder="нпр. 2× / нема потреба…"/></div>
+              <div class="nl-care-field"><label class="nl-lbl">Капење</label><input class="nl-inp" id="cg_kapenje" placeholder="нпр. туш со помош / не денес…"/></div>
+              <div class="nl-care-field"><label class="nl-lbl">Сечење на нокти (раце / нозе)</label><input class="nl-inp" id="cg_nokti" placeholder="нпр. раце сечени / не…"/></div>
+              <div class="nl-care-field"><label class="nl-lbl">Менување на постелнина</label><input class="nl-inp" id="cg_postelnina" placeholder="нпр. извршено / не денес…"/></div>
+              <div class="nl-care-field"><label class="nl-lbl">Проверка на crвенила / рани / модринки</label><input class="nl-inp" id="cg_rani" placeholder="нпр. нема / видено црвенило на…"/></div>
+              <div class="nl-care-field"><label class="nl-lbl">Премачкување (со што / каде)</label><input class="nl-inp" id="cg_premackување" placeholder="нпр. Bepanthen на лактите…"/></div>
             </div>
           </div>
 
-          <!-- 2. ИСХРАНА И ХИДРАТАЦИЈА -->
           <div class="nl-care-group">
             <div class="nl-care-group-hdr">
               <div class="nl-care-group-icon">2</div>
               <span class="nl-care-group-title">Исхрана и хидратација</span>
             </div>
             <div class="nl-care-group-body">
-              <div class="nl-care-field">
-                <label class="nl-lbl">Вид на храна</label>
-                <input class="nl-inp" id="cg_vid_hrana" placeholder="нпр. нормална / мека / каша…"/>
-              </div>
-              <div class="nl-care-field">
-                <label class="nl-lbl">Начин на исхрана</label>
-                <input class="nl-inp" id="cg_nacin_ishrana" placeholder="нпр. самостојно / со помош / сонда…"/>
-              </div>
-              <div class="nl-care-field">
-                <label class="nl-lbl">Внес на течности</label>
-                <input class="nl-inp" id="cg_tecnosti" placeholder="нпр. 1200 ml / добар внес…"/>
-              </div>
-              <div class="nl-care-field">
-                <label class="nl-lbl">Апетит</label>
+              <div class="nl-care-field"><label class="nl-lbl">Вид на храна</label><input class="nl-inp" id="cg_vid_hrana" placeholder="нпр. нормална / мека / каша…"/></div>
+              <div class="nl-care-field"><label class="nl-lbl">Начин на исхрана</label><input class="nl-inp" id="cg_nacin_ishrana" placeholder="нпр. самостојно / со помош / сонда…"/></div>
+              <div class="nl-care-field"><label class="nl-lbl">Внес на течности</label><input class="nl-inp" id="cg_tecnosti" placeholder="нпр. 1200 ml / добар внес…"/></div>
+              <div class="nl-care-field"><label class="nl-lbl">Апетит</label>
                 <select class="nl-inp" id="cg_apetit">
                   <option value="">—</option>
-                  <option>Добар</option>
-                  <option>Намален</option>
-                  <option>Лош</option>
-                  <option>Одбива храна</option>
+                  <option>Добар</option><option>Намален</option><option>Лош</option><option>Одбива храна</option>
                 </select>
               </div>
             </div>
           </div>
 
-          <!-- 3. ЕЛИМИНАЦИЈА (reuses existing diureza/stolica) -->
           <div class="nl-care-group">
             <div class="nl-care-group-hdr">
               <div class="nl-care-group-icon">3</div>
               <span class="nl-care-group-title">Елиминација</span>
             </div>
             <div class="nl-care-group-body">
-              <div class="nl-care-field">
-                <label class="nl-lbl">Диуреза (ml)</label>
-                <input class="nl-inp" id="l_diureza" type="number" placeholder="нпр. 1200"/>
-              </div>
-              <div class="nl-care-field">
-                <label class="nl-lbl">Дефекација</label>
+              <div class="nl-care-field"><label class="nl-lbl">Диуреза (ml)</label><input class="nl-inp" id="l_diureza" type="number" placeholder="нпр. 1200"/></div>
+              <div class="nl-care-field"><label class="nl-lbl">Дефекација</label>
                 <select class="nl-inp" id="l_stolica">
                   <option value="">—</option>
-                  <option value="-">— (нема)</option>
-                  <option value="+">+</option>
-                  <option value="++">++</option>
-                  <option value="+++">+++</option>
-                  <option value="дијареа">Дијареа</option>
+                  <option value="-">— (нема)</option><option value="+">+</option><option value="++">++</option><option value="+++">+++</option><option value="дијареа">Дијареа</option>
                 </select>
               </div>
             </div>
           </div>
 
-          <!-- 4. МОБИЛНОСТ И ПОЗИЦИОНИРАЊЕ -->
           <div class="nl-care-group">
             <div class="nl-care-group-hdr">
               <div class="nl-care-group-icon">4</div>
               <span class="nl-care-group-title">Мобилност и позиционирање</span>
             </div>
             <div class="nl-care-group-body">
-              <div class="nl-care-field">
-                <label class="nl-lbl">Подигање и позиционирање</label>
-                <input class="nl-inp" id="cg_pozicioniranje" placeholder="нпр. во кревет / количка, 2h…"/>
-              </div>
-              <div class="nl-care-field">
-                <label class="nl-lbl">Одење / помош при движење</label>
-                <input class="nl-inp" id="cg_odenje" placeholder="нпр. 2× 10 мин со помош…"/>
-              </div>
-              <div class="nl-care-field" style="grid-column:1/-1">
-                <label class="nl-lbl">Користење на помагало</label>
-                <input class="nl-inp" id="cg_pomagalo" placeholder="нпр. патерици / рамка / инвалидска количка…"/>
-              </div>
+              <div class="nl-care-field"><label class="nl-lbl">Подигање и позиционирање</label><input class="nl-inp" id="cg_pozicioniranje" placeholder="нпр. во кревет / количка, 2h…"/></div>
+              <div class="nl-care-field"><label class="nl-lbl">Одење / помош при движење</label><input class="nl-inp" id="cg_odenje" placeholder="нпр. 2× 10 мин со помош…"/></div>
+              <div class="nl-care-field" style="grid-column:1/-1"><label class="nl-lbl">Помагало</label><input class="nl-inp" id="cg_pomagalo" placeholder="нпр. количка / патерици / без…"/></div>
             </div>
           </div>
 
-          <!-- 5. ПСИХО-СОЦИЈАЛНА СОСТОЈБА -->
           <div class="nl-care-group">
             <div class="nl-care-group-hdr">
               <div class="nl-care-group-icon">5</div>
-              <span class="nl-care-group-title">Психо-социјална состојба</span>
+              <span class="nl-care-group-title">Психосоцијална состојба</span>
             </div>
             <div class="nl-care-group-body">
-              <div class="nl-care-field">
-                <label class="nl-lbl">Расположение</label>
-                <select class="nl-inp" id="cg_raspolozenie">
-                  <option value="">—</option>
-                  <option>Добро</option>
-                  <option>Стабилно</option>
-                  <option>Вознемирено</option>
-                  <option>Тажно / депресивно</option>
-                  <option>Агресивно</option>
-                  <option>Апатично</option>
-                </select>
-              </div>
-              <div class="nl-care-field">
-                <label class="nl-lbl">Комуникација со персонал и корисници</label>
-                <input class="nl-inp" id="cg_komunikacija" placeholder="нпр. добра / ограничена / не комуницира…"/>
-              </div>
-              <div class="nl-care-field">
-                <label class="nl-lbl">Вклученост во активности / секции</label>
-                <input class="nl-inp" id="cg_aktivnosti" placeholder="нпр. учествуваше во арт-секција…"/>
-              </div>
-              <div class="nl-care-field">
-                <label class="nl-lbl">Посета</label>
-                <input class="nl-inp" id="cg_poseta" placeholder="нпр. ќерка 14:00–16:00…"/>
-              </div>
-            </div>
-          </div>
-
-          <!-- Забелешки -->
-          <div class="nl-care-group">
-            <div class="nl-care-group-hdr">
-              <div class="nl-care-group-icon" style="background:var(--gray)">Z</div>
-              <span class="nl-care-group-title">Забелешки</span>
-            </div>
-            <div class="nl-care-group-body full">
-              <textarea class="nl-ta" id="l_zabeleski" rows="3" placeholder="Дополнителни напомени…"></textarea>
+              <div class="nl-care-field"><label class="nl-lbl">Расположение</label><input class="nl-inp" id="cg_raspolozenie" placeholder="нпр. смирен / вознемирен…"/></div>
+              <div class="nl-care-field"><label class="nl-lbl">Комуникација</label><input class="nl-inp" id="cg_komunikacija" placeholder="нпр. соработлив / конфузен…"/></div>
+              <div class="nl-care-field"><label class="nl-lbl">Активности</label><input class="nl-inp" id="cg_aktivnosti" placeholder="нпр. гледа ТВ / чита…"/></div>
+              <div class="nl-care-field"><label class="nl-lbl">Посета</label><input class="nl-inp" id="cg_poseta" placeholder="нпр. ќерка 1h / без посета…"/></div>
             </div>
           </div>
 
@@ -558,7 +464,7 @@
         (diags.length ? `<div class="nl-info-block">
           <div class="nl-ib-title">Хронични дијагнози</div>
           <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.4rem">
-            ${diags.map(d=>`<span class="nl-diag-chip"><span style="font-family:monospace;font-weight:700;color:var(--olive);margin-right:0.3rem">${esc(d.kod)}</span>${esc(d.opis||''  )}</span>`).join('')}
+            ${diags.map(d=>`<span class="nl-diag-chip"><span style="font-family:monospace;font-weight:700;color:var(--olive);margin-right:0.3rem">${esc(d.kod)}</span>${esc(d.opis||'')}</span>`).join('')}
           </div></div>` : '') + `
         <div class="nl-form-cols">
           <div class="nl-col">
@@ -591,9 +497,6 @@
       kodInp.addEventListener('keydown', ev => {
         if (ev.key === 'Enter') { ev.preventDefault(); clearTimeout(_mkbTimer); nlMKB('l_kod','l_opis','l_kod_dd'); }
       });
-      // Wire drug search
-      const drugInp = document.getElementById('nl_drug');
-      if (drugInp) drugInp.addEventListener('input', ev => nlDrugSearch(ev.target.value));
       setTimeout(() => document.getElementById('l_kod')?.focus(), 60);
     }
   }
@@ -610,158 +513,48 @@
 
   // ── Chronic therapy block renderer ──────────────────────────────
   function renderChronicTherapyBlock() {
-    const active = _therapy.filter(t => !t.ended_at);
-    const past   = _therapy.filter(t => t.ended_at);
-
     let html = '';
 
-    // Active therapy list (read-only display)
-    if (active.length) {
-      html += `<div class="nl-ct-active">${active.map(t =>
+    if (_therapy.length) {
+      html += `<div class="nl-ct-active">${_therapy.map(t =>
         `<div class="nl-ct-row">
-          <span class="nl-ct-drug">${esc(t.drug_name)}</span>
+          <span class="nl-ct-drug">${esc(t.generic_name)}</span>
+          ${t.form ? `<span class="nl-ct-form">${esc(t.form)}</span>` : ''}
           <span class="nl-ct-dose">${esc(t.dosage)}</span>
-          <span class="nl-ct-since">од ${fmt(t.added_at)}</span>
         </div>`).join('')}</div>`;
     } else {
       html += `<div style="font-size:0.8rem;color:var(--gray);margin-bottom:0.5rem">Нема активна хронична терапија.</div>`;
     }
 
-    // New therapy items staged this session
-    if (_newTherapyItems.length) {
-      html += `<div class="nl-ct-new-list" id="nl-ct-new-list">${renderNewTherapyItems()}</div>`;
-    } else {
-      html += `<div id="nl-ct-new-list"></div>`;
-    }
-
-    // Add new drug row
     html += `
-      <div class="nl-ct-add-row" id="nl-ct-add-row">
-        <div style="flex:1;min-width:0;position:relative">
-          <input class="nl-inp" id="nl_drug" placeholder="Додај лек (мин. 3 знаци)…" autocomplete="off" oninput="nlDrugSearch(this.value)"/>
-          <div class="nl-drug-dd" id="nl_drug_dd"></div>
-        </div>
-        <div style="flex:0 0 130px">
-          <input class="nl-inp" id="nl_dose" placeholder="Доза…"/>
-        </div>
-        <button class="nl-btn-add" onclick="nlAddTherapy()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Додај
-        </button>
-      </div>`;
-
-    // Past therapy accordion
-    if (past.length) {
-      html += `
-        <details class="nl-past-details">
-          <summary>Поранешна терапија (${past.length})</summary>
-          <div class="nl-past-list">${past.map(t => `
-            <div class="nl-ct-row nl-ct-past">
-              <span class="nl-ct-drug">${esc(t.drug_name)}</span>
-              <span class="nl-ct-dose">${esc(t.dosage)}</span>
-              <span class="nl-ct-since">${fmt(t.added_at)} – ${fmt(t.ended_at)}</span>
-            </div>`).join('')}
-          </div>
-        </details>`;
-    }
+      <button class="nl-btn-add" style="margin-top:0.35rem" onclick="nlOpenChronicTh()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Промени хронична терапија
+      </button>`;
 
     return html;
   }
 
-  function renderNewTherapyItems() {
-    return _newTherapyItems.map((t, i) => `
-      <div class="nl-ct-row nl-ct-staged">
-        <span class="nl-ct-drug">${esc(t.drug_name)}</span>
-        <span class="nl-ct-dose">${esc(t.dosage)}</span>
-        <span class="nl-ct-since" style="color:var(--olive)">Ново</span>
-        <button class="nl-rm-btn" onclick="nlRemTherapy(${i})">×</button>
-      </div>`).join('');
-  }
-
-  function refreshCtBlock() {
-    const block = document.getElementById('nl-ct-block');
-    if (!block) return;
-    block.innerHTML = renderChronicTherapyBlock();
-    // Rewire drug input
-    const drugInp = document.getElementById('nl_drug');
-    if (drugInp) drugInp.addEventListener('input', e => nlDrugSearch(e.target.value));
-  }
-
-  window.nlRemTherapy = function (i) {
-    _newTherapyItems.splice(i, 1);
-    const el = document.getElementById('nl-ct-new-list');
-    if (el) el.innerHTML = renderNewTherapyItems();
-  };
-
-  window.nlAddTherapy = function () {
-    const drugVal = (document.getElementById('nl_drug')?.value || '').trim();
-    const dose    = (document.getElementById('nl_dose')?.value || '').trim();
-    if (!drugVal) { setErr('Внесете лек.'); return; }
-    if (!dose)    { setErr('Внесете доза.'); return; }
-    clearErr();
-    const name = _drugObj ? _drugObj.latin_name : drugVal;
-    _newTherapyItems.push({ drug_name: name, dosage: dose });
-    _drugObj = null;
-    // Refresh the new list + clear inputs
-    const el = document.getElementById('nl-ct-new-list');
-    if (el) el.innerHTML = renderNewTherapyItems();
-    const d = document.getElementById('nl_drug'); if (d) d.value = '';
-    const ds = document.getElementById('nl_dose'); if (ds) ds.value = '';
-    const dd = document.getElementById('nl_drug_dd'); if (dd) dd.classList.remove('show');
-  };
-
-  // ── Drug autocomplete ────────────────────────────────────────────
-  window.nlDrugSearch = function (val) {
-    clearTimeout(_drugTimer);
-    _drugObj = null;
-    const dd = document.getElementById('nl_drug_dd');
-    if (!val || val.trim().length < 3) { if (dd) dd.classList.remove('show'); return; }
-    _drugTimer = setTimeout(async () => {
-      const [byLatin, byGeneric] = await Promise.all([
-        window._sb.from('drugs').select('id,latin_name,generic_name,strength,form')
-          .ilike('latin_name', `%${val}%`).limit(8),
-        window._sb.from('drugs').select('id,latin_name,generic_name,strength,form')
-          .ilike('generic_name', `%${val}%`).limit(8),
-      ]);
-      const seen = new Set();
-      const data = [...(byLatin.data||[]), ...(byGeneric.data||[])].filter(d => {
-        if (seen.has(d.id)) return false; seen.add(d.id); return true;
-      }).slice(0, 12);
-      if (!dd) return;
-      dd.innerHTML = '';
-      if (!data.length) {
-        const empty = document.createElement('div');
-        empty.className = 'nl-drug-item';
-        empty.style.cssText = 'color:var(--gray);cursor:default';
-        empty.textContent = `Нема резултати за „${val}"`;
-        dd.appendChild(empty);
-        dd.classList.add('show'); return;
+  window.nlOpenChronicTh = function () {
+    if (!_client) return;
+    window.openChronicTherapy(
+      _client.id,
+      (_client.obrakanje ? _client.obrakanje + ' ' : '') + (_client.ime_prezime || ''),
+      async function (newSessionId) {
+        const { data } = await window._sb
+          .from('chronic_therapy_drugs')
+          .select('id,generic_name,form,dosage,sort_order')
+          .eq('session_id', newSessionId)
+          .order('sort_order', { ascending: true });
+        _therapy = data || [];
+        _activeSession = { id: newSessionId };
+        const block = document.getElementById('nl-ct-block');
+        if (block) block.innerHTML = renderChronicTherapyBlock();
       }
-      data.forEach(d => {
-        const item = document.createElement('div');
-        item.className = 'nl-drug-item';
-        item.innerHTML = `<div class="nl-ddi-name">${esc(d.latin_name)}</div><div class="nl-ddi-meta">${esc(d.generic_name||'')}${d.strength?' · '+esc(d.strength):''}${d.form?' · '+esc(d.form):''}</div>`;
-        item.addEventListener('click', () => {
-          _drugObj = d;
-          const inp = document.getElementById('nl_drug');
-          if (inp) inp.value = d.latin_name + (d.strength ? ' ' + d.strength : '') + (d.form ? ' (' + d.form + ')' : '');
-          dd.classList.remove('show');
-        });
-        dd.appendChild(item);
-      });
-      dd.classList.add('show');
-    }, 300);
-  };
-
-  window.nlPickDrug = function (jsonStr) {
-    const d = JSON.parse(jsonStr);
-    _drugObj = d;
-    const inp = document.getElementById('nl_drug');
-    if (inp) inp.value = d.latin_name + (d.strength ? ' ' + d.strength : '') + (d.form ? ' (' + d.form + ')' : '');
-    const dd = document.getElementById('nl_drug_dd'); if (dd) dd.classList.remove('show');
+    );
   };
 
   // ── MKB lookup ───────────────────────────────────────────────────
-
   window.nlMKB = async function (codeId, opisId, ddId) {
     const codeEl = document.getElementById(codeId);
     const opisEl = document.getElementById(opisId);
@@ -770,10 +563,8 @@
     const raw = (codeEl.value || '').trim().toUpperCase();
     codeEl.value = raw;
     if (!raw) { if (opisEl) opisEl.value = ''; if (dd) dd.classList.remove('show'); return; }
-    // Exact match first
     const { data: ex } = await window._sb.from('mkb10').select('code,description').eq('code', raw).maybeSingle();
     if (ex) { if (opisEl) opisEl.value = ex.description; if (dd) dd.classList.remove('show'); return; }
-    // Two separate ilike queries — avoids broken .or() syntax
     const [byCode, byDesc] = await Promise.all([
       window._sb.from('mkb10').select('code,description').ilike('code', `${raw}%`).limit(8),
       window._sb.from('mkb10').select('code,description').ilike('description', `%${raw}%`).limit(8),
@@ -799,7 +590,6 @@
     dd.classList.add('show');
   };
 
-  // Live-typing trigger with debounce
   window.nlMKBLive = function(codeId, opisId, ddId) {
     clearTimeout(_mkbTimer);
     const codeEl = document.getElementById(codeId);
@@ -825,7 +615,6 @@
     const nurse     = isNurse();
     const caregiver = isCaregiver();
 
-    // Caregiver: smena required. Doctor: diagnosis required.
     if (caregiver) {
       const smena = (document.getElementById('l_smena')?.value || '').trim();
       if (!smena) { setErr('Изберете смена (утро / пладне / вечер).'); return; }
@@ -840,7 +629,6 @@
     function nv(id) { const v = document.getElementById(id)?.value; return (v && v.trim()) ? parseFloat(v) : null; }
     function sv(id) { const v = document.getElementById(id)?.value; return (v && v.trim()) ? v.trim() : null; }
 
-    // Build caregiver composite text fields
     function caregiverHigijenska() {
       const parts = [];
       const add = (lbl, id) => { const v = sv(id); if (v) parts.push(`${lbl}: ${v}`); };
@@ -907,7 +695,6 @@
       bolka:            nv('l_bolka') != null ? parseInt(document.getElementById('l_bolka')?.value) : null,
       diureza:          nv('l_diureza') != null ? parseInt(document.getElementById('l_diureza')?.value) : null,
       stolica:          sv('l_stolica'),
-      // Caregiver-specific
       smena:            sv('l_smena'),
       higijenska_nega:  caregiver ? caregiverHigijenska() : null,
       ishrana:          caregiver ? caregiverIshrana()    : null,
@@ -918,17 +705,6 @@
     const { error: logErr } = await window._sb.from('client_logs').insert([payload]);
     if (logErr) { setErr('Грешка при зачувување: ' + logErr.message); btn.disabled = false; return; }
 
-    // Insert new chronic therapy items (doctor only)
-    if (!nurse && !caregiver && _newTherapyItems.length) {
-      const rows = _newTherapyItems.map(t => ({
-        client_id:  _client.id,
-        drug_name:  t.drug_name,
-        dosage:     t.dosage,
-        added_by:   window._user.id,
-      }));
-      await window._sb.from('client_chronic_therapy').insert(rows);
-    }
-
     btn.disabled = false;
     close();
   };
@@ -937,6 +713,5 @@
   function setErr(msg) { const el = document.getElementById('nl-err'); if (el) el.textContent = msg; }
   function clearErr()  { const el = document.getElementById('nl-err'); if (el) el.textContent = ''; }
   function esc(s)      { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-  function fmt(iso)    { return iso ? new Date(iso).toLocaleDateString('mk-MK') : '—'; }
 
 })();
