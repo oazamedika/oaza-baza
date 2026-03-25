@@ -2,6 +2,7 @@
  * admission.js — Self-contained admission modal
  * Requires: auth-guard.js (window._sb, window._user, window._username)
  * Requires: sidebar.js  (window.roomToFloor)
+ * Requires: chronic-th.js (window.openChronicTherapy)
  * Public API:
  *   window.openNewAdmission(callback)
  *   window.openAdmissionForClient(clientId, callback)
@@ -9,8 +10,9 @@
 (function () {
 
   let step=1, clientId=null, picFile=null, uploadFiles=[], srodstvoItems=[];
-  let chronicDiagItems=[], chronicTherapyItems=[], selectedDrugObj=null;
-  let drugTimer=null, _closeCallback=null;
+  let chronicDiagItems=[];
+  let _closeCallback=null;
+  let mkbTimer=null;
 
   function u(){ return (window._username||'').toLowerCase(); }
   function isManager(){ return u()==='menadzer'||u()==='glavnasestra'; }
@@ -28,7 +30,6 @@
     return null;
   }
 
-  // Room options 1-84
   const ROOM_OPTIONS = Array.from({length:84},(_,i)=>`<option value="${i+1}">Соба ${i+1}</option>`).join('');
 
   // ── Inject DOM once ────────────────────────────────────────────
@@ -66,7 +67,7 @@
 
   function reset(){
     step=1; clientId=null; picFile=null; uploadFiles=[]; srodstvoItems=[];
-    chronicDiagItems=[]; chronicTherapyItems=[]; selectedDrugObj=null; clearErr();
+    chronicDiagItems=[]; clearErr();
   }
 
   function show(){ document.getElementById('adm-bd').classList.add('open'); document.body.style.overflow='hidden'; }
@@ -74,7 +75,6 @@
     document.getElementById('adm-bd').classList.remove('open');
     document.body.style.overflow='';
     if(typeof _closeCallback==='function') _closeCallback();
-    // Legacy support
     if(typeof window.onAdmissionClose==='function') window.onAdmissionClose();
   }
 
@@ -219,27 +219,52 @@
         <div class="a-fg" style="flex-shrink:0"><label class="a-lbl">&nbsp;</label><button class="btn-dash" onclick="admAddCD()">+ Додај</button></div>
       </div>
     </div>
-    window.nlOpenChronicTh = function () {
-    if (!_client) return;
+    <div class="a-sect">
+      <div class="a-sect-t">Хронична терапија</div>
+      <div class="a-sect-s">Терапијата се внесува преку наменскиот модул. Може да ја поставите сега или подоцна преку нов запис.</div>
+      <div id="adm-ct-display" style="margin-bottom:0.65rem"></div>
+      <button class="btn-dash" onclick="admOpenChronicTh()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Постави хронична терапија
+      </button>
+    </div>
+    <div class="a-sect"><div class="a-sect-t">Белешки</div><textarea class="a-ta" id="d_notes" rows="2" placeholder="Дополнителни белешки…"></textarea></div>`;
+
+    ['d_kod','cd_kod'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();admMKB(id,id==='d_kod'?'d_opis':'cd_opis',id+'_dd');}});});
+    renderCD();
+  }
+
+  // ── Open chronic therapy module from admission ─────────────────
+  window.admOpenChronicTh = function () {
+    if (!clientId) {
+      // clientId not yet set means step 1 wasn't saved — shouldn't happen
+      // since we only render this button in step 2, but guard anyway
+      return;
+    }
     window.openChronicTherapy(
-      _client.id,
-      (_client.obrakanje ? _client.obrakanje + ' ' : '') + (_client.ime_prezime || ''),
-      async function (newSessionId) {
-        const { data } = await window._sb
+      clientId,
+      null, // name not critical here, clientId is already saved
+      function onSaved(newSessionId) {
+        // Reload and display the saved therapy in the admission form
+        window._sb
           .from('chronic_therapy_drugs')
-          .select('id,generic_name,form,dosage,sort_order')
+          .select('generic_name,form,dosage,sort_order')
           .eq('session_id', newSessionId)
-          .order('sort_order', { ascending: true });
-        _therapy = data || [];
-        _activeSession = { id: newSessionId };
-        const block = document.getElementById('nl-ct-block');
-        if (block) block.innerHTML = renderChronicTherapyBlock();
+          .order('sort_order', { ascending: true })
+          .then(({ data }) => {
+            const el = document.getElementById('adm-ct-display');
+            if (!el) return;
+            if (!data || !data.length) { el.innerHTML = ''; return; }
+            el.innerHTML = data.map(d =>
+              `<div class="a-added">
+                <span style="font-weight:700;flex:1;font-size:0.85rem">${ee(d.generic_name)}${d.form ? ' <span style="font-weight:400;color:var(--gray);font-size:0.78rem">'+ee(d.form)+'</span>' : ''}</span>
+                <span style="color:var(--gray);font-size:0.82rem;flex-shrink:0">${ee(d.dosage)}</span>
+              </div>`
+            ).join('');
+          });
       }
     );
   };
-    <div class="a-sect"><div class="a-sect-t">Белешки</div><textarea class="a-ta" id="d_notes" rows="2" placeholder="Дополнителни белешки…"></textarea></div>`;
-    ['d_kod','cd_kod'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();admMKB(id,id==='d_kod'?'d_opis':'cd_opis',id+'_dd');}});});
-  }
 
   // ── Step 3: Social ─────────────────────────────────────────────
   function renderStep3(){
@@ -302,8 +327,9 @@
     };
     const{error}=await window._sb.from('clients').update(update).eq('id',clientId);
     if(error){setErr('Грешка: '+error.message);return;}
+    // Save chronic diagnoses
     if(chronicDiagItems.length) await window._sb.from('client_chronic_diagnoses').insert(chronicDiagItems.map(d=>({client_id:clientId,kod:d.kod,opis:d.opis,added_by:window._user.id})));
-    if(chronicTherapyItems.length) await window._sb.from('client_chronic_therapy').insert(chronicTherapyItems.map(t=>({client_id:clientId,drug_name:t.drug_name,dosage:t.dosage,added_by:window._user.id})));
+    // Chronic therapy is handled by chronic-th.js — already saved directly to new tables
     step=3; render();
   }
 
@@ -321,9 +347,6 @@
   function renderCD(){const el=document.getElementById('a-cd-list');if(!el)return;el.innerHTML=chronicDiagItems.map((d,i)=>`<div class="a-added"><span class="adm-dd-code">${ee(d.kod)}</span><span style="flex:1;font-size:0.85rem">${ee(d.opis||'—')}</span><button class="a-rm" onclick="admRemCD(${i})">×</button></div>`).join('');}
   window.admRemCD=function(i){chronicDiagItems.splice(i,1);renderCD();};
 
-  function renderCT(){const el=document.getElementById('a-ct-list');if(!el)return;el.innerHTML=chronicTherapyItems.map((t,i)=>`<div class="a-added"><span style="font-weight:700;flex:1;font-size:0.85rem">${ee(t.drug_name)}</span><span style="color:var(--gray);font-size:0.82rem;flex-shrink:0">${ee(t.dosage)}</span><button class="a-rm" onclick="admRemCT(${i})">×</button></div>`).join('');}
-  window.admRemCT=function(i){chronicTherapyItems.splice(i,1);renderCT();};
-
   function renderFiles(){const el=document.getElementById('a-file-list');if(!el)return;el.innerHTML=uploadFiles.map((f,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:0.45rem 0.7rem;background:var(--cream);border:1px solid var(--border);border-radius:4px;font-size:0.82rem"><span>${ee(f.name)}</span><button class="a-rm" onclick="admRemFile(${i})">×</button></div>`).join('');}
   window.admRemFile=function(i){uploadFiles.splice(i,1);renderFiles();};
 
@@ -338,7 +361,6 @@
     const flWrap=document.getElementById('a-floor-info-wrap');
     const flInfo=document.getElementById('a-floor-info');
     if(!st) return;
-    // Show floor info
     if(rm){
       const fl=roomToFloor(parseInt(rm));
       if(flWrap) flWrap.style.display='';
@@ -353,8 +375,6 @@
   };
 
   // ── MKB-10 search ──────────────────────────────────────────────
-  let mkbTimer = null;
-
   window.admMKB = async function(codeId, opisId, ddId){
     const codeEl=document.getElementById(codeId);
     const opisEl=document.getElementById(opisId);
@@ -363,10 +383,8 @@
     const raw=(codeEl.value||'').trim().toUpperCase();
     codeEl.value=raw;
     if(!raw){if(opisEl)opisEl.value='';if(dd)dd.classList.remove('show');return;}
-    // Exact match first
     const{data:ex}=await window._sb.from('mkb10').select('code,description').eq('code',raw).maybeSingle();
     if(ex){if(opisEl)opisEl.value=ex.description;if(dd)dd.classList.remove('show');return;}
-    // Two separate ilike queries — avoids broken .or() syntax
     const[byCode,byDesc]=await Promise.all([
       window._sb.from('mkb10').select('code,description').ilike('code',`${raw}%`).limit(8),
       window._sb.from('mkb10').select('code,description').ilike('description',`%${raw}%`).limit(8),
@@ -392,7 +410,6 @@
     dd.classList.add('show');
   };
 
-  // Live-typing trigger — fires after short pause on each keystroke
   window.admMKBLive = function(codeId, opisId, ddId){
     clearTimeout(mkbTimer);
     const codeEl=document.getElementById(codeId);
@@ -409,46 +426,6 @@
     if(c)c.value=code;if(o)o.value=desc;if(d)d.classList.remove('show');
   };
 
-  // ── Drug search ────────────────────────────────────────────────
-  window.admDrugSearch = function(val){
-    clearTimeout(drugTimer); selectedDrugObj=null;
-    const dd=document.getElementById('ct_drug_dd');
-    if(!val||val.trim().length<3){if(dd)dd.classList.remove('show');return;}
-    drugTimer=setTimeout(async()=>{
-      const[byLatin,byGeneric]=await Promise.all([
-        window._sb.from('drugs').select('id,latin_name,generic_name,strength,form').ilike('latin_name',`%${val}%`).limit(8),
-        window._sb.from('drugs').select('id,latin_name,generic_name,strength,form').ilike('generic_name',`%${val}%`).limit(8),
-      ]);
-      const seen=new Set();
-      const data=[...(byLatin.data||[]),...(byGeneric.data||[])].filter(d=>{
-        if(seen.has(d.id))return false; seen.add(d.id); return true;
-      }).slice(0,12);
-      if(!dd) return;
-      if(!data.length){dd.innerHTML=`<div class="adm-dd-item" style="color:var(--gray);cursor:default">Нема резултати за „${ee(val)}"</div>`;dd.classList.add('show');return;}
-      dd.innerHTML='';
-      data.forEach(d=>{
-        const item=document.createElement('div');
-        item.className='adm-dd-item';
-        item.innerHTML=`<div class="adm-dd-name">${ee(d.latin_name)}</div><div class="adm-dd-meta">${ee(d.generic_name||'')}${d.strength?' · '+ee(d.strength):''}${d.form?' · '+ee(d.form):''}</div>`;
-        item.addEventListener('click',()=>{
-          selectedDrugObj=d;
-          const inp=document.getElementById('ct_drug');
-          if(inp)inp.value=d.latin_name+(d.strength?' '+d.strength:'')+(d.form?' ('+d.form+')':'');
-          dd.classList.remove('show');
-        });
-        dd.appendChild(item);
-      });
-      dd.classList.add('show');
-    },350);
-  };
-
-  window.admDrugPick = function(jsonStr){
-    const d=JSON.parse(jsonStr); selectedDrugObj=d;
-    const inp=document.getElementById('ct_drug');
-    if(inp) inp.value=d.latin_name+(d.strength?' '+d.strength:'')+(d.form?' ('+d.form+')':'');
-    const dd=document.getElementById('ct_drug_dd');if(dd)dd.classList.remove('show');
-  };
-
   window.admAddCD = function(){
     const kod=(document.getElementById('cd_kod')?.value||'').trim().toUpperCase();
     const opis=(document.getElementById('cd_opis')?.value||'').trim();
@@ -458,24 +435,12 @@
     const dd=document.getElementById('cd_kod_dd');if(dd)dd.classList.remove('show');
   };
 
-  window.admAddCT = function(){
-    const drug=(document.getElementById('ct_drug')?.value||'').trim();
-    const dose=(document.getElementById('ct_dose')?.value||'').trim();
-    if(!drug){setErr('Внесете или изберете лек.');return;}if(!dose){setErr('Внесете доза.');return;}
-    clearErr();
-    chronicTherapyItems.push({drug_name:selectedDrugObj?selectedDrugObj.latin_name:drug,dosage:dose}); renderCT();
-    document.getElementById('ct_drug').value=''; document.getElementById('ct_dose').value='';
-    selectedDrugObj=null; const dd=document.getElementById('ct_drug_dd');if(dd)dd.classList.remove('show');
-  };
-
   function setErr(msg){const el=document.getElementById('adm-err');if(el)el.textContent=msg;}
   function clearErr(){const el=document.getElementById('adm-err');if(el)el.textContent='';}
   function ee(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
   // ── Expose public API ──────────────────────────────────────────
   window.Admission = { openNew, openExisting };
-
-  // Legacy wrapper names used in clients.html
   window.openNewAdmission = function(cb){ openNew(cb); };
   window.openAdmissionForClient = function(id, cb){ openExisting(id, cb); };
 
