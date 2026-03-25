@@ -7,35 +7,131 @@
   <link rel="stylesheet" href="shared.css"/>
   <script src="auth-guard.js"></script>
   <style>
-    .logs-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem}
-    .date-nav-wrap{display:flex;align-items:center;gap:0.65rem}
-    .btn-date-nav{background:none;border:1px solid var(--border);border-radius:4px;padding:0.45rem 0.75rem;cursor:pointer;color:var(--gray);font-size:0.9rem;transition:all 0.15s;line-height:1}
-    .btn-date-nav:hover{border-color:var(--dark);color:var(--dark)}
-    .date-display{font-family:'Playfair Display',serif;font-size:1rem;font-weight:600;color:var(--dark);min-width:200px;text-align:center}
-    input[type=date].date-pick{padding:0.42rem 0.65rem;border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif;font-size:0.85rem;color:var(--dark);outline:none;cursor:pointer}
-    input[type=date].date-pick:focus{border-color:var(--olive)}
-    .btn-new-log{display:inline-flex;align-items:center;gap:0.5rem;padding:0.65rem 1.25rem;background:var(--dark);color:#fff;border:none;border-radius:5px;font-family:'Lato',sans-serif;font-size:0.82rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:background 0.15s}
-    .btn-new-log:hover{background:var(--olive)}
-    .log-feed{display:flex;flex-direction:column;gap:1rem}
-    .log-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.25rem}
-    .lc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.6rem}
-    .lc-client{display:flex;align-items:center;gap:0.65rem}
-    .lc-av{width:32px;height:32px;border-radius:50%;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:0.82rem;font-weight:700;flex-shrink:0;overflow:hidden}
-    .lc-av img{width:100%;height:100%;object-fit:cover}
-    .lc-cname{font-weight:700;font-size:0.88rem;color:var(--dark)}
-    .lc-cmeta{font-size:0.72rem;color:var(--gray)}
-    .lc-diag{font-family:monospace;font-size:0.82rem;font-weight:700;color:var(--olive)}
-    .lc-type-badge{display:inline-block;padding:0.1rem 0.45rem;border-radius:10px;font-size:0.64rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-left:0.4rem}
-    .lt-doctor{background:#e8ecf5;color:#2e4a8a}.lt-nurse{background:#f0e8f5;color:#6a3a8a}.lt-social{background:#e8f0e8;color:#3a6e3a}.lt-other{background:#f0ece2;color:#8a7a55}
-    .vitals-pills{display:flex;flex-wrap:wrap;gap:0.35rem 0.9rem;padding:0.5rem 0.7rem;background:var(--cream);border-radius:5px;border:1px solid var(--border);margin:0.45rem 0;font-size:0.78rem}
-    .vc span{font-weight:700}
-    .lc-field{margin-top:0.4rem}
-    .lc-fl{font-size:0.64rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray)}
-    .lc-fv{font-size:0.84rem;color:var(--dark);line-height:1.55}
-    .link-btn{font-size:0.78rem;color:var(--olive);font-weight:700;cursor:pointer;background:none;border:none;padding:0}
-    .link-btn:hover{text-decoration:underline}
-    .empty-feed{text-align:center;padding:4rem 2rem;color:var(--gray)}
-    .empty-feed svg{opacity:0.2;display:block;margin:0 auto 1rem}
+    :root{
+      --acc-doctor:       #2e4a8a;
+      --acc-nurse:        #6a3a8a;
+      --acc-social:       #3a6e3a;
+      --acc-fizio:        #c07028;
+      --acc-supervizor:   #b03060;
+      --acc-other:        #8a7a55;
+    }
+
+    /* Toolbar */
+    .logs-toolbar{display:flex;align-items:flex-start;flex-wrap:wrap;gap:0.85rem;margin-bottom:1.5rem;}
+    .toolbar-row1{display:flex;align-items:center;flex-wrap:wrap;gap:0.75rem;width:100%;}
+    .toolbar-row2{display:flex;align-items:center;flex-wrap:wrap;gap:0.5rem;width:100%;}
+    .date-nav-wrap{display:flex;align-items:center;gap:0.5rem;}
+    .btn-date-nav{background:none;border:1px solid var(--border);border-radius:4px;padding:0.42rem 0.7rem;cursor:pointer;color:var(--gray);font-size:0.9rem;transition:all 0.15s;line-height:1;}
+    .btn-date-nav:hover{border-color:var(--dark);color:var(--dark);}
+    .date-display{font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:600;color:var(--dark);min-width:190px;text-align:center;}
+    input[type=date].date-pick{padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif;font-size:0.82rem;color:var(--dark);outline:none;cursor:pointer;}
+    input[type=date].date-pick:focus{border-color:var(--olive);}
+    .search-wrap{position:relative;flex:1;min-width:160px;max-width:280px;}
+    .search-wrap svg{position:absolute;left:0.6rem;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--gray);}
+    #searchInput{width:100%;padding:0.42rem 0.7rem 0.42rem 2rem;border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif;font-size:0.82rem;color:var(--dark);outline:none;box-sizing:border-box;}
+    #searchInput:focus{border-color:var(--olive);}
+    .summary-badge{margin-left:auto;font-size:0.75rem;color:var(--gray);background:var(--cream);border:1px solid var(--border);border-radius:20px;padding:0.3rem 0.85rem;white-space:nowrap;font-family:'Lato',sans-serif;}
+    .summary-badge strong{color:var(--dark);}
+    .btn-new-log{display:inline-flex;align-items:center;gap:0.45rem;padding:0.58rem 1.1rem;background:var(--dark);color:#fff;border:none;border-radius:5px;font-family:'Lato',sans-serif;font-size:0.78rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:background 0.15s;white-space:nowrap;}
+    .btn-new-log:hover{background:var(--olive);}
+
+    /* chips */
+    .filter-chips{display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;}
+    .chip-label{font-size:0.7rem;color:var(--gray);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-right:0.2rem;}
+    .chip{display:inline-flex;align-items:center;gap:0.3rem;padding:0.25rem 0.65rem;border-radius:20px;font-size:0.72rem;font-weight:700;letter-spacing:0.04em;cursor:pointer;border:2px solid transparent;transition:all 0.14s;user-select:none;}
+    .chip-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0;}
+    .chip-all{background:#f0ece2;color:#8a7a55;border-color:#d8d0bc;}
+    .chip-all.active,.chip-all:hover{background:#e8e0d0;border-color:#8a7a55;}
+    .chip-doctor{background:#e8ecf5;color:var(--acc-doctor);}
+    .chip-doctor.active,.chip-doctor:hover{border-color:var(--acc-doctor);}
+    .chip-nurse{background:#f0e8f5;color:var(--acc-nurse);}
+    .chip-nurse.active,.chip-nurse:hover{border-color:var(--acc-nurse);}
+    .chip-social{background:#e8f0e8;color:var(--acc-social);}
+    .chip-social.active,.chip-social:hover{border-color:var(--acc-social);}
+    .chip-fizioterapevt{background:#fdf0e0;color:var(--acc-fizio);}
+    .chip-fizioterapevt.active,.chip-fizioterapevt:hover{border-color:var(--acc-fizio);}
+    .chip-supervizornega{background:#fce8f0;color:var(--acc-supervizor);}
+    .chip-supervizornega.active,.chip-supervizornega:hover{border-color:var(--acc-supervizor);}
+
+    /* Cards */
+    .log-feed{display:flex;flex-direction:column;gap:0.85rem;}
+    .log-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:1.05rem 1.2rem 1.05rem 1.35rem;border-left:4px solid var(--card-accent,var(--border));transition:box-shadow 0.15s;}
+    .log-card:hover{box-shadow:0 2px 10px rgba(0,0,0,0.07);}
+    .log-card[data-type="doctor"]        {--card-accent:var(--acc-doctor);}
+    .log-card[data-type="nurse"]         {--card-accent:var(--acc-nurse);}
+    .log-card[data-type="social"]        {--card-accent:var(--acc-social);}
+    .log-card[data-type="fizioterapevt"] {--card-accent:var(--acc-fizio);}
+    .log-card[data-type="supervizornega"]{--card-accent:var(--acc-supervizor);}
+
+    .lc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.55rem;}
+    .lc-client{display:flex;align-items:center;gap:0.6rem;}
+    .lc-av{width:32px;height:32px;border-radius:50%;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:0.8rem;font-weight:700;flex-shrink:0;overflow:hidden;}
+    .lc-av img{width:100%;height:100%;object-fit:cover;}
+    .lc-cname{font-weight:700;font-size:0.87rem;color:var(--dark);}
+    .lc-cmeta{font-size:0.71rem;color:var(--gray);margin-top:0.05rem;}
+
+    .lc-meta-row{display:flex;align-items:center;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.45rem;}
+    .lc-type-badge{display:inline-block;padding:0.12rem 0.5rem;border-radius:10px;font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;}
+    .lt-doctor        {background:#e8ecf5;color:var(--acc-doctor);}
+    .lt-nurse         {background:#f0e8f5;color:var(--acc-nurse);}
+    .lt-social        {background:#e8f0e8;color:var(--acc-social);}
+    .lt-fizio         {background:#fdf0e0;color:var(--acc-fizio);}
+    .lt-supervizornega{background:#fce8f0;color:var(--acc-supervizor);}
+    .lt-other         {background:#f0ece2;color:var(--acc-other);}
+    .lc-smena-badge{display:inline-block;padding:0.1rem 0.45rem;border-radius:10px;font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;background:#fff3cd;color:#856404;border:1px solid #ffe69c;}
+    .lc-author{font-size:0.7rem;color:var(--gray);display:inline-flex;align-items:center;gap:0.25rem;}
+    .lc-author svg{opacity:0.5;}
+    .lc-time{font-size:0.7rem;color:var(--gray);margin-left:auto;}
+
+    .lc-diag{font-family:monospace;font-size:0.82rem;font-weight:700;color:var(--olive);}
+    .lc-diag-wrap{margin-bottom:0.4rem;}
+
+    .vitals-pills{display:flex;flex-wrap:wrap;gap:0.3rem 0.8rem;padding:0.45rem 0.65rem;background:var(--cream);border-radius:5px;border:1px solid var(--border);margin:0.35rem 0;font-size:0.77rem;}
+    .vc span{font-weight:700;}
+
+    .lc-fields{display:flex;flex-direction:column;gap:0.35rem;margin-top:0.3rem;}
+    .lc-fl{font-size:0.62rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray);}
+    .lc-fv{font-size:0.83rem;color:var(--dark);line-height:1.55;}
+
+    /* Supervisor grid */
+    .sup-section{margin-top:0.55rem;}
+    .sup-section-title{font-size:0.62rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray);margin-bottom:0.4rem;display:flex;align-items:center;gap:0.4rem;}
+    .sup-section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+    .sup-kv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:0.4rem;}
+    .sup-kv{background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:0.4rem 0.6rem;}
+    .sup-kv .k{font-size:0.62rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray);margin-bottom:0.1rem;}
+    .sup-kv .v{font-size:0.81rem;color:var(--dark);line-height:1.45;}
+
+    /* Chronic therapy block */
+    .ct-block{margin-top:0.55rem;border:1px solid #d4e0f5;border-radius:6px;background:#f2f6fd;overflow:hidden;}
+    .ct-header{display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.7rem;background:#e4edf9;border-bottom:1px solid #d4e0f5;flex-wrap:wrap;}
+    .ct-icon{color:var(--acc-doctor);opacity:0.8;flex-shrink:0;}
+    .ct-title{font-size:0.68rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--acc-doctor);}
+    .ct-meta{font-size:0.7rem;color:var(--gray);}
+    .ct-changed-badge{font-size:0.62rem;font-weight:700;padding:0.1rem 0.45rem;border-radius:10px;background:#fff3cd;color:#856404;border:1px solid #ffe69c;margin-left:auto;}
+    .ct-body{padding:0.5rem 0.7rem;}
+    .ct-drug-row{display:flex;align-items:baseline;gap:0.5rem;padding:0.25rem 0;border-bottom:1px dotted #d4e0f5;font-size:0.81rem;}
+    .ct-drug-row:last-child{border-bottom:none;}
+    .ct-drug-num{font-size:0.68rem;color:var(--gray);min-width:16px;text-align:right;}
+    .ct-drug-name{font-weight:700;color:var(--dark);}
+    .ct-drug-detail{color:var(--gray);font-size:0.75rem;}
+    .ct-note{font-size:0.77rem;color:var(--gray);font-style:italic;padding:0.3rem 0 0.1rem;}
+    .ct-empty{font-size:0.77rem;color:var(--gray);padding:0.15rem 0;}
+
+    /* Pagination */
+    .pagination{display:flex;align-items:center;justify-content:center;gap:0.4rem;margin-top:1.25rem;flex-wrap:wrap;}
+    .page-btn{min-width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:4px;background:#fff;font-family:'Lato',sans-serif;font-size:0.8rem;cursor:pointer;color:var(--gray);transition:all 0.14s;padding:0 0.5rem;}
+    .page-btn:hover{border-color:var(--dark);color:var(--dark);}
+    .page-btn.active{background:var(--dark);color:#fff;border-color:var(--dark);font-weight:700;}
+    .page-btn:disabled{opacity:0.35;cursor:default;}
+    .page-info{font-size:0.75rem;color:var(--gray);padding:0 0.3rem;}
+
+    /* Empty */
+    .empty-feed{text-align:center;padding:4rem 2rem;color:var(--gray);}
+    .empty-feed svg{opacity:0.18;display:block;margin:0 auto 1rem;}
+    .empty-feed p{font-size:0.88rem;}
+    .link-btn{font-size:0.78rem;color:var(--olive);font-weight:700;cursor:pointer;background:none;border:none;padding:0;white-space:nowrap;}
+    .link-btn:hover{text-decoration:underline;}
   </style>
 </head>
 <body>
@@ -47,21 +143,40 @@
       <p class="page-subtitle">Дневни клинички записи на установата</p>
     </div>
     <div class="page-content">
+
       <div class="logs-toolbar">
-        <div class="date-nav-wrap">
-          <button class="btn-date-nav" id="btnPrev">‹</button>
-          <span class="date-display" id="dateDisp">—</span>
-          <button class="btn-date-nav" id="btnNext">›</button>
-          <input type="date" class="date-pick" id="datePick"/>
+        <div class="toolbar-row1">
+          <div class="date-nav-wrap">
+            <button class="btn-date-nav" id="btnPrev">‹</button>
+            <span class="date-display" id="dateDisp">—</span>
+            <button class="btn-date-nav" id="btnNext">›</button>
+            <input type="date" class="date-pick" id="datePick"/>
+          </div>
+          <div class="search-wrap">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="searchInput" placeholder="Пребарај клиент…" autocomplete="off"/>
+          </div>
+          <span class="summary-badge" id="summaryBadge">—</span>
+          <button class="btn-new-log" id="btnNewLog" style="margin-left:auto;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Нов Запис
+          </button>
         </div>
-        <button class="btn-new-log" id="btnNewLog">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Нов Запис
-        </button>
+        <div class="toolbar-row2">
+          <div class="filter-chips" id="filterChips">
+            <span class="chip-label">Тип:</span>
+            <span class="chip chip-all active"         data-type="all">Сите</span>
+            <span class="chip chip-doctor"             data-type="doctor"><span class="chip-dot" style="background:var(--acc-doctor)"></span>Доктор</span>
+            <span class="chip chip-nurse"              data-type="nurse"><span class="chip-dot" style="background:var(--acc-nurse)"></span>Сестра</span>
+            <span class="chip chip-social"             data-type="social"><span class="chip-dot" style="background:var(--acc-social)"></span>Социјален</span>
+            <span class="chip chip-fizioterapevt"      data-type="fizioterapevt"><span class="chip-dot" style="background:var(--acc-fizio)"></span>Физио</span>
+            <span class="chip chip-supervizornega"     data-type="supervizornega"><span class="chip-dot" style="background:var(--acc-supervizor)"></span>Супервизор за нега</span>
+          </div>
+        </div>
       </div>
-      <div id="log-feed">
-        <div class="empty-feed"><p>Се вчитува…</p></div>
-      </div>
+
+      <div id="log-feed"><div class="empty-feed"><p>Се вчитува…</p></div></div>
+      <div id="paginationBar"></div>
     </div>
   </main>
 </div>
@@ -69,11 +184,25 @@
 <script src="sidebar.js"></script>
 <script src="new-log.js"></script>
 <script src="client-card.js"></script>
-<script src="chronic-th.js"></script>  
+<script src="chronic-th.js"></script>
 
 <script>
-let currentDate = new Date();
+/* ════════════════════════════════════════════════════════
+   CONFIG
+════════════════════════════════════════════════════════ */
+const PAGE_SIZE    = 50;
+const CT_WINDOW_MS = 20 * 60 * 1000; // 20 min
 
+let currentDate  = new Date();
+let allLogs      = [];
+let ctSessions   = [];
+let ctDrugsMap   = {};   // session_id → drug[]
+let filteredLogs = [];
+let activePage   = 1;
+let activeType   = 'all';
+let searchQuery  = '';
+
+/* ── boot ─────────────────────────────────────────────── */
 window.addEventListener('DOMContentLoaded', () => {
   const wait = setInterval(() => {
     if (window._username !== undefined) {
@@ -92,110 +221,373 @@ function initPage() {
 
   document.getElementById('btnPrev').addEventListener('click', () => {
     currentDate.setDate(currentDate.getDate() - 1);
-    dp.value = toDateStr(currentDate);
-    updateDateDisplay(); loadFeed();
+    dp.value = toDateStr(currentDate); updateDateDisplay(); loadFeed();
   });
   document.getElementById('btnNext').addEventListener('click', () => {
     currentDate.setDate(currentDate.getDate() + 1);
-    dp.value = toDateStr(currentDate);
-    updateDateDisplay(); loadFeed();
+    dp.value = toDateStr(currentDate); updateDateDisplay(); loadFeed();
   });
   dp.addEventListener('change', e => {
     currentDate = new Date(e.target.value + 'T12:00:00');
     updateDateDisplay(); loadFeed();
   });
 
-  // Delegate to new-log.js
-  document.getElementById('btnNewLog').addEventListener('click', () => {
-    openNewLog(loadFeed);
+  document.getElementById('btnNewLog').addEventListener('click', () => openNewLog(loadFeed));
+
+  document.getElementById('filterChips').addEventListener('click', e => {
+    const chip = e.target.closest('[data-type]');
+    if (!chip) return;
+    document.querySelectorAll('#filterChips [data-type]').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeType = chip.dataset.type;
+    activePage = 1;
+    applyFilters();
+  });
+
+  let st;
+  document.getElementById('searchInput').addEventListener('input', e => {
+    clearTimeout(st);
+    st = setTimeout(() => {
+      searchQuery = e.target.value.trim().toLowerCase();
+      activePage  = 1;
+      applyFilters();
+    }, 200);
   });
 }
 
-function toDateStr(d) { return d.toISOString().slice(0, 10); }
-function dispDate(d)  { return d.toLocaleDateString('mk-MK', { weekday:'long', day:'2-digit', month:'long', year:'numeric' }); }
+/* ════════════════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════════════════ */
+function toDateStr(d)  { return d.toISOString().slice(0,10); }
+function dispDate(d)   { return d.toLocaleDateString('mk-MK',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}); }
 function updateDateDisplay() { document.getElementById('dateDisp').textContent = dispDate(currentDate); }
 function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-const TYPE_LABEL = { doctor:'Доктор', nurse:'Сестра', social:'Социјален', fizioterapevt:'Физио', supervisor:'Супервизор', other:'Друго' };
-const TYPE_CLS   = { doctor:'lt-doctor', nurse:'lt-nurse', social:'lt-social', fizioterapevt:'lt-other', supervisor:'lt-other', other:'lt-other' };
+const TYPE_LABEL = {
+  doctor:'Доктор', nurse:'Сестра', social:'Социјален',
+  fizioterapevt:'Физиотерапевт', supervizornega:'Супервизор за нега', other:'Друго'
+};
+const TYPE_CLS = {
+  doctor:'lt-doctor', nurse:'lt-nurse', social:'lt-social',
+  fizioterapevt:'lt-fizio', supervizornega:'lt-supervizornega', other:'lt-other'
+};
 
-// Visibility: which log types the current user is allowed to see
-function canSeeLogType(logType) {
+/* ── Permissions ──────────────────────────────────────── */
+function canSeeLogType(t) {
   const u = (window._username || '').toLowerCase();
   if (u === 'menadzer') return true;
-  if (logType === 'doctor' || logType === 'nurse') return u === 'doktor' || u === 'glavnasestra';
-  if (logType === 'social')       return u === 'socijalenrabotnik' || u === 'doktor' || u === 'glavnasestra';
-  if (logType === 'fizioterapevt') return u === 'fizioterapevt'   || u === 'doktor' || u === 'glavnasestra';
-  if (logType === 'supervisor')   return u === 'doktor' || u === 'glavnasestra';
+  if (t === 'doctor' || t === 'nurse')    return u === 'doktor' || u === 'glavnasestra';
+  if (t === 'social')                     return u === 'socijalenrabotnik' || u === 'doktor' || u === 'glavnasestra';
+  if (t === 'fizioterapevt')              return u === 'fizioterapevt' || u === 'doktor' || u === 'glavnasestra';
+  if (t === 'supervizornega')             return u === 'supervizornega' || u === 'doktor' || u === 'glavnasestra';
   return u === 'menadzer' || u === 'glavnasestra';
 }
 
+function isMine(log) {
+  const u = (window._username || '').toLowerCase();
+  if (u === 'supervizornega')
+    return window._userId && log.created_by === window._userId;
+  return true;
+}
+
+/* ── Chronic therapy matching ─────────────────────────── */
+function findCtForLog(log) {
+  if (log.log_type !== 'doctor') return null;
+  const logTs = new Date(log.created_at).getTime();
+  let best = null, bestDelta = Infinity;
+  for (const s of ctSessions) {
+    if (s.client_id !== log.client_id) continue;
+    const delta = Math.abs(new Date(s.created_at).getTime() - logTs);
+    if (delta <= CT_WINDOW_MS && delta < bestDelta) { best = s; bestDelta = delta; }
+  }
+  if (!best) return null;
+  return { session: best, drugs: ctDrugsMap[best.id] || [], deltaMin: Math.round(bestDelta/60000) };
+}
+
+/* ════════════════════════════════════════════════════════
+   DATA
+════════════════════════════════════════════════════════ */
 async function loadFeed() {
-  const feed = document.getElementById('log-feed');
-  feed.innerHTML = '<div class="empty-feed"><p>Се вчитува…</p></div>';
+  document.getElementById('log-feed').innerHTML = '<div class="empty-feed"><p>Се вчитува…</p></div>';
+  document.getElementById('paginationBar').innerHTML = '';
+  document.getElementById('summaryBadge').textContent = '—';
+
   const ds = toDateStr(currentDate);
-  const { data } = await window._sb.from('client_logs')
-    .select('*, clients(id,ime_prezime,obrakanje,profile_pic_url,room_number,bed_number)')
-    .gte('created_at', ds + 'T00:00:00').lte('created_at', ds + 'T23:59:59')
-    .order('created_at', { ascending: false });
+  const [logsRes, ctRes] = await Promise.all([
+    window._sb.from('client_logs')
+      .select('*, clients(id,ime_prezime,obrakanje,profile_pic_url,room_number,bed_number)')
+      .gte('created_at', ds+'T00:00:00').lte('created_at', ds+'T23:59:59')
+      .order('created_at', { ascending: false }),
+    window._sb.from('chronic_therapy_sessions')
+      .select('*')
+      .gte('created_at', ds+'T00:00:00').lte('created_at', ds+'T23:59:59')
+  ]);
 
-  if (!data || !data.length) {
-    feed.innerHTML = `<div class="empty-feed"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>Нема записи за ${dispDate(currentDate)}.</p></div>`;
-    return;
+  ctSessions = ctRes.data || [];
+  ctDrugsMap = {};
+  if (ctSessions.length) {
+    const ids = ctSessions.map(s => s.id);
+    const { data: drugs } = await window._sb.from('chronic_therapy_drugs')
+      .select('*').in('session_id', ids).order('sort_order', { ascending: true });
+    (drugs || []).forEach(d => {
+      if (!ctDrugsMap[d.session_id]) ctDrugsMap[d.session_id] = [];
+      ctDrugsMap[d.session_id].push(d);
+    });
   }
 
-  // Filter to only log types the current user may see
-  const visible = data.filter(l => canSeeLogType(l.log_type || 'doctor'));
-
-  if (!visible.length) {
-    feed.innerHTML = `<div class="empty-feed"><p>Нема записи за ${dispDate(currentDate)} со вашата улога.</p></div>`;
-    return;
+  const data = logsRes.data || [];
+  if (!data.length) {
+    allLogs = [];
+    renderEmpty(`Нема записи за ${dispDate(currentDate)}.`);
+    updateSummary(); return;
   }
 
-  feed.innerHTML = `<div class="log-feed">${visible.map(l => {
-    const c = l.clients || {};
-    const loc = c.room_number ? `С${c.room_number}/Кр${c.bed_number}` : '—';
-    const av = c.profile_pic_url
-      ? `<div class="lc-av"><img src="${esc(c.profile_pic_url)}" alt=""/></div>`
-      : `<div class="lc-av">${esc((c.ime_prezime||'?').charAt(0))}</div>`;
-    // Vitals in order: Т° → Пулс → SpO2 → КП → Респ → Тежина → Шеќер → Болка → Диуреза → Столица
-    const v = [];
-    if(l.temperatura)  v.push(`Т°: <span>${l.temperatura}°C</span>`);
-    if(l.puls)         v.push(`Пулс: <span>${l.puls} bpm</span>`);
-    if(l.spo2)         v.push(`SpO2: <span>${l.spo2}%</span>`);
-    if(l.kp_sistolicen&&l.kp_dijastolicen) v.push(`КП: <span>${l.kp_sistolicen}/${l.kp_dijastolicen} mmHg</span>`);
-    if(l.respiracii)   v.push(`Респ: <span>${l.respiracii}/мин</span>`);
-    if(l.tezina)       v.push(`Тежина: <span>${l.tezina} kg</span>`);
-    if(l.seker)        v.push(`Шеќер: <span>${l.seker} mmol/L</span>`);
-    if(l.bolka!=null)  v.push(`Болка: <span>${l.bolka}/10</span>`);
-    if(l.diureza!=null)v.push(`Диуреза: <span>${l.diureza} ml</span>`);
-    if(l.stolica)      v.push(`Столица: <span>${esc(l.stolica)}</span>`);
-    return `<div class="log-card">
-      <!-- Top row: client info left, Досие button right -->
-      <div class="lc-top">
-        <div class="lc-client">
-          ${av}
-          <div>
-            <div class="lc-cname">${esc(c.obrakanje?c.obrakanje+' ':'')}${esc(c.ime_prezime||'—')}</div>
-            <div class="lc-cmeta">${esc(loc)} · ${new Date(l.created_at).toLocaleTimeString('mk-MK',{hour:'2-digit',minute:'2-digit'})}</div>
-          </div>
-        </div>
-        <button class="link-btn" onclick="openClientCard('${c.id}')">Досие →</button>
-      </div>
-      <!-- Role badge LEFT, date RIGHT -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.35rem">
-        <span class="lc-type-badge ${TYPE_CLS[l.log_type||'doctor']||'lt-other'}">${TYPE_LABEL[l.log_type||'doctor']||'Друго'}</span>
-        <span style="font-size:0.72rem;color:var(--gray)">${new Date(l.created_at).toLocaleDateString('mk-MK')}</span>
-      </div>
-      <!-- Diagnosis above vitals -->
-      ${l.dijagnoza_kod?`<div style="margin-bottom:0.3rem"><span class="lc-diag">${esc(l.dijagnoza_kod)}${l.dijagnoza_opis?' — '+esc(l.dijagnoza_opis):''}</span></div>`:''}
-      ${v.length?`<div class="vitals-pills">${v.map(x=>`<div class="vc">${x}</div>`).join('')}</div>`:''}
-      ${l.anamneza    ?`<div class="lc-field"><div class="lc-fl">Анамнеза</div><div class="lc-fv">${esc(l.anamneza)}</div></div>`:''}
-      ${l.naod        ?`<div class="lc-field"><div class="lc-fl">Наод</div><div class="lc-fv">${esc(l.naod)}</div></div>`:''}
-      ${l.parenteralna?`<div class="lc-field"><div class="lc-fl">Парентерална</div><div class="lc-fv">${esc(l.parenteralna)}</div></div>`:''}
-      ${l.zabeleski   ?`<div class="lc-field"><div class="lc-fl">Забелешки</div><div class="lc-fv">${esc(l.zabeleski)}</div></div>`:''}
+  allLogs = data.filter(l => canSeeLogType(l.log_type || 'doctor') && isMine(l));
+  if (!allLogs.length) {
+    renderEmpty(`Нема записи за ${dispDate(currentDate)} со вашата улога.`);
+    updateSummary(); return;
+  }
+
+  activeType = 'all'; searchQuery = '';
+  document.getElementById('searchInput').value = '';
+  document.querySelectorAll('#filterChips [data-type]').forEach(c =>
+    c.classList.toggle('active', c.dataset.type === 'all'));
+  activePage = 1;
+  applyFilters();
+}
+
+function applyFilters() {
+  filteredLogs = allLogs.filter(l => {
+    const t = l.log_type || 'doctor';
+    if (activeType !== 'all' && t !== activeType) return false;
+    if (searchQuery) {
+      const c = l.clients || {};
+      const n = ((c.obrakanje||'')+' '+(c.ime_prezime||'')).toLowerCase();
+      if (!n.includes(searchQuery)) return false;
+    }
+    return true;
+  });
+  updateSummary();
+  renderPage();
+}
+
+function updateSummary() {
+  const total = allLogs.length, showing = filteredLogs.length;
+  const badge = document.getElementById('summaryBadge');
+  if (!total) { badge.textContent = 'Нема записи'; return; }
+  if (showing === total)
+    badge.innerHTML = `<strong>${total}</strong> запис${total===1?'':'и'} денес`;
+  else
+    badge.innerHTML = `<strong>${showing}</strong> / ${total} запис${total===1?'':'и'}`;
+}
+
+/* ════════════════════════════════════════════════════════
+   RENDER
+════════════════════════════════════════════════════════ */
+function renderPage() {
+  const feed = document.getElementById('log-feed');
+  const pgBar = document.getElementById('paginationBar');
+  if (!filteredLogs.length) {
+    feed.innerHTML = `<div class="empty-feed">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg><p>Нема записи${activeType!=='all'?' за избраниот тип':''}${searchQuery?' — нема совпаѓање':''}.</p>
     </div>`;
-  }).join('')}</div>`;
+    pgBar.innerHTML = ''; return;
+  }
+  const totalPages = Math.ceil(filteredLogs.length / PAGE_SIZE);
+  if (activePage > totalPages) activePage = totalPages;
+  const slice = filteredLogs.slice((activePage-1)*PAGE_SIZE, activePage*PAGE_SIZE);
+  feed.innerHTML = `<div class="log-feed">${slice.map(renderCard).join('')}</div>`;
+  renderPagination(totalPages);
+}
+
+function renderPagination(totalPages) {
+  const bar = document.getElementById('paginationBar');
+  if (totalPages <= 1) { bar.innerHTML = ''; return; }
+  let btns = `<button class="page-btn" onclick="goPage(${activePage-1})" ${activePage===1?'disabled':''}>‹</button>`;
+  const pages = new Set([1,totalPages,activePage,activePage-1,activePage+1].filter(p=>p>=1&&p<=totalPages));
+  let prev=0;
+  Array.from(pages).sort((a,b)=>a-b).forEach(p=>{
+    if(prev&&p-prev>1) btns+=`<span class="page-info">…</span>`;
+    btns+=`<button class="page-btn ${p===activePage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+    prev=p;
+  });
+  btns+=`<button class="page-btn" onclick="goPage(${activePage+1})" ${activePage===totalPages?'disabled':''}>›</button>`;
+  btns+=`<span class="page-info">${(activePage-1)*PAGE_SIZE+1}–${Math.min(activePage*PAGE_SIZE,filteredLogs.length)} / ${filteredLogs.length}</span>`;
+  bar.innerHTML=`<div class="pagination">${btns}</div>`;
+}
+
+function goPage(n){
+  activePage=n; renderPage();
+  document.querySelector('.page-content').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function renderEmpty(msg){
+  document.getElementById('log-feed').innerHTML=`<div class="empty-feed">
+    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+    </svg><p>${msg}</p></div>`;
+  document.getElementById('paginationBar').innerHTML='';
+}
+
+/* ════════════════════════════════════════════════════════
+   CARD
+════════════════════════════════════════════════════════ */
+function renderCard(l) {
+  const c    = l.clients || {};
+  const type = l.log_type || 'doctor';
+  const loc  = c.room_number ? `С${c.room_number}/Кр${c.bed_number}` : '—';
+  const time = new Date(l.created_at).toLocaleTimeString('mk-MK',{hour:'2-digit',minute:'2-digit'});
+  const dateStr = new Date(l.created_at).toLocaleDateString('mk-MK');
+
+  const av = c.profile_pic_url
+    ? `<div class="lc-av"><img src="${esc(c.profile_pic_url)}" alt=""/></div>`
+    : `<div class="lc-av">${esc((c.ime_prezime||'?').charAt(0))}</div>`;
+
+  // Author name from profiles cache (if available)
+  let authorHtml = '';
+  if (l.created_by) {
+    const name = window._profiles?.[l.created_by] || null;
+    if (name) authorHtml = `<span class="lc-author">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      ${esc(name)}</span>`;
+  }
+
+  const smenaHtml = l.smena
+    ? `<span class="lc-smena-badge">⏰ ${esc(l.smena)}</span>` : '';
+
+  // Vitals
+  const v=[];
+  if(l.temperatura)  v.push(`Т°: <span>${l.temperatura}°C</span>`);
+  if(l.puls)         v.push(`Пулс: <span>${l.puls} bpm</span>`);
+  if(l.spo2)         v.push(`SpO2: <span>${l.spo2}%</span>`);
+  if(l.kp_sistolicen&&l.kp_dijastolicen) v.push(`КП: <span>${l.kp_sistolicen}/${l.kp_dijastolicen} mmHg</span>`);
+  if(l.respiracii)   v.push(`Респ: <span>${l.respiracii}/мин</span>`);
+  if(l.tezina)       v.push(`Тежина: <span>${l.tezina} kg</span>`);
+  if(l.seker)        v.push(`Шеќер: <span>${l.seker} mmol/L</span>`);
+  if(l.bolka!=null)  v.push(`Болка: <span>${l.bolka}/10</span>`);
+  if(l.diureza!=null)v.push(`Диуреза: <span>${l.diureza} ml</span>`);
+  if(l.stolica)      v.push(`Столица: <span>${esc(l.stolica)}</span>`);
+  const vitalsHtml = v.length
+    ? `<div class="vitals-pills">${v.map(x=>`<div class="vc">${x}</div>`).join('')}</div>` : '';
+
+  const diagHtml = l.dijagnoza_kod
+    ? `<div class="lc-diag-wrap"><span class="lc-diag">${esc(l.dijagnoza_kod)}${l.dijagnoza_opis?' — '+esc(l.dijagnoza_opis):''}</span></div>` : '';
+
+  const bodyHtml = type==='supervizornega' ? renderSupBody(l) : renderStdBody(l);
+  const ctMatch  = findCtForLog(l);
+  const ctHtml   = ctMatch ? renderCtBlock(ctMatch) : '';
+
+  return `<div class="log-card" data-type="${esc(type)}">
+    <div class="lc-top">
+      <div class="lc-client">
+        ${av}
+        <div>
+          <div class="lc-cname">${esc(c.obrakanje?c.obrakanje+' ':'')}${esc(c.ime_prezime||'—')}</div>
+          <div class="lc-cmeta">${esc(loc)}</div>
+        </div>
+      </div>
+      <button class="link-btn" onclick="openClientCard('${c.id}')">Досие →</button>
+    </div>
+    <div class="lc-meta-row">
+      <span class="lc-type-badge ${TYPE_CLS[type]||'lt-other'}">${TYPE_LABEL[type]||'Друго'}</span>
+      ${smenaHtml}
+      ${authorHtml}
+      <span class="lc-time">${time} · ${dateStr}</span>
+    </div>
+    ${diagHtml}
+    ${vitalsHtml}
+    ${bodyHtml}
+    ${ctHtml}
+  </div>`;
+}
+
+/* ── Standard body ───────────────────────────────────── */
+function renderStdBody(l) {
+  const rows=[
+    ['anamneza',    'Анамнеза'],
+    ['naod',        'Наод'],
+    ['parenteralna','Парентерална'],
+    ['plan',        'План / Терапија'],
+    ['zabeleski',   'Забелешки'],
+  ];
+  const html=rows.filter(([k])=>l[k])
+    .map(([k,lb])=>`<div class="lc-field"><div class="lc-fl">${lb}</div><div class="lc-fv">${esc(l[k])}</div></div>`)
+    .join('');
+  return html?`<div class="lc-fields">${html}</div>`:'';
+}
+
+/* ── Supervisor body — parses pipe-delimited strings ──── */
+function parsePipe(raw) {
+  if (!raw) return [];
+  return raw.split('|').map(s=>{
+    const i=s.indexOf(':');
+    if(i===-1) return {k:s.trim(),v:''};
+    return {k:s.slice(0,i).trim(),v:s.slice(i+1).trim()};
+  }).filter(p=>p.k);
+}
+
+function renderSupBody(l) {
+  const sections=[
+    {title:'Хигиенска нега', raw:l.higijenska_nega},
+    {title:'Исхрана',        raw:l.ishrana},
+    {title:'Мобилност',      raw:l.mobilnost},
+    {title:'Психосоцијално', raw:l.psihosocijalno},
+  ].filter(s=>s.raw);
+
+  const sectHtml=sections.map(s=>{
+    const pairs=parsePipe(s.raw);
+    const cells=pairs.map(p=>
+      `<div class="sup-kv"><div class="k">${esc(p.k)}</div><div class="v">${esc(p.v)||'—'}</div></div>`
+    ).join('');
+    return `<div class="sup-section">
+      <div class="sup-section-title">${s.title}</div>
+      <div class="sup-kv-grid">${cells}</div>
+    </div>`;
+  }).join('');
+
+  const zab=l.zabeleski?`<div class="lc-field" style="margin-top:0.45rem">
+    <div class="lc-fl">Забелешки</div><div class="lc-fv">${esc(l.zabeleski)}</div></div>`:'';
+
+  return sectHtml+zab || '';
+}
+
+/* ── Chronic therapy block ───────────────────────────── */
+function renderCtBlock({session, drugs, deltaMin}) {
+  // Heuristic: if session started within 5 min of log → likely opened during this visit
+  const probablyChanged = deltaMin <= 5;
+  const changedBadge = probablyChanged
+    ? `<span class="ct-changed-badge">⚠ Можна промена на терапија</span>` : '';
+
+  const startTime = new Date(session.started_at)
+    .toLocaleTimeString('mk-MK',{hour:'2-digit',minute:'2-digit'});
+
+  const drugRows = drugs.length
+    ? drugs.map((d,i)=>`<div class="ct-drug-row">
+        <span class="ct-drug-num">${i+1}.</span>
+        <span class="ct-drug-name">${esc(d.generic_name||'—')}</span>
+        ${d.form   ? `<span class="ct-drug-detail">${esc(d.form)}</span>`    : ''}
+        ${d.dosage ? `<span class="ct-drug-detail">· ${esc(d.dosage)}</span>`: ''}
+      </div>`).join('')
+    : `<div class="ct-empty">Нема лекови регистрирани во оваа сесија.</div>`;
+
+  const noteHtml = session.note
+    ? `<div class="ct-note">${esc(session.note)}</div>` : '';
+
+  return `<div class="ct-block">
+    <div class="ct-header">
+      <svg class="ct-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/>
+      </svg>
+      <span class="ct-title">Хронична терапија</span>
+      <span class="ct-meta">сесија во ${startTime} · ${deltaMin} мин разлика</span>
+      ${changedBadge}
+    </div>
+    <div class="ct-body">${drugRows}${noteHtml}</div>
+  </div>`;
 }
 </script>
 </body>
