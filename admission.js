@@ -219,19 +219,24 @@
         <div class="a-fg" style="flex-shrink:0"><label class="a-lbl">&nbsp;</label><button class="btn-dash" onclick="admAddCD()">+ Додај</button></div>
       </div>
     </div>
-    <div class="a-sect"><div class="a-sect-t">Хронична терапија</div>
-      <div id="a-ct-list" style="margin-bottom:0.65rem"></div>
-      <div style="display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap">
-        <div class="a-fg" style="flex:1;min-width:200px;position:relative">
-          <label class="a-lbl">Лек (пребарај — мин. 3 знаци)</label>
-          <input class="a-inp" id="ct_drug" placeholder="нпр. Metformin…" autocomplete="off" oninput="admDrugSearch(this.value)"/>
-          <div class="adm-dd" id="ct_drug_dd"></div>
-        </div>
-        <div class="a-fg" style="flex:0 0 165px"><label class="a-lbl">Доза</label><input class="a-inp" id="ct_dose" placeholder="нпр. 1×1 tabl."/></div>
-        <div class="a-fg" style="flex-shrink:0"><label class="a-lbl">&nbsp;</label><button class="btn-dash" onclick="admAddCT()">+ Додај</button></div>
-      </div>
-      <div style="font-size:0.74rem;color:var(--gray);margin-top:0.35rem">Ако лекот не е во базата, може рачно да го внесете.</div>
-    </div>
+    window.nlOpenChronicTh = function () {
+    if (!_client) return;
+    window.openChronicTherapy(
+      _client.id,
+      (_client.obrakanje ? _client.obrakanje + ' ' : '') + (_client.ime_prezime || ''),
+      async function (newSessionId) {
+        const { data } = await window._sb
+          .from('chronic_therapy_drugs')
+          .select('id,generic_name,form,dosage,sort_order')
+          .eq('session_id', newSessionId)
+          .order('sort_order', { ascending: true });
+        _therapy = data || [];
+        _activeSession = { id: newSessionId };
+        const block = document.getElementById('nl-ct-block');
+        if (block) block.innerHTML = renderChronicTherapyBlock();
+      }
+    );
+  };
     <div class="a-sect"><div class="a-sect-t">Белешки</div><textarea class="a-ta" id="d_notes" rows="2" placeholder="Дополнителни белешки…"></textarea></div>`;
     ['d_kod','cd_kod'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();admMKB(id,id==='d_kod'?'d_opis':'cd_opis',id+'_dd');}});});
   }
