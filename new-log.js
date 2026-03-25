@@ -140,6 +140,7 @@
     document.body.insertAdjacentHTML('beforeend', NL_HTML);
     document.getElementById('nl-close').addEventListener('click', close);
     document.getElementById('nl-bd').addEventListener('click', e => { if (e.target.id === 'nl-bd') close(); });
+  }
 
   // ── Public API ───────────────────────────────────────────────────
   window.openNewLog = function (cb) {
