@@ -281,10 +281,6 @@
   // ══════════════════════════════════════════════════════════════════
   //  STEP 2 — LOG FORM (role-aware)
   // ══════════════════════════════════════════════════════════════════
-  if (client.client_status !== 'active') {
-  alert('Не може да се додаде запис за одјавен или починат корисник.');
-  return;
-}
   function clientBar(c, loc) {
     const av = c.profile_pic_url
       ? `<div class="nl-av"><img src="${esc(c.profile_pic_url)}" alt=""/></div>`
