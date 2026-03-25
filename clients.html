@@ -7,19 +7,108 @@
   <link rel="stylesheet" href="shared.css"/>
   <script src="auth-guard.js"></script>
   <style>
+    /* ── badges ── */
     .badge{display:inline-block;padding:.2rem .65rem;border-radius:20px;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
-    .badge-draft{background:#f0ece2;color:#8a7a55}.badge-doctor{background:#e8ecf5;color:#2e4a8a}.badge-social{background:#e8f0e8;color:#3a6e3a}.badge-completed{background:#e6f0e6;color:#2a6e2a;border:1px solid #b5d5b5}
+    .badge-draft    {background:#f0ece2;color:#8a7a55}
+    .badge-doctor   {background:#e8ecf5;color:#2e4a8a}
+    .badge-social   {background:#e8f0e8;color:#3a6e3a}
+    .badge-completed{background:#e6f0e6;color:#2a6e2a;border:1px solid #b5d5b5}
+    .badge-odjavен  {background:#eaecf5;color:#2e4a8a;border:1px solid #c5ccdf}
+    .badge-pocinat  {background:#f5eaea;color:#8a3a3a;border:1px solid #dfc5c5}
+
+    /* ── toolbar ── */
+    .clients-toolbar{
+      display:flex;align-items:center;justify-content:space-between;
+      flex-wrap:wrap;gap:.75rem;
+      padding:.85rem 1rem;border-bottom:1px solid var(--border);
+      background:var(--cream);
+    }
+    .toolbar-left{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;flex:1;min-width:0}
+
+    /* search */
+    .search-wrap{position:relative;flex:1;min-width:160px;max-width:280px}
+    .search-wrap svg{position:absolute;left:.7rem;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--gray)}
+    .search-input{
+      width:100%;padding:.5rem .75rem .5rem 2.1rem;
+      border:1px solid var(--border);border-radius:5px;
+      font-family:'Lato',sans-serif;font-size:.84rem;color:var(--dark);
+      background:#fff;outline:none;transition:border-color .15s;box-sizing:border-box;
+    }
+    .search-input:focus{border-color:var(--olive)}
+
+    /* filter pills */
+    .filter-pills{display:flex;gap:.4rem;flex-wrap:wrap}
+    .fp{
+      padding:.35rem .8rem;border-radius:20px;font-size:.72rem;font-weight:700;
+      letter-spacing:.07em;text-transform:uppercase;cursor:pointer;
+      border:1px solid var(--border);background:#fff;color:var(--gray);
+      transition:all .13s;white-space:nowrap;
+    }
+    .fp.active{background:var(--dark);color:#fff;border-color:var(--dark)}
+    .fp:hover:not(.active){border-color:var(--dark);color:var(--dark)}
+
+    /* archive toggle */
+    .archive-toggle{
+      display:inline-flex;align-items:center;gap:.45rem;
+      padding:.38rem .85rem;border-radius:20px;font-size:.72rem;font-weight:700;
+      letter-spacing:.07em;text-transform:uppercase;cursor:pointer;
+      border:1px solid var(--border);background:#fff;color:var(--gray);
+      transition:all .13s;white-space:nowrap;
+    }
+    .archive-toggle.active{background:#f5eaea;color:#8a3a3a;border-color:#dfc5c5}
+    .archive-toggle:hover:not(.active){border-color:var(--dark);color:var(--dark)}
+
+    /* ── table ── */
     .clients-table{width:100%;border-collapse:collapse;font-size:.88rem}
-    .clients-table th{text-align:left;font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gray);padding:.75rem 1rem;border-bottom:2px solid var(--border)}
-    .clients-table td{padding:.85rem 1rem;border-bottom:1px solid var(--border);color:var(--dark);vertical-align:middle}
-    .clients-table tr:last-child td{border-bottom:none}.clients-table tr:hover td{background:#faf7f2}
-    .btn-new{display:inline-flex;align-items:center;gap:.5rem;padding:.65rem 1.25rem;background:var(--dark);color:#fff;border:none;border-radius:5px;font-family:'Lato',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:background .15s}
-    .btn-new:hover{background:var(--olive)}
-    .ci-av{width:34px;height:34px;border-radius:50%;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:.85rem;font-weight:700;overflow:hidden;flex-shrink:0}
+    .clients-table th{
+      text-align:left;font-size:.68rem;font-weight:700;letter-spacing:.12em;
+      text-transform:uppercase;color:var(--gray);
+      padding:.7rem 1rem;border-bottom:2px solid var(--border);
+      background:var(--cream);white-space:nowrap;
+    }
+    .clients-table td{padding:.8rem 1rem;border-bottom:1px solid var(--border);color:var(--dark);vertical-align:middle}
+    .clients-table tr:last-child td{border-bottom:none}
+    .clients-table tr:hover td{background:#faf7f2}
+
+    /* maticen broj pill */
+    .mb-pill{
+      display:inline-block;font-family:monospace;font-size:.8rem;font-weight:700;
+      color:var(--olive);background:rgba(122,122,46,.1);
+      padding:.2rem .55rem;border-radius:4px;letter-spacing:.04em;
+      white-space:nowrap;
+    }
+
+    /* client cell */
+    .ci-av{
+      width:34px;height:34px;border-radius:50%;background:var(--olive);color:#fff;
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Playfair Display',serif;font-size:.85rem;font-weight:700;
+      overflow:hidden;flex-shrink:0;
+    }
     .ci-av img{width:100%;height:100%;object-fit:cover}
     .ci-cell{display:flex;align-items:center;gap:.75rem}
-    .lnk{font-size:.82rem;color:var(--olive);font-weight:700;cursor:pointer;background:none;border:none;padding:0;text-decoration:none}.lnk:hover{text-decoration:underline}
-    .empty-state{text-align:center;padding:4rem 2rem;color:var(--gray)}.empty-state svg{opacity:.25;margin-bottom:1rem;display:block;margin-left:auto;margin-right:auto}
+    .ci-name{font-weight:700}
+    .ci-sub{font-size:.75rem;color:var(--gray);margin-top:.1rem;font-family:monospace}
+
+    /* deceased / discharged row dimming */
+    .clients-table tr.row-inactive td{opacity:.6}
+    .clients-table tr.row-inactive:hover td{opacity:1}
+
+    /* action links */
+    .lnk{font-size:.82rem;color:var(--olive);font-weight:700;cursor:pointer;background:none;border:none;padding:0;text-decoration:none;white-space:nowrap}
+    .lnk:hover{text-decoration:underline}
+    .lnk.edit{color:var(--dark)}
+
+    /* new btn */
+    .btn-new{display:inline-flex;align-items:center;gap:.5rem;padding:.65rem 1.25rem;background:var(--dark);color:#fff;border:none;border-radius:5px;font-family:'Lato',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:background .15s;white-space:nowrap}
+    .btn-new:hover{background:var(--olive)}
+
+    /* result count */
+    .result-count{font-size:.76rem;color:var(--gray);padding:.5rem 1rem;border-bottom:1px solid var(--border)}
+
+    /* empty */
+    .empty-state{text-align:center;padding:4rem 2rem;color:var(--gray)}
+    .empty-state svg{opacity:.25;margin-bottom:1rem;display:block;margin-left:auto;margin-right:auto}
   </style>
 </head>
 <body>
@@ -27,7 +116,10 @@
   <div id="sidebar-placeholder"></div>
   <main class="main">
     <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
-      <div><h1 class="page-title">Корисници</h1><p class="page-subtitle">Евиденција на сите корисници на установата</p></div>
+      <div>
+        <h1 class="page-title">Корисници</h1>
+        <p class="page-subtitle">Евиденција на сите корисници на установата</p>
+      </div>
       <div id="new-btn-wrap" style="display:none">
         <button class="btn-new" id="btnNewClient">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -35,21 +127,66 @@
         </button>
       </div>
     </div>
+
     <div class="page-content">
       <div class="card" style="padding:0;overflow:hidden">
+
+        <!-- toolbar -->
+        <div class="clients-toolbar">
+          <div class="toolbar-left">
+            <!-- search -->
+            <div class="search-wrap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="search-input" id="searchInput" type="text" placeholder="Пребарај по име, ЕМБГ…"/>
+            </div>
+            <!-- status filters -->
+            <div class="filter-pills">
+              <button class="fp active" data-status="all">Сите</button>
+              <button class="fp" data-status="draft">Нацрт</button>
+              <button class="fp" data-status="doctor">Доктор</button>
+              <button class="fp" data-status="social">Социјален</button>
+              <button class="fp" data-status="completed">Завршен</button>
+            </div>
+            <!-- archive toggle -->
+            <button class="archive-toggle" id="archiveToggle">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+              Архива
+            </button>
+          </div>
+        </div>
+
+        <!-- loading -->
         <div id="clients-loading" style="padding:3rem;text-align:center;color:var(--gray)">Се вчитува…</div>
+
+        <!-- table wrap -->
         <div id="clients-table-wrap" style="display:none">
+          <div class="result-count" id="result-count"></div>
           <table class="clients-table">
-            <thead><tr><th>Корисник</th><th>Кат/Соба/Кревет</th><th>ЕМБГ</th><th>Телефон</th><th>Статус</th><th>Датум</th><th></th></tr></thead>
+            <thead>
+              <tr>
+                <th>Мат. бр.</th>
+                <th>Корисник</th>
+                <th>Кат / Соба / Кревет</th>
+                <th>ЕМБГ</th>
+                <th>Телефон</th>
+                <th>Прием</th>
+                <th>Статус</th>
+                <th>Датум</th>
+                <th></th>
+              </tr>
+            </thead>
             <tbody id="clients-tbody"></tbody>
           </table>
         </div>
+
+        <!-- empty -->
         <div id="clients-empty" style="display:none">
           <div class="empty-state">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-            <p>Сè уште нема регистрирани корисници.</p>
+            <p id="empty-msg">Сè уште нема регистрирани корисници.</p>
           </div>
         </div>
+
       </div>
     </div>
   </main>
@@ -58,12 +195,33 @@
 <script src="sidebar.js"></script>
 <script src="admission.js"></script>
 <script src="client-card.js"></script>
+<script src="edit.js"></script>
 <script>
-const STATUS_LABEL={draft:{t:'Нацрт',c:'badge-draft'},doctor:{t:'Чека доктор',c:'badge-doctor'},social:{t:'Чека социјален',c:'badge-social'},completed:{t:'Завршен прием',c:'badge-completed'}};
+/* ── constants ── */
+const ADMISSION_STATUS_LABEL = {
+  draft:     {t:'Нацрт',         c:'badge-draft'},
+  doctor:    {t:'Чека доктор',   c:'badge-doctor'},
+  social:    {t:'Чека социјален',c:'badge-social'},
+  completed: {t:'Завршен прием', c:'badge-completed'},
+};
+const CLIENT_STATUS_LABEL = {
+  active:   null,                                        // no badge, shown via admission status
+  'odjavен':{t:'Одјавен',   c:'badge-odjavен'},
+  pocinat:  {t:'Починат',   c:'badge-pocinat'},
+};
+
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function isDoc(){return(window._username||'').toLowerCase()==='doktor';}
 function isSoc(){return(window._username||'').toLowerCase()==='socijalenrabotnik';}
+function canEdit(){const u=(window._username||'').toLowerCase();return u==='menadzer'||u==='glavnasestra';}
 
+/* ── state ── */
+let _allClients = [];
+let _filterStatus  = 'all';
+let _showArchive   = false;
+let _search        = '';
+
+/* ── boot ── */
 window.addEventListener('DOMContentLoaded',()=>{
   const wait=setInterval(()=>{
     if(window._username!==undefined){clearInterval(wait);buildSidebar('Корисници');initPage();}
@@ -71,41 +229,136 @@ window.addEventListener('DOMContentLoaded',()=>{
 });
 
 async function loadClients(){
-  const{data}=await window._sb.from('clients').select('id,ime_prezime,floor_number,room_number,bed_number,embg,telefon,status,created_at,obrakanje,profile_pic_url').order('created_at',{ascending:false});
+  const{data}=await window._sb.from('clients')
+    .select('id,ime_prezime,floor_number,room_number,bed_number,embg,telefon,status,client_status,created_at,obrakanje,profile_pic_url,maticen_broj')
+    .order('maticen_broj',{ascending:true});
+
   document.getElementById('clients-loading').style.display='none';
-  if(!data||!data.length){document.getElementById('clients-empty').style.display='block';return;}
-  const tbody=document.getElementById('clients-tbody');
-  tbody.innerHTML=data.map(c=>{
-    const st=STATUS_LABEL[c.status]||{t:c.status,c:'badge-draft'};
-    const loc=(c.floor_number&&c.room_number&&c.bed_number)?`К${c.floor_number}/С${c.room_number}/Кр${c.bed_number}`:'—';
-    const avatar=c.profile_pic_url?`<div class="ci-av"><img src="${esc(c.profile_pic_url)}" alt=""/></div>`:`<div class="ci-av">${esc((c.ime_prezime||'?').charAt(0))}</div>`;
-    const statusCell=c.status!=='completed'?`<td><span class="badge ${st.c}">${st.t}</span></td>`:'<td></td>';
-    // Action buttons based on role
-    const actions=[];
-    actions.push(`<button class="lnk" onclick="openClientCard('${c.id}')">Преглед</button>`);
-    if(canManageClients()&&c.status!=='completed')actions.push(`<button class="lnk" onclick="openAdmissionForClient('${c.id}',loadClients)">Прием</button>`);
-    if(isDoc()&&c.status==='doctor')actions.push(`<button class="lnk" onclick="openAdmissionForClient('${c.id}',loadClients)">Заврши</button>`);
-    if(isSoc()&&c.status==='social')actions.push(`<button class="lnk" onclick="openAdmissionForClient('${c.id}',loadClients)">Заврши</button>`);
-    return`<tr>
-      <td><div class="ci-cell">${avatar}<div style="font-weight:700">${esc(c.obrakanje?c.obrakanje+' ':'')}${esc(c.ime_prezime)}</div></div></td>
-      <td style="font-size:.82rem">${esc(loc)}</td>
-      <td style="font-family:monospace;font-size:.82rem">${esc(c.embg||'—')}</td>
-      <td style="font-size:.82rem">${esc(c.telefon||'—')}</td>
-      ${statusCell}
-      <td style="color:var(--gray);font-size:.82rem">${c.created_at?new Date(c.created_at).toLocaleDateString('mk-MK'):'—'}</td>
-      <td style="display:flex;gap:.5rem;align-items:center">${actions.join('')}</td>
-    </tr>`;
-  }).join('');
-  document.getElementById('clients-table-wrap').style.display='block';
+
+  if(!data||!data.length){
+    document.getElementById('clients-empty').style.display='block';
+    return;
+  }
+  _allClients=data;
+  renderTable();
 }
 
+/* ── render ── */
+function renderTable(){
+  const q=_search.toLowerCase().trim();
+  let rows=_allClients.filter(c=>{
+    const cs=c.client_status||'active';
+    const isArchived=(cs==='odjavен'||cs==='pocinat');
+    if(!_showArchive&&isArchived) return false;   // hide archived unless toggled
+    if(_showArchive&&!isArchived) return false;   // in archive mode show only archived
+    if(_filterStatus!=='all'&&c.status!==_filterStatus) return false;
+    if(q){
+      const haystack=`${c.ime_prezime||''} ${c.embg||''} ${c.maticen_broj||''} ${c.telefon||''}`.toLowerCase();
+      if(!haystack.includes(q)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('result-count').textContent=`${rows.length} корисник${rows.length===1?'':'и'}`;
+
+  if(!rows.length){
+    document.getElementById('clients-table-wrap').style.display='none';
+    document.getElementById('clients-empty').style.display='block';
+    document.getElementById('empty-msg').textContent=
+      _showArchive?'Нема архивирани корисници.':'Нема корисници кои ги исполнуваат критериумите.';
+    return;
+  }
+
+  document.getElementById('clients-empty').style.display='none';
+  document.getElementById('clients-table-wrap').style.display='block';
+
+  const tbody=document.getElementById('clients-tbody');
+  tbody.innerHTML=rows.map(c=>{
+    const admSt   = ADMISSION_STATUS_LABEL[c.status]||{t:c.status,c:'badge-draft'};
+    const cliSt   = CLIENT_STATUS_LABEL[c.client_status||'active'];
+    const loc     = (c.floor_number&&c.room_number&&c.bed_number)?`К${c.floor_number} / С${c.room_number} / Кр${c.bed_number}`:'—';
+    const isInactive = c.client_status==='odjavен'||c.client_status==='pocinat';
+
+    const avatar  = c.profile_pic_url
+      ?`<div class="ci-av"><img src="${esc(c.profile_pic_url)}" alt=""/></div>`
+      :`<div class="ci-av">${esc((c.ime_prezime||'?').charAt(0))}</div>`;
+
+    /* admission status badge: only show for active clients */
+    const admBadge = !isInactive
+      ? `<span class="badge ${admSt.c}">${admSt.t}</span>`
+      : '—';
+
+    /* client status badge: odjavен / pocinat */
+    const cliBadge = cliSt
+      ? `<span class="badge ${cliSt.c}">${cliSt.t}</span>`
+      : '<span style="color:var(--gray);font-size:.8rem">Активен</span>';
+
+    /* action buttons */
+    const actions=[];
+    actions.push(`<button class="lnk" onclick="openClientCard('${c.id}')">Преглед</button>`);
+    if(canEdit()){
+      actions.push(`<button class="lnk edit" onclick="openClientEdit('${c.id}', loadClients)">Уреди</button>`);
+    }
+    if(canManageClients()&&!isInactive&&c.status!=='completed'){
+      actions.push(`<button class="lnk" onclick="openAdmissionForClient('${c.id}',loadClients)">Прием</button>`);
+    }
+    if(isDoc()&&c.status==='doctor'&&!isInactive){
+      actions.push(`<button class="lnk" onclick="openAdmissionForClient('${c.id}',loadClients)">Заврши</button>`);
+    }
+    if(isSoc()&&c.status==='social'&&!isInactive){
+      actions.push(`<button class="lnk" onclick="openAdmissionForClient('${c.id}',loadClients)">Заврши</button>`);
+    }
+
+    return`<tr class="${isInactive?'row-inactive':''}">
+      <td><span class="mb-pill">${esc(c.maticen_broj||'—')}</span></td>
+      <td><div class="ci-cell">${avatar}<div><div class="ci-name">${esc(c.obrakanje?c.obrakanje+' ':'')}${esc(c.ime_prezime)}</div></div></div></td>
+      <td style="font-size:.82rem">${esc(loc)}</td>
+      <td style="font-family:monospace;font-size:.8rem">${esc(c.embg||'—')}</td>
+      <td style="font-size:.82rem">${esc(c.telefon||'—')}</td>
+      <td>${admBadge}</td>
+      <td>${cliBadge}</td>
+      <td style="color:var(--gray);font-size:.8rem;white-space:nowrap">${c.created_at?new Date(c.created_at).toLocaleDateString('mk-MK'):'—'}</td>
+      <td style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">${actions.join('')}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── init ── */
 function initPage(){
-  if(canManageClients()){
+  /* new client button: only менаџер + главна сестра */
+  if(canEdit()){
     document.getElementById('new-btn-wrap').style.display='';
     document.getElementById('btnNewClient').onclick=()=>openNewAdmission(loadClients);
   }
+
   loadClients();
-  // Handle ?edit= param from client-card edit button
+
+  /* search */
+  document.getElementById('searchInput').addEventListener('input',e=>{
+    _search=e.target.value;
+    renderTable();
+  });
+
+  /* status filter pills */
+  document.querySelectorAll('.fp').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.fp').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      _filterStatus=btn.dataset.status;
+      renderTable();
+    });
+  });
+
+  /* archive toggle */
+  document.getElementById('archiveToggle').addEventListener('click',function(){
+    _showArchive=!_showArchive;
+    this.classList.toggle('active',_showArchive);
+    /* hide admission status filter in archive mode — not relevant */
+    document.querySelector('.filter-pills').style.display=_showArchive?'none':'flex';
+    renderTable();
+  });
+
+  /* ?edit= param */
   const params=new URLSearchParams(window.location.search);
   if(params.get('edit'))setTimeout(()=>openClientCard(params.get('edit')),500);
 }
