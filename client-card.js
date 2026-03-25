@@ -1,6 +1,9 @@
 /**
- * client-card.js  — REVAMPED v2 (schema-aligned)
- * Shared client view modal — include on any protected page.
+ * client-card.js — REVAMPED v3
+ * - Photo shown from profile_pic_url (set by admission.js / edit.js)
+ * - Logs tab: pagination at 10, full supervizornega card rendering,
+ *   accent borders per log type matching logs.html design
+ * - canSeeLogType aligned: supervizornega (not supervisor)
  * Call: openClientCard(clientId)
  * Requires: auth-guard.js (window._sb, window._username)
  */
@@ -75,29 +78,15 @@ const STYLE = `
 /* ── Therapy session cards ── */
 .therapy-session{border:1px solid var(--border);border-radius:7px;overflow:hidden;margin-bottom:0.65rem}
 .therapy-session:last-child{margin-bottom:0}
-.therapy-session-hdr{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0.55rem 0.85rem;background:var(--cream);border-bottom:1px solid var(--border);
-  gap:0.5rem;flex-wrap:wrap;
-}
+.therapy-session-hdr{display:flex;align-items:center;justify-content:space-between;padding:0.55rem 0.85rem;background:var(--cream);border-bottom:1px solid var(--border);gap:0.5rem;flex-wrap:wrap}
 .therapy-session-dates{font-size:0.78rem;font-weight:700;color:var(--dark)}
 .therapy-session-dates span{font-weight:400;color:var(--gray)}
-.therapy-session-status{
-  display:inline-block;padding:0.1rem 0.5rem;border-radius:20px;
-  font-size:0.65rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;
-}
+.therapy-session-status{display:inline-block;padding:0.1rem 0.5rem;border-radius:20px;font-size:0.65rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase}
 .tss-active{background:#e6f0e6;color:#2a6e2a;border:1px solid #b5d5b5}
-.tss-ended {background:#f0ece2;color:#8a7a55;border:1px solid #d5c5a5}
-.therapy-session-note{
-  font-size:0.78rem;color:var(--gray);padding:0.35rem 0.85rem;
-  border-bottom:1px solid var(--border);font-style:italic;
-}
+.tss-ended{background:#f0ece2;color:#8a7a55;border:1px solid #d5c5a5}
+.therapy-session-note{font-size:0.78rem;color:var(--gray);padding:0.35rem 0.85rem;border-bottom:1px solid var(--border);font-style:italic}
 .therapy-drugs-list{padding:0.4rem 0}
-.therapy-drug-row{
-  display:grid;grid-template-columns:1fr auto auto;gap:0.5rem 1rem;
-  align-items:center;padding:0.35rem 0.85rem;border-bottom:1px solid var(--border);
-  font-size:0.83rem;
-}
+.therapy-drug-row{display:grid;grid-template-columns:1fr auto auto;gap:0.5rem 1rem;align-items:center;padding:0.35rem 0.85rem;border-bottom:1px solid var(--border);font-size:0.83rem}
 .therapy-drug-row:last-child{border-bottom:none}
 .drug-name{font-weight:700;color:var(--dark)}
 .drug-form{font-size:0.75rem;color:var(--gray)}
@@ -109,22 +98,70 @@ const STYLE = `
 .diag-opis{font-size:0.83rem}
 .request-box{background:var(--cream);border:1px dashed var(--border);border-radius:8px;padding:1.25rem 1rem;text-align:center;color:var(--gray);font-size:0.81rem;margin-bottom:1.25rem}
 .request-box svg{opacity:0.25;margin-bottom:0.5rem;display:block;margin-inline:auto}
-.logs-filter-row{display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem}
+
+/* ── Logs tab ── */
+.logs-toolbar-cc{display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap}
 .logs-month-sel{padding:0.38rem 0.7rem;border:1px solid var(--border);border-radius:6px;font-family:'Lato',sans-serif;font-size:0.82rem;background:#fff;color:var(--dark);cursor:pointer;outline:none}
-.log-entry{padding:0.85rem;border:1px solid var(--border);border-radius:6px;margin-bottom:0.65rem}
-.le-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.45rem;flex-wrap:wrap;gap:0.3rem}
+.logs-type-chips{display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.85rem}
+.ltchip{display:inline-flex;align-items:center;gap:0.25rem;padding:0.2rem 0.55rem;border-radius:20px;font-size:0.68rem;font-weight:700;letter-spacing:0.04em;cursor:pointer;border:2px solid transparent;transition:all 0.13s;user-select:none}
+.ltchip-dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
+.ltchip-all{background:#f0ece2;color:#8a7a55;border-color:#d8d0bc}
+.ltchip-all.active,.ltchip-all:hover{background:#e8e0d0;border-color:#8a7a55}
+.ltchip-doctor{background:#e8ecf5;color:#2e4a8a}.ltchip-doctor.active,.ltchip-doctor:hover{border-color:#2e4a8a}
+.ltchip-nurse{background:#f0e8f5;color:#6a3a8a}.ltchip-nurse.active,.ltchip-nurse:hover{border-color:#6a3a8a}
+.ltchip-social{background:#e8f0e8;color:#3a6e3a}.ltchip-social.active,.ltchip-social:hover{border-color:#3a6e3a}
+.ltchip-fizio{background:#fdf0e0;color:#c07028}.ltchip-fizio.active,.ltchip-fizio:hover{border-color:#c07028}
+.ltchip-sup{background:#fce8f0;color:#b03060}.ltchip-sup.active,.ltchip-sup:hover{border-color:#b03060}
+
+/* ── Log entry card (accent border, matches logs.html) ── */
+.log-entry{
+  background:#fff;border:1px solid var(--border);border-radius:7px;
+  padding:0.85rem 1rem 0.85rem 1.1rem;
+  border-left:3px solid var(--le-accent,var(--border));
+  margin-bottom:0.6rem;transition:box-shadow 0.13s;
+}
+.log-entry:hover{box-shadow:0 2px 8px rgba(0,0,0,0.07)}
+.log-entry[data-type="doctor"]        {--le-accent:#2e4a8a}
+.log-entry[data-type="nurse"]         {--le-accent:#6a3a8a}
+.log-entry[data-type="social"]        {--le-accent:#3a6e3a}
+.log-entry[data-type="fizioterapevt"] {--le-accent:#c07028}
+.log-entry[data-type="supervizornega"]{--le-accent:#b03060}
+
+.le-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;flex-wrap:wrap;gap:0.3rem}
+.le-left{display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap}
 .le-diag{font-family:monospace;font-size:0.81rem;font-weight:700;color:var(--olive)}
 .le-date{font-size:0.71rem;color:var(--gray)}
-.le-type{display:inline-block;padding:0.1rem 0.42rem;border-radius:10px;font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-left:0.35rem}
-.le-type-doctor{background:#e8ecf5;color:#2e4a8a}
-.le-type-social{background:#e8f0e8;color:#3a6e3a}
-.le-type-other{background:#f0ece2;color:#8a7a55}
-.le-type-nurse{background:#f0e8f5;color:#6a3a8a}
+.le-type{display:inline-block;padding:0.1rem 0.42rem;border-radius:10px;font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em}
+.le-smena{display:inline-block;padding:0.1rem 0.4rem;border-radius:10px;font-size:0.62rem;font-weight:700;text-transform:uppercase;background:#fff3cd;color:#856404;border:1px solid #ffe69c}
+.lt-doctor{background:#e8ecf5;color:#2e4a8a}
+.lt-nurse{background:#f0e8f5;color:#6a3a8a}
+.lt-social{background:#e8f0e8;color:#3a6e3a}
+.lt-fizio{background:#fdf0e0;color:#c07028}
+.lt-supervizornega{background:#fce8f0;color:#b03060}
+.lt-other{background:#f0ece2;color:#8a7a55}
 .le-field{margin-top:0.35rem}
 .le-fl{font-size:0.63rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray)}
 .le-fv{font-size:0.82rem;color:var(--dark);line-height:1.5}
-.vital-chips{display:flex;flex-wrap:wrap;gap:0.35rem 0.9rem;padding:0.55rem 0.75rem;background:var(--cream);border-radius:5px;border:1px solid var(--border);margin:0.35rem 0}
+.vital-chips{display:flex;flex-wrap:wrap;gap:0.35rem 0.9rem;padding:0.5rem 0.7rem;background:var(--cream);border-radius:5px;border:1px solid var(--border);margin:0.35rem 0}
 .vc{font-size:0.8rem;color:var(--dark)}.vc span{font-weight:700}
+
+/* Supervisor sections inside log entry */
+.le-sup-section{margin-top:0.5rem}
+.le-sup-title{font-size:0.61rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray);display:flex;align-items:center;gap:0.4rem;margin-bottom:0.3rem}
+.le-sup-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.le-sup-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.3rem}
+.le-sup-kv{background:var(--cream);border:1px solid var(--border);border-radius:4px;padding:0.35rem 0.55rem}
+.le-sup-kv .k{font-size:0.6rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray);margin-bottom:0.08rem}
+.le-sup-kv .v{font-size:0.79rem;color:var(--dark);line-height:1.4}
+
+/* Pagination */
+.cc-pagination{display:flex;align-items:center;justify-content:center;gap:0.35rem;margin-top:1rem;flex-wrap:wrap}
+.cc-page-btn{min-width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:4px;background:#fff;font-family:'Lato',sans-serif;font-size:0.78rem;cursor:pointer;color:var(--gray);transition:all 0.13s;padding:0 0.45rem}
+.cc-page-btn:hover{border-color:var(--dark);color:var(--dark)}
+.cc-page-btn.active{background:var(--dark);color:#fff;border-color:var(--dark);font-weight:700}
+.cc-page-btn:disabled{opacity:0.35;cursor:default}
+.cc-page-info{font-size:0.72rem;color:var(--gray);padding:0 0.25rem}
+
 .cc-btn-outline{display:block;width:100%;padding:0.55rem;background:var(--cream);border:1px solid var(--border);border-radius:6px;font-family:'Lato',sans-serif;font-size:0.81rem;font-weight:700;color:var(--gray);cursor:pointer;text-align:center;transition:background 0.15s;margin-top:0.5rem}
 .cc-btn-outline:hover{background:var(--cream2,#f0ece2)}
 .cc-btn-olive{background:var(--olive)!important;color:#fff!important;border-color:var(--olive)!important}
@@ -181,9 +218,12 @@ function injectDOM(){
 // ── State ──────────────────────────────────────────────────────────────
 let _client=null, _therapySessions=[], _logs=[], _vitals=[], _srodstvo=[];
 let _logsMonth=null;
+let _logsTypeFilter='all';
+let _logsPage=1;
+const LOGS_PAGE_SIZE=10;
 let _vitalsView='chart';
 let _activeParam='puls';
-const LOGS_MAX=50;
+const LOGS_FETCH_MAX=300; // fetch up to 300, paginate client-side
 
 // ── Helpers ────────────────────────────────────────────────────────────
 function e(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -191,22 +231,13 @@ function e(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<
 function ageDetailFromEmbg(embg){
   if(!embg||String(embg).length<7)return null;
   const d=String(embg).padStart(13,'0');
-  const day=parseInt(d.slice(0,2),10);
-  const mon=parseInt(d.slice(2,4),10)-1;
-  let yr=parseInt(d.slice(4,7),10);
-  yr = yr < 100 ? 2000 + yr : 1000 + yr;
+  const day=parseInt(d.slice(0,2),10),mon=parseInt(d.slice(2,4),10)-1;
+  let yr=parseInt(d.slice(4,7),10);yr=yr<100?2000+yr:1000+yr;
   try{
-    const bd=new Date(yr,mon,day);
-    if(isNaN(bd.getTime()))return null;
-    const today=new Date();
-    let years=today.getFullYear()-bd.getFullYear();
-    let months=today.getMonth()-bd.getMonth();
-    let days=today.getDate()-bd.getDate();
-    if(days<0){
-      months--;
-      const prevMonth=new Date(today.getFullYear(),today.getMonth(),0);
-      days+=prevMonth.getDate();
-    }
+    const bd=new Date(yr,mon,day);if(isNaN(bd.getTime()))return null;
+    const today=new Date();let years=today.getFullYear()-bd.getFullYear();
+    let months=today.getMonth()-bd.getMonth(),days=today.getDate()-bd.getDate();
+    if(days<0){months--;const pm=new Date(today.getFullYear(),today.getMonth(),0);days+=pm.getDate();}
     if(months<0){years--;months+=12;}
     if(years<0||years>130)return null;
     return{years,months,days};
@@ -216,15 +247,11 @@ function ageDetailFromEmbg(embg){
 function ageFromEmbg(embg){
   if(!embg||String(embg).length<7)return null;
   const d=String(embg).padStart(13,'0');
-  const day=parseInt(d.slice(0,2),10);
-  const mon=parseInt(d.slice(2,4),10)-1;
-  let yr=parseInt(d.slice(4,7),10);
-  yr = yr < 100 ? 2000 + yr : 1000 + yr;
+  const day=parseInt(d.slice(0,2),10),mon=parseInt(d.slice(2,4),10)-1;
+  let yr=parseInt(d.slice(4,7),10);yr=yr<100?2000+yr:1000+yr;
   try{
-    const bd=new Date(yr,mon,day);
-    if(isNaN(bd.getTime()))return null;
-    const today=new Date();
-    let age=today.getFullYear()-bd.getFullYear();
+    const bd=new Date(yr,mon,day);if(isNaN(bd.getTime()))return null;
+    const today=new Date();let age=today.getFullYear()-bd.getFullYear();
     if(today.getMonth()<mon||(today.getMonth()===mon&&today.getDate()<day))age--;
     return(age>0&&age<130)?age:null;
   }catch{return null;}
@@ -243,14 +270,15 @@ function canSeeLogType(logType){
   if(logType==='doctor'||logType==='nurse')return u==='doktor'||u==='glavnasestra';
   if(logType==='social')return u==='socijalenrabotnik'||u==='doktor'||u==='glavnasestra';
   if(logType==='fizioterapevt')return u==='fizioterapevt'||u==='doktor'||u==='glavnasestra';
-  if(logType==='supervisor')return u==='doktor'||u==='glavnasestra';
+  if(logType==='supervizornega')return u==='supervizornega'||u==='doktor'||u==='glavnasestra';
   return isPrivileged();
 }
 
 // ── Open ────────────────────────────────────────────────────────────────
 window.openClientCard = async function(clientId){
   injectDOM();
-  _logsMonth=null; _vitalsView='chart'; _activeParam='puls';
+  _logsMonth=null; _logsTypeFilter='all'; _logsPage=1;
+  _vitalsView='chart'; _activeParam='puls';
   document.getElementById('cc-body').innerHTML='<div class="cc-empty">Се вчитува…</div>';
   document.getElementById('cc-hero-badges').innerHTML='';
   document.getElementById('cc-hero-pills').innerHTML='';
@@ -262,14 +290,12 @@ window.openClientCard = async function(clientId){
   document.getElementById('cc-backdrop').classList.add('open');
   document.body.style.overflow='hidden';
 
-  // ── Fetch all data in parallel ──
   const [clientRes, therapySessionsRes, logsRes, vitalsRes, srodRes] = await Promise.all([
 
-    // Client + chronic diagnoses (nested relation)
     window._sb.from('clients').select(`
       id,ime_prezime,obrakanje,maticen_broj,embg,licna_karta_broj,
       adresa,telefon,floor_number,room_number,bed_number,
-      profile_pic_url,status,created_at,updated_at,
+      profile_pic_url,status,client_status,created_at,updated_at,
       social_notes,social_completed_at,
       doctor_notes,doctor_completed_at,
       priem_dijagnoza_kod,priem_dijagnoza_opis,
@@ -280,37 +306,31 @@ window.openClientCard = async function(clientId){
       client_chronic_diagnoses(id,kod,opis,added_at)
     `).eq('id',clientId).single(),
 
-    // Chronic therapy: sessions with their drugs nested
-    // Most recent sessions first; ended_at null = still active
     window._sb.from('chronic_therapy_sessions')
-      .select(`
-        id, started_at, ended_at, note, created_at,
-        chronic_therapy_drugs(id, generic_name, form, dosage, sort_order)
-      `)
-      .eq('client_id', clientId)
-      .order('started_at', { ascending: false }),
+      .select(`id,started_at,ended_at,note,created_at,chronic_therapy_drugs(id,generic_name,form,dosage,sort_order)`)
+      .eq('client_id',clientId).order('started_at',{ascending:false}),
 
-    // Logs
+    // Fetch all fields needed for full log cards including supervisor fields
     window._sb.from('client_logs')
-      .select('id,created_at,log_type,dijagnoza_kod,dijagnoza_opis,anamneza,naod,parenteralna,kp_sistolicen,kp_dijastolicen,puls,temperatura,spo2,respiracii,tezina,seker,bolka,diureza,stolica,zabeleski')
-      .eq('client_id',clientId).order('created_at',{ascending:false}).limit(LOGS_MAX+1),
+      .select(`id,created_at,log_type,created_by,
+        dijagnoza_kod,dijagnoza_opis,anamneza,naod,parenteralna,plan,zabeleski,
+        kp_sistolicen,kp_dijastolicen,puls,temperatura,spo2,respiracii,
+        tezina,seker,bolka,diureza,stolica,
+        smena,higijenska_nega,ishrana,mobilnost,psihosocijalno`)
+      .eq('client_id',clientId).order('created_at',{ascending:false}).limit(LOGS_FETCH_MAX),
 
-    // Vitals (last 25 records that have at least one vital sign)
     window._sb.from('client_logs')
       .select('created_at,kp_sistolicen,kp_dijastolicen,puls,temperatura,spo2,respiracii,tezina,seker,bolka,diureza,stolica')
       .eq('client_id',clientId).order('created_at',{ascending:false}).limit(25),
 
-    // Srodstvo
     window._sb.from('client_srodstvo')
       .select('id,ime_prezime,adresa,telefon').eq('client_id',clientId),
   ]);
 
-  _client          = clientRes.data;
-  // Each session gets its drugs sorted by sort_order
-  _therapySessions = (therapySessionsRes.data || []).map(s => ({
+  _client = clientRes.data;
+  _therapySessions = (therapySessionsRes.data||[]).map(s=>({
     ...s,
-    chronic_therapy_drugs: (s.chronic_therapy_drugs || [])
-      .sort((a,b) => (a.sort_order||0) - (b.sort_order||0))
+    chronic_therapy_drugs:(s.chronic_therapy_drugs||[]).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0))
   }));
   _logs     = logsRes.data||[];
   _vitals   = (vitalsRes.data||[]).filter(v=>
@@ -325,23 +345,21 @@ window.openClientCard = async function(clientId){
 
   const c=_client;
 
-  // Avatar
+  // ── Avatar: show photo if profile_pic_url is set ──
   const avEl=document.getElementById('cc-avatar');
   if(c.profile_pic_url){
-    avEl.innerHTML=`<img src="${e(c.profile_pic_url)}" alt="">`;
+    avEl.innerHTML=`<img src="${e(c.profile_pic_url)}" alt="Профилна слика" onerror="this.parentNode.innerHTML='${e((c.ime_prezime||'?').charAt(0).toUpperCase())}'"/>`;
   }else{
     avEl.textContent=(c.ime_prezime||'?').charAt(0).toUpperCase();
   }
 
-  // Name
   document.getElementById('cc-name').textContent=(c.obrakanje?c.obrakanje+' ':'')+(c.ime_prezime||'');
 
-  // Badges
   const bp=[];
   const ageDetail=ageDetailFromEmbg(c.embg);
   if(ageDetail!==null){
     const parts=[];
-    if(ageDetail.years>0)parts.push(`${ageDetail.years} год`);
+    if(ageDetail.years>0) parts.push(`${ageDetail.years} год`);
     if(ageDetail.months>0)parts.push(`${ageDetail.months} мес`);
     if(ageDetail.days>0||parts.length===0)parts.push(`${ageDetail.days} ден`);
     bp.push(`<span class="cc-hbadge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg>${parts.join(' ')}</span>`);
@@ -352,9 +370,15 @@ window.openClientCard = async function(clientId){
   }
   const fl=c.floor_number||(window.roomToFloor?window.roomToFloor(c.room_number):null);
   if(fl){bp.push('<span class="cc-dot"></span>');bp.push(`<span class="cc-hbadge">Кат ${fl}</span>`);}
+
+  // Status badge
+  const cst = c.client_status || c.status || 'active';
+  if(cst==='odjavен'){bp.push('<span class="cc-dot"></span><span class="cc-hbadge" style="background:#e8ecf5;color:#2e4a8a;border-color:#c0ccdf">Одјавен</span>');}
+  else if(cst==='pocinat'){bp.push('<span class="cc-dot"></span><span class="cc-hbadge" style="background:#f5e8e8;color:#8a3a3a;border-color:#dfc0c0">Починат</span>');}
+  else{bp.push('<span class="cc-dot"></span><span class="cc-hbadge green">Активен</span>');}
+
   document.getElementById('cc-hero-badges').innerHTML=bp.join('');
 
-  // Pills
   const pp=[];
   if(c.maticen_broj)pp.push(`<span class="cc-pill"><span class="cc-pill-lbl">Мат.</span>${e(c.maticen_broj)}</span>`);
   if(c.telefon)pp.push(`<span class="cc-pill"><span class="cc-pill-lbl">Тел.</span>${e(c.telefon)}</span>`);
@@ -375,7 +399,7 @@ function renderTab(tab){
   const body=document.getElementById('cc-body');
   if(tab==='social')     body.innerHTML=renderSocial();
   else if(tab==='dosie') {body.innerHTML=renderDosie();scheduleChart();}
-  else if(tab==='logs')  {body.innerHTML=renderLogs();bindLogsFilter();}
+  else if(tab==='logs')  {body.innerHTML=renderLogs();bindLogsControls();}
   else if(tab==='info')  body.innerHTML=renderInfo();
 }
 window._ccTab=renderTab;
@@ -386,15 +410,11 @@ window._ccTab=renderTab;
 function renderSocial(){
   const c=_client;
   const editBtn=isPrivileged()?`<button class="cc-edit-btn" onclick="editClientData('${e(c.id)}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Уреди</button>`:'';
-
   const hasSocial=c.social_notes||c.social_completed_at;
-  const socialHtml=hasSocial?`
-    <div class="cc-grid">
-      ${c.social_notes?`<div class="cc-field cc-full"><div class="cc-label">Белешки</div><div class="cc-value">${e(c.social_notes)}</div></div>`:''}
-      ${c.social_completed_at?`<div class="cc-field"><div class="cc-label">Комплетирано на</div><div class="cc-value">${fmtDate(c.social_completed_at)}</div></div>`:''}
-    </div>`
-    :'<div class="cc-empty" style="padding:0.5rem">Нема внесени социјални информации.</div>';
-
+  const socialHtml=hasSocial?`<div class="cc-grid">
+    ${c.social_notes?`<div class="cc-field cc-full"><div class="cc-label">Белешки</div><div class="cc-value">${e(c.social_notes)}</div></div>`:''}
+    ${c.social_completed_at?`<div class="cc-field"><div class="cc-label">Комплетирано на</div><div class="cc-value">${fmtDate(c.social_completed_at)}</div></div>`:''}
+  </div>`:'<div class="cc-empty" style="padding:0.5rem">Нема внесени социјални информации.</div>';
   const srodHtml=_srodstvo.length
     ?_srodstvo.map(s=>`<div class="srodstvo-row">
         <div><div class="cc-label">Ime и Презиме</div><div>${e(s.ime_prezime||'—')}</div></div>
@@ -402,16 +422,9 @@ function renderSocial(){
         <div><div class="cc-label">Телефон</div><div>${e(s.telefon||'—')}</div></div>
       </div>`).join('')
     :'<div class="cc-empty" style="padding:0.5rem">Нема внесено сродство.</div>';
-
   return`
-  <div class="cc-section">
-    <div class="cc-section-title"><span>Социјално досие</span>${editBtn}</div>
-    ${socialHtml}
-  </div>
-  <div class="cc-section">
-    <div class="cc-section-title"><span>Сродство / Контакт лица</span></div>
-    ${srodHtml}
-  </div>`;
+  <div class="cc-section"><div class="cc-section-title"><span>Социјално досие</span>${editBtn}</div>${socialHtml}</div>
+  <div class="cc-section"><div class="cc-section-title"><span>Сродство / Контакт лица</span></div>${srodHtml}</div>`;
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -421,28 +434,23 @@ function renderDosie(){
   if(!canSeeAll())return'<div class="cc-empty">Немате пристап до медицинското досие.</div>';
   const c=_client;
   const diags=c.client_chronic_diagnoses||[];
-
-  // Split sessions: active (no ended_at) vs ended
-  const activeSessions  = _therapySessions.filter(s => !s.ended_at);
-  const endedSessions   = _therapySessions.filter(s =>  s.ended_at);
+  const activeSessions  = _therapySessions.filter(s=>!s.ended_at);
+  const endedSessions   = _therapySessions.filter(s=> s.ended_at);
 
   const leftCol=`<div>
     <div class="cc-section">
       <div class="cc-section-title"><span>Витални знаци</span></div>
       ${renderVitalsWidget()}
     </div>
-
     <div class="cc-section">
       <div class="cc-section-title"><span>Хронична терапија</span></div>
-      ${renderTherapySessions(activeSessions, endedSessions)}
+      ${renderTherapySessions(activeSessions,endedSessions)}
     </div>
-
     <div class="cc-section">
       <div class="cc-section-title"><span>Хронични дијагнози</span></div>
       ${!diags.length?'<div class="cc-empty" style="padding:0.5rem">Нема хронични дијагнози.</div>'
         :`<div class="diag-list">${diags.map(d=>`<div class="diag-item"><span class="diag-kod">${e(d.kod)}</span><span class="diag-opis">${e(d.opis||'—')}</span></div>`).join('')}</div>`}
     </div>
-
     <div class="cc-section">
       <div class="cc-section-title"><span>Дијагноза на прием</span></div>
       ${c.priem_dijagnoza_kod?`<div style="display:flex;align-items:center;gap:0.7rem;margin-bottom:0.6rem">
@@ -457,7 +465,7 @@ function renderDosie(){
     </div>
   </div>`;
 
-  const miniLogs=_logs.slice(0,3);
+  const miniLogs=_logs.filter(l=>canSeeLogType(l.log_type||'doctor')).slice(0,3);
   const rightCol=`<div>
     <div class="cc-section">
       <div class="cc-section-title"><span>Барања и задачи</span></div>
@@ -477,286 +485,71 @@ function renderDosie(){
 }
 
 // ── Therapy sessions renderer ──────────────────────────────────────────
-function renderTherapySessions(active, ended) {
-  if(!active.length && !ended.length) {
-    return '<div class="cc-empty" style="padding:0.5rem">Нема внесена хронична терапија.</div>';
-  }
-
-  function sessionHtml(s) {
-    const isActive = !s.ended_at;
-    const dateRange = isActive
-      ? `<span>Од</span> ${fmtDate(s.started_at)} <span>— тековна</span>`
-      : `<span>Од</span> ${fmtDate(s.started_at)} <span>до</span> ${fmtDate(s.ended_at)}`;
-
-    const drugs = s.chronic_therapy_drugs || [];
-    const drugsHtml = drugs.length
-      ? drugs.map(d=>`
-          <div class="therapy-drug-row">
-            <div>
-              <div class="drug-name">${e(d.generic_name||'—')}</div>
-              ${d.form?`<div class="drug-form">${e(d.form)}</div>`:''}
-            </div>
-            <div class="drug-dosage">${e(d.dosage||'—')}</div>
-          </div>`).join('')
-      : `<div style="padding:0.5rem 0.85rem;font-size:0.8rem;color:var(--gray)">Нема лекови во оваа сесија.</div>`;
-
-    return `<div class="therapy-session">
+function renderTherapySessions(active, ended){
+  if(!active.length&&!ended.length)return'<div class="cc-empty" style="padding:0.5rem">Нема внесена хронична терапија.</div>';
+  function sessionHtml(s){
+    const isActive=!s.ended_at;
+    const dateRange=isActive
+      ?`<span>Од</span> ${fmtDate(s.started_at)} <span>— тековна</span>`
+      :`<span>Од</span> ${fmtDate(s.started_at)} <span>до</span> ${fmtDate(s.ended_at)}`;
+    const drugs=s.chronic_therapy_drugs||[];
+    const drugsHtml=drugs.length
+      ?drugs.map(d=>`<div class="therapy-drug-row">
+          <div><div class="drug-name">${e(d.generic_name||'—')}</div>${d.form?`<div class="drug-form">${e(d.form)}</div>`:''}</div>
+          <div class="drug-dosage">${e(d.dosage||'—')}</div>
+        </div>`).join('')
+      :'<div style="padding:0.5rem 0.85rem;font-size:0.78rem;color:var(--gray)">Нема лекови во оваа сесија.</div>';
+    return`<div class="therapy-session">
       <div class="therapy-session-hdr">
-        <span class="therapy-session-dates">${dateRange}</span>
+        <div class="therapy-session-dates">${dateRange}</div>
         <span class="therapy-session-status ${isActive?'tss-active':'tss-ended'}">${isActive?'Активна':'Завршена'}</span>
       </div>
       ${s.note?`<div class="therapy-session-note">${e(s.note)}</div>`:''}
       <div class="therapy-drugs-list">${drugsHtml}</div>
     </div>`;
   }
-
-  let html = active.map(sessionHtml).join('');
-
-  if(ended.length) {
-    html += `<details style="margin-top:0.5rem">
-      <summary style="cursor:pointer;font-size:0.78rem;color:var(--olive);font-weight:700;padding:0.3rem 0">
-        Претходна терапија (${ended.length} сесија${ended.length===1?'':'и'})
-      </summary>
-      <div style="margin-top:0.5rem">${ended.map(sessionHtml).join('')}</div>
-    </details>`;
+  let html='';
+  if(active.length) html+=active.map(sessionHtml).join('');
+  if(ended.length){
+    if(active.length) html+=`<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray);margin:0.75rem 0 0.4rem">Претходни сесии</div>`;
+    html+=ended.map(sessionHtml).join('');
   }
-
   return html;
 }
 
+// ── Admission vitals ───────────────────────────────────────────────────
 function renderAdmissionVitals(c){
-  const chips=[];
-  if(c.priem_kp_sistolicen&&c.priem_kp_dijastolicen)chips.push(`КП: <span>${c.priem_kp_sistolicen}/${c.priem_kp_dijastolicen} mmHg</span>`);
-  if(c.priem_puls)        chips.push(`Пулс: <span>${c.priem_puls} bpm</span>`);
-  if(c.priem_temperatura) chips.push(`Т°: <span>${c.priem_temperatura}°C</span>`);
-  if(c.priem_spo2)        chips.push(`SpO2: <span>${c.priem_spo2}%</span>`);
-  if(c.priem_respiracii)  chips.push(`Респ: <span>${c.priem_respiracii}/мин</span>`);
-  if(c.priem_tezina)      chips.push(`Тежина: <span>${c.priem_tezina} kg</span>`);
-  if(c.priem_seker)       chips.push(`Шеќер: <span>${c.priem_seker} mmol/L</span>`);
-  if(c.priem_bolka!=null) chips.push(`Болка: <span>${c.priem_bolka}/10</span>`);
-  if(!chips.length)return'';
-  return`<div class="vital-chips">${chips.map(ch=>`<div class="vc">${ch}</div>`).join('')}</div>`;
-}
-
-// ── Vitals widget ──────────────────────────────────────────────────────
-const PARAMS=[
-  {key:'temperatura', label:'Т°',      unit:'°C',     color:'#d4a017', field:'temperatura'},
-  {key:'puls',        label:'Пулс',    unit:'bpm',    color:'#e07a27', field:'puls'},
-  {key:'spo2',        label:'SpO2',    unit:'%',      color:'#2e8a5a', field:'spo2'},
-  {key:'kp',          label:'КП',      unit:'mmHg',   color:'#e05252', field:'kp_sistolicen'},
-  {key:'respiracii',  label:'Респ',    unit:'/мин',   color:'#2e6ba8', field:'respiracii'},
-  {key:'tezina',      label:'Тежина',  unit:'kg',     color:'#7a4ea8', field:'tezina'},
-  {key:'seker',       label:'Шеќер',   unit:'mmol/L', color:'#c43e8a', field:'seker'},
-  {key:'bolka',       label:'Болка',   unit:'/10',    color:'#8a3a3a', field:'bolka'},
-  {key:'diureza',     label:'Диуреза', unit:'ml',     color:'#3a7a8a', field:'diureza'},
-];
-
-function renderVitalsWidget(){
-  if(!_vitals.length)return'<div class="cc-empty" style="padding:0.75rem">Нема витали внесени во записите.</div>';
-  return`
-    <div class="vitals-view-tabs">
-      <button class="vtab ${_vitalsView==='chart'?'active':''}" id="vtab-chart" onclick="window._ccVitalsView('chart')">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Графикон
-      </button>
-      <button class="vtab ${_vitalsView==='list'?'active':''}" id="vtab-list" onclick="window._ccVitalsView('list')">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.5" fill="currentColor"/><circle cx="3" cy="12" r="1.5" fill="currentColor"/><circle cx="3" cy="18" r="1.5" fill="currentColor"/></svg>Листа
-      </button>
-    </div>
-    <div id="cc-vitals-inner">${_vitalsView==='chart'?renderVitalsChart():renderVitalsList()}</div>`;
-}
-
-window._ccVitalsView=function(mode){
-  _vitalsView=mode;
-  ['chart','list'].forEach(m=>{const t=document.getElementById('vtab-'+m);if(t)t.classList.toggle('active',m===mode);});
-  const inner=document.getElementById('cc-vitals-inner');
-  if(!inner)return;
-  inner.innerHTML=mode==='chart'?renderVitalsChart():renderVitalsList();
-  if(mode==='chart')scheduleChart();
-};
-
-window._ccPickParam=function(key){
-  _activeParam=key;
-  document.querySelectorAll('.vpill').forEach(p=>p.classList.toggle('active',p.dataset.key===key));
-  drawChart(key);
-};
-
-function renderVitalsChart(){
-  const pills=PARAMS.map(p=>`<button class="vpill ${_activeParam===p.key?'active':''}" data-key="${p.key}" onclick="window._ccPickParam('${p.key}')">${p.label}</button>`).join('');
-  return`<div class="vitals-chart-wrap">
-    <div class="vpills">${pills}</div>
-    <div class="chart-canvas-wrap" id="cc-chart-wrap"><canvas id="cc-vitals-canvas"></canvas></div>
-    <div class="chart-note" id="cc-chart-note"></div>
-  </div>`;
-}
-
-function renderVitalsList(){
-  const rows=_vitals.slice(0,50).map(v=>{
-    const kp=(v.kp_sistolicen&&v.kp_dijastolicen)?`${v.kp_sistolicen}/${v.kp_dijastolicen}`:null;
-    const cells=[
-      v.temperatura!=null?v.temperatura:null,
-      v.puls||null,
-      v.spo2||null,
-      kp,
-      v.respiracii||null,
-      v.tezina!=null?v.tezina:null,
-      v.seker!=null?v.seker:null,
-      v.bolka!=null?v.bolka:null,
-      v.diureza!=null?v.diureza+' ml':null,
-      v.stolica||null,
-    ];
-    return`<div class="vl-row">
-      <span class="vl-cell date">${new Date(v.created_at).toLocaleString('mk-MK',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
-      ${cells.map(c=>`<span class="vl-cell ${c!==null?'has':'empty'}">${c!==null?c:'—'}</span>`).join('')}
-    </div>`;
-  }).join('');
-  return`<div class="vitals-list-wrap"><div class="vitals-list">
-    <div class="vl-row hdr" style="grid-template-columns:1.6fr repeat(10,1fr)">
-      <span class="vl-cell date">Датум/Час</span>
-      <span class="vl-cell">Т°</span><span class="vl-cell">Пулс</span><span class="vl-cell">SpO2</span>
-      <span class="vl-cell">КП</span><span class="vl-cell">Респ</span><span class="vl-cell">Кг</span>
-      <span class="vl-cell">Шеќ</span><span class="vl-cell">Болка</span>
-      <span class="vl-cell">Диур.</span><span class="vl-cell">Столица</span>
-    </div>
-    <style>.vitals-list .vl-row{grid-template-columns:1.6fr repeat(10,1fr)}</style>
-    ${rows||'<div class="cc-empty">Нема витали.</div>'}
-  </div></div>`;
-}
-
-function scheduleChart(){setTimeout(()=>{if(_vitalsView==='chart')drawChart(_activeParam);},80);}
-
-function drawChart(paramKey){
-  const canvas=document.getElementById('cc-vitals-canvas');
-  if(!canvas)return;
-  const wrap=document.getElementById('cc-chart-wrap');
-  const note=document.getElementById('cc-chart-note');
-  const param=PARAMS.find(p=>p.key===paramKey)||PARAMS[0];
-
-  const pts50=_vitals.slice(0,50).slice().reverse();
-  const relevant=pts50.filter(v=>paramKey==='kp'?v.kp_sistolicen!=null:v[param.field]!=null);
-
-  const W=(wrap?wrap.offsetWidth:400)||400;
-  const H=170;
-  canvas.width=W; canvas.height=H;
-  const ctx=canvas.getContext('2d');
-  ctx.clearRect(0,0,W,H);
-
-  if(!relevant.length){
-    ctx.fillStyle='#aaa';ctx.font='12px Lato,sans-serif';ctx.textAlign='center';
-    ctx.fillText('Нема податоци за '+param.label,W/2,H/2);
-    if(note)note.textContent='Нема вредности за '+param.label;
-    return;
-  }
-
-  const n=relevant.length;
-  if(note)note.textContent=`${param.label} (${param.unit}) · ${n} мерење${n===1?'':n<5?'а':'а'} · последните 50`;
-
-  const pL=44,pR=14,pT=18,pB=34;
-  const cW=W-pL-pR, cH=H-pT-pB;
-
-  let allVals=[];
-  if(paramKey==='kp'){
-    relevant.forEach(v=>{
-      if(v.kp_sistolicen)allVals.push(parseFloat(v.kp_sistolicen));
-      if(v.kp_dijastolicen)allVals.push(parseFloat(v.kp_dijastolicen));
-    });
-  } else {
-    relevant.forEach(v=>allVals.push(parseFloat(v[param.field])));
-  }
-  let minV=Math.min(...allVals), maxV=Math.max(...allVals);
-  const pad=(maxV-minV)*0.12||1;
-  minV-=pad; maxV+=pad;
-  const range=maxV-minV;
-
-  const xS=i=>pL+(n>1?i/(n-1)*cW:cW/2);
-  const yS=v=>pT+(1-(v-minV)/range)*cH;
-
-  ctx.strokeStyle='#eae7e0'; ctx.lineWidth=1;
-  for(let i=0;i<=4;i++){
-    const y=pT+i/4*cH;
-    ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(W-pR,y);ctx.stroke();
-    const lv=maxV-i*(range/4);
-    ctx.fillStyle='#b0a898';ctx.font='10px Lato,sans-serif';ctx.textAlign='right';
-    ctx.fillText(lv%1===0?lv:lv.toFixed(1),pL-4,y+3.5);
-  }
-
-  ctx.fillStyle='#b0a898';ctx.font='10px Lato,sans-serif';ctx.textAlign='center';
-  const labelStep=Math.max(1,Math.floor(n/6));
-  relevant.forEach((v,i)=>{
-    if(i%labelStep!==0&&i!==n-1)return;
-    const lbl=new Date(v.created_at).toLocaleDateString('mk-MK',{day:'2-digit',month:'2-digit'});
-    ctx.fillText(lbl,xS(i),H-pB+14);
-  });
-
-  if(paramKey==='kp'){
-    const sysVals=relevant.map((v,i)=>({x:xS(i),y:yS(parseFloat(v.kp_sistolicen)),v:parseFloat(v.kp_sistolicen)}));
-    const diaVals=relevant.map((v,i)=>({x:xS(i),y:v.kp_dijastolicen?yS(parseFloat(v.kp_dijastolicen)):null,v:v.kp_dijastolicen?parseFloat(v.kp_dijastolicen):null}));
-
-    const fi=0,li=sysVals.length-1;
-    const grad=ctx.createLinearGradient(0,pT,0,H-pB);
-    grad.addColorStop(0,'#e0525244');grad.addColorStop(1,'#e0525208');
-    ctx.save();ctx.beginPath();
-    sysVals.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
-    ctx.lineTo(sysVals[li].x,H-pB);ctx.lineTo(sysVals[0].x,H-pB);ctx.closePath();
-    ctx.fillStyle=grad;ctx.fill();ctx.restore();
-
-    ctx.beginPath();
-    sysVals.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
-    ctx.strokeStyle='#e05252';ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();
-
-    ctx.beginPath();let dStarted=false;
-    diaVals.forEach(p=>{if(!p.y)return;if(!dStarted){ctx.moveTo(p.x,p.y);dStarted=true;}else ctx.lineTo(p.x,p.y);});
-    ctx.strokeStyle='#e07a7a';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
-
-    relevant.forEach((v,i)=>{
-      if(!v.kp_dijastolicen)return;
-      const x=xS(i);
-      const ys=yS(parseFloat(v.kp_sistolicen));
-      const yd=yS(parseFloat(v.kp_dijastolicen));
-      ctx.beginPath();ctx.moveTo(x,ys);ctx.lineTo(x,yd);
-      ctx.strokeStyle='#e05252';ctx.lineWidth=1;ctx.setLineDash([2,3]);ctx.stroke();ctx.setLineDash([]);
-    });
-
-    sysVals.forEach(p=>{
-      ctx.beginPath();ctx.arc(p.x,p.y,4,0,2*Math.PI);
-      ctx.fillStyle='#fff';ctx.strokeStyle='#e05252';ctx.lineWidth=2;ctx.fill();ctx.stroke();
-      ctx.fillStyle='#e05252';ctx.font='bold 9px Lato,sans-serif';ctx.textAlign='center';
-      ctx.fillText(p.v,p.x,p.y-8);
-    });
-    diaVals.forEach(p=>{
-      if(!p.y)return;
-      ctx.beginPath();ctx.arc(p.x,p.y,3.5,0,2*Math.PI);
-      ctx.fillStyle='#fff';ctx.strokeStyle='#e07a7a';ctx.lineWidth=1.5;ctx.fill();ctx.stroke();
-      ctx.fillStyle='#e07a7a';ctx.font='9px Lato,sans-serif';ctx.textAlign='center';
-      ctx.fillText(p.v,p.x,p.y+14);
-    });
-
-  } else {
-    const vals=relevant.map((v,i)=>({x:xS(i),y:yS(parseFloat(v[param.field])),v:parseFloat(v[param.field])}));
-    const color=param.color;
-
-    const grad=ctx.createLinearGradient(0,pT,0,H-pB);
-    grad.addColorStop(0,color+'44');grad.addColorStop(1,color+'08');
-    ctx.save();ctx.beginPath();
-    vals.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
-    ctx.lineTo(vals[vals.length-1].x,H-pB);ctx.lineTo(vals[0].x,H-pB);ctx.closePath();
-    ctx.fillStyle=grad;ctx.fill();ctx.restore();
-
-    ctx.beginPath();
-    vals.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
-    ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
-
-    vals.forEach(p=>{
-      ctx.beginPath();ctx.arc(p.x,p.y,4.5,0,2*Math.PI);
-      ctx.fillStyle='#fff';ctx.strokeStyle=color;ctx.lineWidth=2;ctx.fill();ctx.stroke();
-      ctx.fillStyle=color;ctx.font='bold 10px Lato,sans-serif';ctx.textAlign='center';
-      ctx.fillText(p.v%1===0?p.v:p.v.toFixed(1),p.x,p.y-9);
-    });
-  }
+  const v=[];
+  if(c.priem_temperatura) v.push(`Т°: <span>${c.priem_temperatura}°C</span>`);
+  if(c.priem_puls)         v.push(`Пулс: <span>${c.priem_puls} bpm</span>`);
+  if(c.priem_spo2)         v.push(`SpO2: <span>${c.priem_spo2}%</span>`);
+  if(c.priem_kp_sistolicen&&c.priem_kp_dijastolicen) v.push(`КП: <span>${c.priem_kp_sistolicen}/${c.priem_kp_dijastolicen}</span>`);
+  if(c.priem_respiracii)   v.push(`Респ: <span>${c.priem_respiracii}/мин</span>`);
+  if(c.priem_tezina)       v.push(`Тежина: <span>${c.priem_tezina} kg</span>`);
+  if(c.priem_seker)        v.push(`Шеќер: <span>${c.priem_seker} mmol/L</span>`);
+  if(c.priem_bolka!=null)  v.push(`Болка: <span>${c.priem_bolka}/10</span>`);
+  return v.length?`<div class="vital-chips" style="margin-top:0.5rem">${v.map(x=>`<div class="vc">${x}</div>`).join('')}</div>`:'';
 }
 
 // ══════════════════════════════════════════════════════════════════════
 // Записи
 // ══════════════════════════════════════════════════════════════════════
+const _TL={
+  doctor:'Доктор',nurse:'Сестра',social:'Социјален',
+  fizioterapevt:'Физиотерапевт',supervizornega:'Супервизор за нега',other:'Друго'
+};
+const _TC={
+  doctor:'lt-doctor',nurse:'lt-nurse',social:'lt-social',
+  fizioterapevt:'lt-fizio',supervizornega:'lt-supervizornega',other:'lt-other'
+};
+
+function getFilteredLogs(){
+  let logs=_logs.filter(l=>canSeeLogType(l.log_type||'doctor'));
+  if(_logsMonth) logs=logs.filter(l=>l.created_at.startsWith(_logsMonth));
+  if(_logsTypeFilter!=='all') logs=logs.filter(l=>(l.log_type||'doctor')===_logsTypeFilter);
+  return logs;
+}
+
 function renderLogs(){
   const months=[...new Set(_logs.map(l=>l.created_at.slice(0,7)))].sort((a,b)=>b.localeCompare(a));
   const monthOpts=months.map(m=>{
@@ -764,28 +557,106 @@ function renderLogs(){
     return`<option value="${m}" ${_logsMonth===m?'selected':''}>${lbl}</option>`;
   }).join('');
 
-  let filtered=(_logsMonth?_logs.filter(l=>l.created_at.startsWith(_logsMonth)):_logs).filter(l=>canSeeLogType(l.log_type||'doctor'));
-  const overflow=filtered.length>LOGS_MAX;
-  if(overflow)filtered=filtered.slice(0,LOGS_MAX);
+  // Count per type (of all permission-visible logs, before type filter)
+  const allVisible=_logs.filter(l=>canSeeLogType(l.log_type||'doctor'));
+  const typeCount={};
+  allVisible.forEach(l=>{const t=l.log_type||'doctor';typeCount[t]=(typeCount[t]||0)+1;});
+
+  const filtered=getFilteredLogs();
+  const totalPages=Math.ceil(filtered.length/LOGS_PAGE_SIZE)||1;
+  if(_logsPage>totalPages)_logsPage=totalPages;
+  const slice=filtered.slice((_logsPage-1)*LOGS_PAGE_SIZE,_logsPage*LOGS_PAGE_SIZE);
+
+  // Type chips
+  const typeChips=[
+    {type:'all',label:'Сите',cls:'ltchip-all'},
+    {type:'doctor',label:'Доктор',cls:'ltchip-doctor',dot:'#2e4a8a'},
+    {type:'nurse',label:'Сестра',cls:'ltchip-nurse',dot:'#6a3a8a'},
+    {type:'social',label:'Социјален',cls:'ltchip-social',dot:'#3a6e3a'},
+    {type:'fizioterapevt',label:'Физио',cls:'ltchip-fizio',dot:'#c07028'},
+    {type:'supervizornega',label:'Супервизор',cls:'ltchip-sup',dot:'#b03060'},
+  ].filter(ch=>{
+    if(ch.type==='all')return true;
+    return typeCount[ch.type]>0;
+  }).map(ch=>{
+    const dotHtml=ch.dot?`<span class="ltchip-dot" style="background:${ch.dot}"></span>`:'';
+    const cnt=ch.type==='all'?allVisible.length:(typeCount[ch.type]||0);
+    return`<span class="ltchip ${ch.cls} ${_logsTypeFilter===ch.type?'active':''}" data-type="${ch.type}">${dotHtml}${ch.label} <span style="opacity:0.65;font-weight:400">${cnt}</span></span>`;
+  }).join('');
 
   return`
-    <div class="logs-filter-row">
+    <div class="logs-toolbar-cc">
       <span class="cc-label" style="margin:0;white-space:nowrap">Месец:</span>
       <select class="logs-month-sel" id="cc-logs-month">
         <option value="">Сите месеци</option>${monthOpts}
       </select>
-      <span style="font-size:0.75rem;color:var(--gray)">${filtered.length} записи</span>
+      <span style="font-size:0.75rem;color:var(--gray);margin-left:auto">${filtered.length} записи</span>
     </div>
+    <div class="logs-type-chips" id="cc-logs-type-chips">${typeChips}</div>
     <div id="cc-logs-list">
-      ${filtered.length?filtered.map(l=>renderLogEntry(l)).join(''):'<div class="cc-empty">Нема записи за избраниот месец.</div>'}
+      ${slice.length?slice.map(l=>renderLogEntry(l)).join(''):'<div class="cc-empty">Нема записи за избраниот период/тип.</div>'}
     </div>
-    ${overflow?`<div class="overflow-note">Прикажани се ${LOGS_MAX} записи. За постари, користете го главниот Logs модул со филтрирање по датум.</div>`:''}`;
+    ${totalPages>1?renderLogsPagination(totalPages,filtered.length):''}`;
 }
 
-const _TL={doctor:'Доктор',nurse:'Сестра',social:'Социјален',fizioterapevt:'Физио',supervisor:'Супервизор',other:'Друго'};
-const _TC={doctor:'le-type-doctor',nurse:'le-type-nurse',social:'le-type-social',fizioterapevt:'le-type-other',supervisor:'le-type-other',other:'le-type-other'};
+function renderLogsPagination(totalPages, total){
+  let btns=`<button class="cc-page-btn" id="cc-pg-prev" ${_logsPage===1?'disabled':''}>‹</button>`;
+  const pages=new Set([1,totalPages,_logsPage,_logsPage-1,_logsPage+1].filter(p=>p>=1&&p<=totalPages));
+  let prev=0;
+  Array.from(pages).sort((a,b)=>a-b).forEach(p=>{
+    if(prev&&p-prev>1)btns+=`<span class="cc-page-info">…</span>`;
+    btns+=`<button class="cc-page-btn ${p===_logsPage?'active':''}" data-pg="${p}">${p}</button>`;
+    prev=p;
+  });
+  btns+=`<button class="cc-page-btn" id="cc-pg-next" ${_logsPage===totalPages?'disabled':''}>›</button>`;
+  const start=(_logsPage-1)*LOGS_PAGE_SIZE+1;
+  const end=Math.min(_logsPage*LOGS_PAGE_SIZE,total);
+  btns+=`<span class="cc-page-info">${start}–${end} / ${total}</span>`;
+  return`<div class="cc-pagination" id="cc-logs-pagination">${btns}</div>`;
+}
 
+function bindLogsControls(){
+  const sel=document.getElementById('cc-logs-month');
+  if(sel){sel.addEventListener('change',()=>{_logsMonth=sel.value||null;_logsPage=1;refreshLogs();});}
+
+  const chips=document.getElementById('cc-logs-type-chips');
+  if(chips){chips.addEventListener('click',ev=>{
+    const chip=ev.target.closest('[data-type]');
+    if(!chip)return;
+    _logsTypeFilter=chip.dataset.type;_logsPage=1;refreshLogs();
+  });}
+
+  bindPagination();
+}
+
+function bindPagination(){
+  const bar=document.getElementById('cc-logs-pagination');
+  if(!bar)return;
+  bar.addEventListener('click',ev=>{
+    const btn=ev.target.closest('[data-pg]');
+    if(btn){_logsPage=parseInt(btn.dataset.pg);refreshLogs();return;}
+    if(ev.target.id==='cc-pg-prev'&&_logsPage>1){_logsPage--;refreshLogs();}
+    if(ev.target.id==='cc-pg-next'){const t=Math.ceil(getFilteredLogs().length/LOGS_PAGE_SIZE);if(_logsPage<t){_logsPage++;refreshLogs();}}
+  });
+}
+
+function refreshLogs(){
+  document.getElementById('cc-body').innerHTML=renderLogs();
+  bindLogsControls();
+  document.getElementById('cc-body').scrollTop=0;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Log entry card renderer (full, with accent border + supervisor body)
+// ══════════════════════════════════════════════════════════════════════
 function renderLogEntry(l){
+  const type=l.log_type||'doctor';
+  const time=new Date(l.created_at).toLocaleTimeString('mk-MK',{hour:'2-digit',minute:'2-digit'});
+  const dateStr=new Date(l.created_at).toLocaleDateString('mk-MK');
+
+  const smenaHtml=l.smena?`<span class="le-smena">⏰ ${e(l.smena)}</span>`:'';
+
+  // Vitals
   const v=[];
   if(l.temperatura) v.push(`Т°: <span>${l.temperatura}°C</span>`);
   if(l.puls)        v.push(`Пулс: <span>${l.puls} bpm</span>`);
@@ -797,28 +668,69 @@ function renderLogEntry(l){
   if(l.bolka!=null) v.push(`Болка: <span>${l.bolka}/10</span>`);
   if(l.diureza!=null)v.push(`Диуреза: <span>${l.diureza} ml</span>`);
   if(l.stolica)     v.push(`Столица: <span>${e(l.stolica)}</span>`);
-  return`<div class="log-entry">
+  const vitalsHtml=v.length?`<div class="vital-chips">${v.map(x=>`<div class="vc">${x}</div>`).join('')}</div>`:'';
+
+  const diagHtml=l.dijagnoza_kod
+    ?`<div style="margin:0.3rem 0 0.2rem"><span class="le-diag">${e(l.dijagnoza_kod)}${l.dijagnoza_opis?' — '+e(l.dijagnoza_opis):''}</span></div>`:'';
+
+  const bodyHtml=type==='supervizornega'?renderSupBody(l):renderStdBody(l);
+
+  return`<div class="log-entry" data-type="${e(type)}">
     <div class="le-top">
-      <span class="le-type ${_TC[l.log_type||'doctor']||'le-type-other'}">${_TL[l.log_type||'doctor']||'Друго'}</span>
-      <span class="le-date">${fmtDateTime(l.created_at)}</span>
+      <div class="le-left">
+        <span class="le-type ${_TC[type]||'lt-other'}">${_TL[type]||'Друго'}</span>
+        ${smenaHtml}
+      </div>
+      <span class="le-date">${time} · ${dateStr}</span>
     </div>
-    ${l.dijagnoza_kod?`<div style="margin:0.3rem 0 0.2rem"><span class="le-diag">${e(l.dijagnoza_kod)}${l.dijagnoza_opis?' — '+e(l.dijagnoza_opis):''}</span></div>`:''}
-    ${v.length?`<div class="vital-chips">${v.map(x=>`<div class="vc">${x}</div>`).join('')}</div>`:''}
-    ${l.anamneza    ?`<div class="le-field"><div class="le-fl">Анамнеза</div><div class="le-fv">${e(l.anamneza)}</div></div>`:''}
-    ${l.naod        ?`<div class="le-field"><div class="le-fl">Наод</div><div class="le-fv">${e(l.naod)}</div></div>`:''}
-    ${l.parenteralna?`<div class="le-field"><div class="le-fl">Парентерална</div><div class="le-fv">${e(l.parenteralna)}</div></div>`:''}
-    ${l.zabeleski   ?`<div class="le-field"><div class="le-fl">Забелешки</div><div class="le-fv">${e(l.zabeleski)}</div></div>`:''}
+    ${diagHtml}
+    ${vitalsHtml}
+    ${bodyHtml}
   </div>`;
 }
 
-function bindLogsFilter(){
-  const sel=document.getElementById('cc-logs-month');
-  if(!sel)return;
-  sel.addEventListener('change',()=>{
-    _logsMonth=sel.value||null;
-    document.getElementById('cc-body').innerHTML=renderLogs();
-    bindLogsFilter();
-  });
+// Standard body
+function renderStdBody(l){
+  const rows=[
+    ['anamneza','Анамнеза'],['naod','Наод'],
+    ['parenteralna','Парентерална'],['plan','План / Терапија'],
+    ['zabeleski','Забелешки'],
+  ];
+  const html=rows.filter(([k])=>l[k])
+    .map(([k,lb])=>`<div class="le-field"><div class="le-fl">${lb}</div><div class="le-fv">${e(l[k])}</div></div>`)
+    .join('');
+  return html?`<div style="margin-top:0.25rem">${html}</div>`:'';
+}
+
+// Supervisor body — parse pipe-delimited strings into grids
+function parsePipe(raw){
+  if(!raw)return[];
+  return raw.split('|').map(s=>{
+    const i=s.indexOf(':');
+    if(i===-1)return{k:s.trim(),v:''};
+    return{k:s.slice(0,i).trim(),v:s.slice(i+1).trim()};
+  }).filter(p=>p.k);
+}
+
+function renderSupBody(l){
+  const sections=[
+    {title:'Хигиенска нега',raw:l.higijenska_nega},
+    {title:'Исхрана',raw:l.ishrana},
+    {title:'Мобилност',raw:l.mobilnost},
+    {title:'Психосоцијално',raw:l.psihosocijalno},
+  ].filter(s=>s.raw);
+
+  const sectHtml=sections.map(s=>{
+    const pairs=parsePipe(s.raw);
+    const cells=pairs.map(p=>`<div class="le-sup-kv"><div class="k">${e(p.k)}</div><div class="v">${e(p.v)||'—'}</div></div>`).join('');
+    return`<div class="le-sup-section">
+      <div class="le-sup-title">${s.title}</div>
+      <div class="le-sup-grid">${cells}</div>
+    </div>`;
+  }).join('');
+
+  const zabHtml=l.zabeleski?`<div class="le-field" style="margin-top:0.4rem"><div class="le-fl">Забелешки</div><div class="le-fv">${e(l.zabeleski)}</div></div>`:'';
+  return sectHtml+zabHtml||'';
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -827,7 +739,7 @@ function bindLogsFilter(){
 function renderInfo(){
   const c=_client;
   const age=ageFromEmbg(c.embg);
-  const editBtn=isPrivileged()?`<button class="cc-edit-btn" onclick="editClientData('${e(c.id)}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Уреди</button>`:'';
+  const editBtn=isPrivileged()?`<button class="cc-edit-btn" onclick="openClientEdit('${e(c.id)}',()=>openClientCard('${e(c.id)}'))"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Уреди</button>`:'';
   const srodHtml=_srodstvo.length
     ?_srodstvo.map(s=>`<div class="srodstvo-row">
         <div><div class="cc-label">Ime и Презиме</div><div>${e(s.ime_prezime||'—')}</div></div>
@@ -857,8 +769,144 @@ function renderInfo(){
 }
 
 window.editClientData=function(clientId){
-  closeClientCard();
-  window.location.href=`clients.html?edit=${clientId}`;
+  // Use openClientEdit from edit.js if available, otherwise fallback to redirect
+  if(typeof window.openClientEdit==='function'){
+    window.openClientEdit(clientId,()=>window.openClientCard(clientId));
+  }else{
+    closeClientCard();
+    window.location.href=`clients.html?edit=${clientId}`;
+  }
 };
+
+// ══════════════════════════════════════════════════════════════════════
+// Витали widget
+// ══════════════════════════════════════════════════════════════════════
+function renderVitalsWidget(){
+  if(!_vitals.length)return'<div class="cc-empty" style="padding:0.5rem">Нема витални знаци.</div>';
+  const params=[
+    {key:'puls',         label:'Пулс',    unit:'bpm', color:'#c0392b'},
+    {key:'temperatura',  label:'Т°',      unit:'°C',  color:'#e67e22'},
+    {key:'spo2',         label:'SpO2',    unit:'%',   color:'#2980b9'},
+    {key:'kp_sistolicen',label:'КП сист.',unit:'mmHg',color:'#8e44ad'},
+    {key:'respiracii',   label:'Респ.',   unit:'/мин',color:'#27ae60'},
+    {key:'tezina',       label:'Тежина',  unit:'kg',  color:'#7f8c8d'},
+    {key:'seker',        label:'Шеќер',   unit:'mmol',color:'#f39c12'},
+  ];
+  const available=params.filter(p=>_vitals.some(v=>v[p.key]!=null));
+  if(!available.length)return'<div class="cc-empty" style="padding:0.5rem">Нема доволно витални податоци.</div>';
+  if(!available.find(p=>p.key===_activeParam)) _activeParam=available[0].key;
+
+  if(_vitalsView==='chart'){
+    const pillsHtml=available.map(p=>`<span class="vpill ${p.key===_activeParam?'active':''}" data-vparam="${p.key}">${p.label}</span>`).join('');
+    return`<div>
+      <div class="vitals-view-tabs">
+        <span class="vtab active" data-vview="chart">Графикон</span>
+        <span class="vtab" data-vview="list">Табела</span>
+      </div>
+      <div class="vitals-chart-wrap">
+        <div class="vpills" id="cc-vpills">${pillsHtml}</div>
+        <div class="chart-canvas-wrap"><canvas id="cc-vitals-canvas"></canvas></div>
+        <div class="chart-note" id="cc-chart-note"></div>
+      </div>
+    </div>`;
+  } else {
+    const hdr=`<div class="vl-row hdr"><div class="vl-cell date">Датум</div>${available.map(p=>`<div class="vl-cell">${p.label}</div>`).join('')}</div>`;
+    const rows=_vitals.map(v=>`<div class="vl-row">
+      <div class="vl-cell date">${fmtDate(v.created_at)}</div>
+      ${available.map(p=>`<div class="vl-cell ${v[p.key]!=null?'has':'empty'}">${v[p.key]!=null?v[p.key]:'—'}</div>`).join('')}
+    </div>`).join('');
+    return`<div>
+      <div class="vitals-view-tabs">
+        <span class="vtab" data-vview="chart">Графикон</span>
+        <span class="vtab active" data-vview="list">Табела</span>
+      </div>
+      <div class="vitals-list-wrap"><div class="vitals-list">${hdr}${rows}</div></div>
+    </div>`;
+  }
+}
+
+function scheduleChart(){
+  setTimeout(()=>{
+    bindVitalsControls();
+    if(_vitalsView==='chart') drawChart();
+  },50);
+}
+
+function bindVitalsControls(){
+  document.querySelectorAll('[data-vview]').forEach(el=>{
+    el.addEventListener('click',()=>{
+      _vitalsView=el.dataset.vview;
+      document.querySelectorAll('.cc-tab').forEach(b=>{if(b.classList.contains('active'))renderTab(b.dataset.tab);});
+    });
+  });
+  document.querySelectorAll('[data-vparam]').forEach(el=>{
+    el.addEventListener('click',()=>{
+      _activeParam=el.dataset.vparam;
+      document.querySelectorAll('[data-vparam]').forEach(x=>x.classList.toggle('active',x.dataset.vparam===_activeParam));
+      drawChart();
+    });
+  });
+}
+
+function drawChart(){
+  const canvas=document.getElementById('cc-vitals-canvas');
+  if(!canvas)return;
+  const params=[
+    {key:'puls',color:'#c0392b'},{key:'temperatura',color:'#e67e22'},{key:'spo2',color:'#2980b9'},
+    {key:'kp_sistolicen',color:'#8e44ad'},{key:'respiracii',color:'#27ae60'},
+    {key:'tezina',color:'#7f8c8d'},{key:'seker',color:'#f39c12'},
+  ];
+  const param=params.find(p=>p.key===_activeParam)||params[0];
+  const pts=_vitals.filter(v=>v[param.key]!=null).map(v=>({
+    x:new Date(v.created_at).getTime(),v:parseFloat(v[param.key]),
+    lbl:fmtDate(v.created_at)
+  })).reverse();
+  if(!pts.length)return;
+  const wrap=canvas.parentElement;
+  canvas.width=wrap.offsetWidth||320;
+  canvas.height=wrap.offsetHeight||155;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const pad={t:20,r:12,b:30,l:38};
+  const W=canvas.width-pad.l-pad.r;
+  const H=canvas.height-pad.t-pad.b;
+  const vals=pts.map(p=>p.v);
+  const mn=Math.min(...vals),mx=Math.max(...vals);
+  const range=mx-mn||1;
+  function cx(i){return pad.l+(i/(pts.length-1||1))*W;}
+  function cy(v){return pad.t+H-(((v-mn)/range)*H);}
+  // Grid
+  ctx.strokeStyle='#e8e4de';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=pad.t+(H/4)*i;
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+W,y);ctx.stroke();
+    const val=mx-(range/4)*i;
+    ctx.fillStyle='#9a968e';ctx.font='10px Lato,sans-serif';ctx.textAlign='right';
+    ctx.fillText(val%1===0?val:val.toFixed(1),pad.l-4,y+4);
+  }
+  // Area fill
+  if(pts.length>1){
+    ctx.beginPath();ctx.moveTo(cx(0),cy(pts[0].v));
+    pts.forEach((p,i)=>{if(i>0)ctx.lineTo(cx(i),cy(p.v));});
+    ctx.lineTo(cx(pts.length-1),pad.t+H);ctx.lineTo(cx(0),pad.t+H);ctx.closePath();
+    ctx.fillStyle=param.color+'22';ctx.fill();
+  }
+  // Line
+  ctx.beginPath();ctx.strokeStyle=param.color;ctx.lineWidth=2;ctx.lineJoin='round';
+  pts.forEach((p,i)=>{if(i===0)ctx.moveTo(cx(0),cy(p.v));else ctx.lineTo(cx(i),cy(p.v));});
+  ctx.stroke();
+  // Dots + labels
+  pts.forEach((p,i)=>{
+    ctx.beginPath();ctx.arc(cx(i),cy(p.v),3.5,0,Math.PI*2);
+    ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle=param.color;ctx.lineWidth=2;ctx.stroke();
+    if(pts.length<=8||i===0||i===pts.length-1||i%Math.ceil(pts.length/6)===0){
+      ctx.fillStyle=param.color;ctx.font='bold 10px Lato,sans-serif';ctx.textAlign='center';
+      ctx.fillText(p.v%1===0?p.v:parseFloat(p.v).toFixed(1),cx(i),cy(p.v)-9);
+    }
+  });
+  // X axis labels
+  const noteEl=document.getElementById('cc-chart-note');
+  if(noteEl&&pts.length){noteEl.textContent=`${pts[0].lbl} – ${pts[pts.length-1].lbl}`;}
+}
 
 })();

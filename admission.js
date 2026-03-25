@@ -299,12 +299,22 @@
     if(!fl){setErr('Невалидна соба.');return;}
     const{data:taken}=await window._sb.from('clients').select('id').eq('room_number',rm).eq('bed_number',bd).neq('status','discharged').maybeSingle();
     if(taken){setErr('Избраниот кревет е веќе зафатен. Изберете друг.');return;}
-    let picUrl=null;
-    if(picFile){const ext=picFile.name.split('.').pop();const path=`${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;const{error:ue}=await window._sb.storage.from('client-photos').upload(path,picFile);if(!ue){const{data:ud}=window._sb.storage.from('client-photos').getPublicUrl(path);picUrl=ud?.publicUrl||null;}}
-    const payload={obrakanje:document.getElementById('f_ob').value,maticen_broj:document.getElementById('f_mat').value.trim(),ime_prezime:document.getElementById('f_ime').value.trim(),adresa:document.getElementById('f_adr').value.trim(),embg:document.getElementById('f_emb').value.trim(),telefon:document.getElementById('f_tel').value.trim(),licna_karta_broj:document.getElementById('f_lk').value.trim(),floor_number:fl,room_number:rm,bed_number:bd,profile_pic_url:picUrl,status:'doctor',created_by:window._user.id};
+    // Insert client first (without photo URL) so we have the clientId for the storage path
+    const payload={obrakanje:document.getElementById('f_ob').value,maticen_broj:document.getElementById('f_mat').value.trim(),ime_prezime:document.getElementById('f_ime').value.trim(),adresa:document.getElementById('f_adr').value.trim(),embg:document.getElementById('f_emb').value.trim(),telefon:document.getElementById('f_tel').value.trim(),licna_karta_broj:document.getElementById('f_lk').value.trim(),floor_number:fl,room_number:rm,bed_number:bd,profile_pic_url:null,status:'doctor',client_status:'active',created_by:window._user.id};
     const{data,error}=await window._sb.from('clients').insert([payload]).select('id').single();
     if(error){if(error.code==='23505')setErr('Избраниот кревет е веќе зафатен.');else setErr('Грешка: '+error.message);return;}
     clientId=data.id;
+    // Upload photo after insert so we can use clientId in the storage path
+    if(picFile){
+      const ext=picFile.name.split('.').pop().toLowerCase();
+      const path=`${clientId}/${Date.now()}.${ext}`;
+      const{error:ue}=await window._sb.storage.from('client-photos').upload(path,picFile,{upsert:true});
+      if(!ue){
+        const{data:ud}=window._sb.storage.from('client-photos').getPublicUrl(path);
+        const picUrl=ud?.publicUrl||null;
+        if(picUrl) await window._sb.from('clients').update({profile_pic_url:picUrl}).eq('id',clientId);
+      }
+    }
     const srRows=srodstvoItems.filter(s=>s.ime_prezime.trim()).map(s=>({client_id:clientId,...s}));
     if(srRows.length) await window._sb.from('client_srodstvo').insert(srRows);
     for(const f of uploadFiles) await window._sb.storage.from('client-files').upload(`${clientId}/${Date.now()}-${f.name}`,f);
