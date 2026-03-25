@@ -71,6 +71,38 @@ const STYLE = `
 .badge-cc{display:inline-block;padding:0.12rem 0.45rem;border-radius:20px;font-size:0.64rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase}
 .badge-active{background:#e6f0e6;color:#2a6e2a;border:1px solid #b5d5b5}
 .badge-stopped{background:#f0ece2;color:#8a7a55}
+
+/* ── Therapy session cards ── */
+.therapy-session{border:1px solid var(--border);border-radius:7px;overflow:hidden;margin-bottom:0.65rem}
+.therapy-session:last-child{margin-bottom:0}
+.therapy-session-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0.55rem 0.85rem;background:var(--cream);border-bottom:1px solid var(--border);
+  gap:0.5rem;flex-wrap:wrap;
+}
+.therapy-session-dates{font-size:0.78rem;font-weight:700;color:var(--dark)}
+.therapy-session-dates span{font-weight:400;color:var(--gray)}
+.therapy-session-status{
+  display:inline-block;padding:0.1rem 0.5rem;border-radius:20px;
+  font-size:0.65rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;
+}
+.tss-active{background:#e6f0e6;color:#2a6e2a;border:1px solid #b5d5b5}
+.tss-ended {background:#f0ece2;color:#8a7a55;border:1px solid #d5c5a5}
+.therapy-session-note{
+  font-size:0.78rem;color:var(--gray);padding:0.35rem 0.85rem;
+  border-bottom:1px solid var(--border);font-style:italic;
+}
+.therapy-drugs-list{padding:0.4rem 0}
+.therapy-drug-row{
+  display:grid;grid-template-columns:1fr auto auto;gap:0.5rem 1rem;
+  align-items:center;padding:0.35rem 0.85rem;border-bottom:1px solid var(--border);
+  font-size:0.83rem;
+}
+.therapy-drug-row:last-child{border-bottom:none}
+.drug-name{font-weight:700;color:var(--dark)}
+.drug-form{font-size:0.75rem;color:var(--gray)}
+.drug-dosage{font-size:0.8rem;color:var(--olive);font-weight:700;white-space:nowrap}
+
 .diag-list{display:flex;flex-direction:column;gap:0.35rem}
 .diag-item{display:flex;align-items:center;gap:0.65rem;padding:0.45rem 0.7rem;background:var(--cream);border:1px solid var(--border);border-radius:4px}
 .diag-kod{font-family:monospace;font-size:0.8rem;font-weight:700;color:var(--olive);flex-shrink:0}
@@ -147,7 +179,7 @@ function injectDOM(){
 }
 
 // ── State ──────────────────────────────────────────────────────────────
-let _client=null, _therapy=[], _logs=[], _vitals=[], _srodstvo=[];
+let _client=null, _therapySessions=[], _logs=[], _vitals=[], _srodstvo=[];
 let _logsMonth=null;
 let _vitalsView='chart';
 let _activeParam='puls';
@@ -205,14 +237,9 @@ function isPrivileged(){const u=(window._username||'').toLowerCase();return u===
 function isDoctor(){return(window._username||'').toLowerCase()==='doktor';}
 function canSeeAll(){return isPrivileged()||isDoctor();}
 
-// Visibility: who can see which log types
-// doctor/nurse logs: menadzer, glavnasestra, doktor
-// social logs: menadzer, socijalenrabotnik
-// nurse logs: menadzer, glavnasestra, doktor (clinical staff)
-// all staff see all if privileged (menadzer/glavnasestra)
 function canSeeLogType(logType){
   const u=(window._username||'').toLowerCase();
-  if(u==='menadzer')return true; // sees everything
+  if(u==='menadzer')return true;
   if(logType==='doctor'||logType==='nurse')return u==='doktor'||u==='glavnasestra';
   if(logType==='social')return u==='socijalenrabotnik'||u==='doktor'||u==='glavnasestra';
   if(logType==='fizioterapevt')return u==='fizioterapevt'||u==='doktor'||u==='glavnasestra';
@@ -235,7 +262,10 @@ window.openClientCard = async function(clientId){
   document.getElementById('cc-backdrop').classList.add('open');
   document.body.style.overflow='hidden';
 
-  const [clientRes,therapyRes,logsRes,vitalsRes,srodRes]=await Promise.all([
+  // ── Fetch all data in parallel ──
+  const [clientRes, therapySessionsRes, logsRes, vitalsRes, srodRes] = await Promise.all([
+
+    // Client + chronic diagnoses (nested relation)
     window._sb.from('clients').select(`
       id,ime_prezime,obrakanje,maticen_broj,embg,licna_karta_broj,
       adresa,telefon,floor_number,room_number,bed_number,
@@ -250,24 +280,38 @@ window.openClientCard = async function(clientId){
       client_chronic_diagnoses(id,kod,opis,added_at)
     `).eq('id',clientId).single(),
 
-    window._sb.from('client_chronic_therapy')
-      .select('id,drug_name,dosage,active,added_at,stopped_at')
-      .eq('client_id',clientId).order('added_at',{ascending:false}),
+    // Chronic therapy: sessions with their drugs nested
+    // Most recent sessions first; ended_at null = still active
+    window._sb.from('chronic_therapy_sessions')
+      .select(`
+        id, started_at, ended_at, note, created_at,
+        chronic_therapy_drugs(id, generic_name, form, dosage, sort_order)
+      `)
+      .eq('client_id', clientId)
+      .order('started_at', { ascending: false }),
 
+    // Logs
     window._sb.from('client_logs')
       .select('id,created_at,log_type,dijagnoza_kod,dijagnoza_opis,anamneza,naod,parenteralna,kp_sistolicen,kp_dijastolicen,puls,temperatura,spo2,respiracii,tezina,seker,bolka,diureza,stolica,zabeleski')
       .eq('client_id',clientId).order('created_at',{ascending:false}).limit(LOGS_MAX+1),
 
+    // Vitals (last 25 records that have at least one vital sign)
     window._sb.from('client_logs')
       .select('created_at,kp_sistolicen,kp_dijastolicen,puls,temperatura,spo2,respiracii,tezina,seker,bolka,diureza,stolica')
       .eq('client_id',clientId).order('created_at',{ascending:false}).limit(25),
 
+    // Srodstvo
     window._sb.from('client_srodstvo')
       .select('id,ime_prezime,adresa,telefon').eq('client_id',clientId),
   ]);
 
-  _client   = clientRes.data;
-  _therapy  = therapyRes.data||[];
+  _client          = clientRes.data;
+  // Each session gets its drugs sorted by sort_order
+  _therapySessions = (therapySessionsRes.data || []).map(s => ({
+    ...s,
+    chronic_therapy_drugs: (s.chronic_therapy_drugs || [])
+      .sort((a,b) => (a.sort_order||0) - (b.sort_order||0))
+  }));
   _logs     = logsRes.data||[];
   _vitals   = (vitalsRes.data||[]).filter(v=>
     v.kp_sistolicen||v.puls||v.temperatura||v.spo2||v.respiracii||v.tezina||v.seker||v.bolka!=null||v.diureza!=null||v.stolica
@@ -292,10 +336,8 @@ window.openClientCard = async function(clientId){
   // Name
   document.getElementById('cc-name').textContent=(c.obrakanje?c.obrakanje+' ':'')+(c.ime_prezime||'');
 
-  // Badges — detailed age first, then location
-  const fl=c.floor_number||(window.roomToFloor?window.roomToFloor(c.room_number):null);
+  // Badges
   const bp=[];
-  // Detailed age from EMBG (years + months + days)
   const ageDetail=ageDetailFromEmbg(c.embg);
   if(ageDetail!==null){
     const parts=[];
@@ -308,6 +350,7 @@ window.openClientCard = async function(clientId){
     if(bp.length)bp.push('<span class="cc-dot"></span>');
     bp.push(`<span class="cc-hbadge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Соба ${c.room_number} / Кревет ${c.bed_number}</span>`);
   }
+  const fl=c.floor_number||(window.roomToFloor?window.roomToFloor(c.room_number):null);
   if(fl){bp.push('<span class="cc-dot"></span>');bp.push(`<span class="cc-hbadge">Кат ${fl}</span>`);}
   document.getElementById('cc-hero-badges').innerHTML=bp.join('');
 
@@ -377,31 +420,29 @@ function renderSocial(){
 function renderDosie(){
   if(!canSeeAll())return'<div class="cc-empty">Немате пристап до медицинското досие.</div>';
   const c=_client;
-  const active=_therapy.filter(t=>t.active);
-  const stopped=_therapy.filter(t=>!t.active);
   const diags=c.client_chronic_diagnoses||[];
+
+  // Split sessions: active (no ended_at) vs ended
+  const activeSessions  = _therapySessions.filter(s => !s.ended_at);
+  const endedSessions   = _therapySessions.filter(s =>  s.ended_at);
 
   const leftCol=`<div>
     <div class="cc-section">
       <div class="cc-section-title"><span>Витални знаци</span></div>
       ${renderVitalsWidget()}
     </div>
+
     <div class="cc-section">
       <div class="cc-section-title"><span>Хронична терапија</span></div>
-      ${!active.length?'<div class="cc-empty" style="padding:0.5rem">Нема активна терапија.</div>'
-        :`<table class="therapy-tbl"><thead><tr><th>Лек</th><th>Доза</th><th>Додадена</th><th>Статус</th></tr></thead>
-          <tbody>${active.map(t=>`<tr><td style="font-weight:700">${e(t.drug_name)}</td><td>${e(t.dosage)}</td><td>${fmtDate(t.added_at)}</td><td><span class="badge-cc badge-active">Активна</span></td></tr>`).join('')}</tbody>
-          </table>`}
-      ${stopped.length?`<details style="margin-top:0.65rem"><summary style="cursor:pointer;font-size:0.78rem;color:var(--olive);font-weight:700">Стопирана терапија (${stopped.length})</summary>
-        <table class="therapy-tbl" style="margin-top:0.5rem"><thead><tr><th>Лек</th><th>Доза</th><th>Стопирана</th></tr></thead>
-        <tbody>${stopped.map(t=>`<tr style="opacity:0.55;text-decoration:line-through"><td>${e(t.drug_name)}</td><td>${e(t.dosage)}</td><td>${fmtDate(t.stopped_at)}</td></tr>`).join('')}</tbody>
-        </table></details>`:''}
+      ${renderTherapySessions(activeSessions, endedSessions)}
     </div>
+
     <div class="cc-section">
       <div class="cc-section-title"><span>Хронични дијагнози</span></div>
       ${!diags.length?'<div class="cc-empty" style="padding:0.5rem">Нема хронични дијагнози.</div>'
         :`<div class="diag-list">${diags.map(d=>`<div class="diag-item"><span class="diag-kod">${e(d.kod)}</span><span class="diag-opis">${e(d.opis||'—')}</span></div>`).join('')}</div>`}
     </div>
+
     <div class="cc-section">
       <div class="cc-section-title"><span>Дијагноза на прием</span></div>
       ${c.priem_dijagnoza_kod?`<div style="display:flex;align-items:center;gap:0.7rem;margin-bottom:0.6rem">
@@ -435,6 +476,54 @@ function renderDosie(){
   return`<div class="dosie-layout">${leftCol}${rightCol}</div>`;
 }
 
+// ── Therapy sessions renderer ──────────────────────────────────────────
+function renderTherapySessions(active, ended) {
+  if(!active.length && !ended.length) {
+    return '<div class="cc-empty" style="padding:0.5rem">Нема внесена хронична терапија.</div>';
+  }
+
+  function sessionHtml(s) {
+    const isActive = !s.ended_at;
+    const dateRange = isActive
+      ? `<span>Од</span> ${fmtDate(s.started_at)} <span>— тековна</span>`
+      : `<span>Од</span> ${fmtDate(s.started_at)} <span>до</span> ${fmtDate(s.ended_at)}`;
+
+    const drugs = s.chronic_therapy_drugs || [];
+    const drugsHtml = drugs.length
+      ? drugs.map(d=>`
+          <div class="therapy-drug-row">
+            <div>
+              <div class="drug-name">${e(d.generic_name||'—')}</div>
+              ${d.form?`<div class="drug-form">${e(d.form)}</div>`:''}
+            </div>
+            <div class="drug-dosage">${e(d.dosage||'—')}</div>
+          </div>`).join('')
+      : `<div style="padding:0.5rem 0.85rem;font-size:0.8rem;color:var(--gray)">Нема лекови во оваа сесија.</div>`;
+
+    return `<div class="therapy-session">
+      <div class="therapy-session-hdr">
+        <span class="therapy-session-dates">${dateRange}</span>
+        <span class="therapy-session-status ${isActive?'tss-active':'tss-ended'}">${isActive?'Активна':'Завршена'}</span>
+      </div>
+      ${s.note?`<div class="therapy-session-note">${e(s.note)}</div>`:''}
+      <div class="therapy-drugs-list">${drugsHtml}</div>
+    </div>`;
+  }
+
+  let html = active.map(sessionHtml).join('');
+
+  if(ended.length) {
+    html += `<details style="margin-top:0.5rem">
+      <summary style="cursor:pointer;font-size:0.78rem;color:var(--olive);font-weight:700;padding:0.3rem 0">
+        Претходна терапија (${ended.length} сесија${ended.length===1?'':'и'})
+      </summary>
+      <div style="margin-top:0.5rem">${ended.map(sessionHtml).join('')}</div>
+    </details>`;
+  }
+
+  return html;
+}
+
 function renderAdmissionVitals(c){
   const chips=[];
   if(c.priem_kp_sistolicen&&c.priem_kp_dijastolicen)chips.push(`КП: <span>${c.priem_kp_sistolicen}/${c.priem_kp_dijastolicen} mmHg</span>`);
@@ -450,8 +539,6 @@ function renderAdmissionVitals(c){
 }
 
 // ── Vitals widget ──────────────────────────────────────────────────────
-// Parameter order: Т° → Пулс → SpO2 → КП → Респ → Тежина → Шеќер → Болка → Диуреза
-// Столица is categorical — shown in list only, not chart
 const PARAMS=[
   {key:'temperatura', label:'Т°',      unit:'°C',     color:'#d4a017', field:'temperatura'},
   {key:'puls',        label:'Пулс',    unit:'bpm',    color:'#e07a27', field:'puls'},
@@ -503,7 +590,6 @@ function renderVitalsChart(){
 }
 
 function renderVitalsList(){
-  // List shows all vitals records newest-first, up to 50
   const rows=_vitals.slice(0,50).map(v=>{
     const kp=(v.kp_sistolicen&&v.kp_dijastolicen)?`${v.kp_sistolicen}/${v.kp_dijastolicen}`:null;
     const cells=[
@@ -545,10 +631,7 @@ function drawChart(paramKey){
   const note=document.getElementById('cc-chart-note');
   const param=PARAMS.find(p=>p.key===paramKey)||PARAMS[0];
 
-  // Use up to 50 individual data points (not averaged by day), oldest→newest
   const pts50=_vitals.slice(0,50).slice().reverse();
-
-  // For KP, filter to rows with sistolicen; for others filter to rows with the field
   const relevant=pts50.filter(v=>paramKey==='kp'?v.kp_sistolicen!=null:v[param.field]!=null);
 
   const W=(wrap?wrap.offsetWidth:400)||400;
@@ -570,7 +653,6 @@ function drawChart(paramKey){
   const pL=44,pR=14,pT=18,pB=34;
   const cW=W-pL-pR, cH=H-pT-pB;
 
-  // Determine value range
   let allVals=[];
   if(paramKey==='kp'){
     relevant.forEach(v=>{
@@ -588,7 +670,6 @@ function drawChart(paramKey){
   const xS=i=>pL+(n>1?i/(n-1)*cW:cW/2);
   const yS=v=>pT+(1-(v-minV)/range)*cH;
 
-  // Grid lines
   ctx.strokeStyle='#eae7e0'; ctx.lineWidth=1;
   for(let i=0;i<=4;i++){
     const y=pT+i/4*cH;
@@ -598,7 +679,6 @@ function drawChart(paramKey){
     ctx.fillText(lv%1===0?lv:lv.toFixed(1),pL-4,y+3.5);
   }
 
-  // X-axis labels — show up to 6 evenly spaced
   ctx.fillStyle='#b0a898';ctx.font='10px Lato,sans-serif';ctx.textAlign='center';
   const labelStep=Math.max(1,Math.floor(n/6));
   relevant.forEach((v,i)=>{
@@ -608,11 +688,9 @@ function drawChart(paramKey){
   });
 
   if(paramKey==='kp'){
-    // BP: draw area fill using systolic, then dots + vertical dotted link sys↔dias
     const sysVals=relevant.map((v,i)=>({x:xS(i),y:yS(parseFloat(v.kp_sistolicen)),v:parseFloat(v.kp_sistolicen)}));
     const diaVals=relevant.map((v,i)=>({x:xS(i),y:v.kp_dijastolicen?yS(parseFloat(v.kp_dijastolicen)):null,v:v.kp_dijastolicen?parseFloat(v.kp_dijastolicen):null}));
 
-    // Area fill under systolic line
     const fi=0,li=sysVals.length-1;
     const grad=ctx.createLinearGradient(0,pT,0,H-pB);
     grad.addColorStop(0,'#e0525244');grad.addColorStop(1,'#e0525208');
@@ -621,17 +699,14 @@ function drawChart(paramKey){
     ctx.lineTo(sysVals[li].x,H-pB);ctx.lineTo(sysVals[0].x,H-pB);ctx.closePath();
     ctx.fillStyle=grad;ctx.fill();ctx.restore();
 
-    // Systolic line
     ctx.beginPath();
     sysVals.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
     ctx.strokeStyle='#e05252';ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();
 
-    // Diastolic line
     ctx.beginPath();let dStarted=false;
     diaVals.forEach(p=>{if(!p.y)return;if(!dStarted){ctx.moveTo(p.x,p.y);dStarted=true;}else ctx.lineTo(p.x,p.y);});
     ctx.strokeStyle='#e07a7a';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
 
-    // Vertical dotted lines linking sys↔dias
     relevant.forEach((v,i)=>{
       if(!v.kp_dijastolicen)return;
       const x=xS(i);
@@ -641,14 +716,12 @@ function drawChart(paramKey){
       ctx.strokeStyle='#e05252';ctx.lineWidth=1;ctx.setLineDash([2,3]);ctx.stroke();ctx.setLineDash([]);
     });
 
-    // Dots — systolic
     sysVals.forEach(p=>{
       ctx.beginPath();ctx.arc(p.x,p.y,4,0,2*Math.PI);
       ctx.fillStyle='#fff';ctx.strokeStyle='#e05252';ctx.lineWidth=2;ctx.fill();ctx.stroke();
       ctx.fillStyle='#e05252';ctx.font='bold 9px Lato,sans-serif';ctx.textAlign='center';
       ctx.fillText(p.v,p.x,p.y-8);
     });
-    // Dots — diastolic
     diaVals.forEach(p=>{
       if(!p.y)return;
       ctx.beginPath();ctx.arc(p.x,p.y,3.5,0,2*Math.PI);
@@ -658,7 +731,6 @@ function drawChart(paramKey){
     });
 
   } else {
-    // Normal param — line + area fill + dots
     const vals=relevant.map((v,i)=>({x:xS(i),y:yS(parseFloat(v[param.field])),v:parseFloat(v[param.field])}));
     const color=param.color;
 
@@ -714,7 +786,6 @@ const _TL={doctor:'Доктор',nurse:'Сестра',social:'Социјален
 const _TC={doctor:'le-type-doctor',nurse:'le-type-nurse',social:'le-type-social',fizioterapevt:'le-type-other',supervisor:'le-type-other',other:'le-type-other'};
 
 function renderLogEntry(l){
-  // Vitals in display order: Т° → Пулс → SpO2 → КП → Респ → Тежина → Шеќер → Болка → Диуреза → Столица
   const v=[];
   if(l.temperatura) v.push(`Т°: <span>${l.temperatura}°C</span>`);
   if(l.puls)        v.push(`Пулс: <span>${l.puls} bpm</span>`);
@@ -727,16 +798,12 @@ function renderLogEntry(l){
   if(l.diureza!=null)v.push(`Диуреза: <span>${l.diureza} ml</span>`);
   if(l.stolica)     v.push(`Столица: <span>${e(l.stolica)}</span>`);
   return`<div class="log-entry">
-    <!-- Header: role badge LEFT, date RIGHT -->
     <div class="le-top">
       <span class="le-type ${_TC[l.log_type||'doctor']||'le-type-other'}">${_TL[l.log_type||'doctor']||'Друго'}</span>
       <span class="le-date">${fmtDateTime(l.created_at)}</span>
     </div>
-    <!-- Diagnosis (if present) -->
     ${l.dijagnoza_kod?`<div style="margin:0.3rem 0 0.2rem"><span class="le-diag">${e(l.dijagnoza_kod)}${l.dijagnoza_opis?' — '+e(l.dijagnoza_opis):''}</span></div>`:''}
-    <!-- Vitals -->
     ${v.length?`<div class="vital-chips">${v.map(x=>`<div class="vc">${x}</div>`).join('')}</div>`:''}
-    <!-- Text fields -->
     ${l.anamneza    ?`<div class="le-field"><div class="le-fl">Анамнеза</div><div class="le-fv">${e(l.anamneza)}</div></div>`:''}
     ${l.naod        ?`<div class="le-field"><div class="le-fl">Наод</div><div class="le-fv">${e(l.naod)}</div></div>`:''}
     ${l.parenteralna?`<div class="le-field"><div class="le-fl">Парентерална</div><div class="le-fv">${e(l.parenteralna)}</div></div>`:''}
