@@ -1,11 +1,11 @@
 /**
- * client-card.js — REVAMPED v3
- * - Photo shown from profile_pic_url (set by admission.js / edit.js)
- * - Logs tab: pagination at 10, full supervizornega card rendering,
- *   accent borders per log type matching logs.html design
- * - canSeeLogType aligned: supervizornega (not supervisor)
+ * client-card.js — REVAMPED v4
+ * - Tasks tab added: shows tasks & requests linked to client
+ * - Photo shown from profile_pic_url
+ * - Logs tab: pagination at 10, full supervizornega card rendering
+ * - "Барања и задачи" section in Медицинско досие wired to Tasks tab
  * Call: openClientCard(clientId)
- * Requires: auth-guard.js (window._sb, window._username)
+ * Requires: auth-guard.js (window._sb, window._username, window._userId)
  */
 
 (function(){
@@ -32,7 +32,7 @@ const STYLE = `
 .cc-hero-pills{display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.45rem}
 .cc-pill{display:inline-flex;align-items:center;gap:0.25rem;padding:0.18rem 0.6rem;border-radius:10px;background:var(--cream);border:1px solid var(--border);font-size:0.74rem;color:var(--dark)}
 .cc-pill-lbl{font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray);margin-right:0.1rem}
-.cc-tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-top:0.85rem}
+.cc-tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-top:0.85rem;overflow-x:auto}
 .cc-tab{padding:0.65rem 1.1rem;font-family:'Lato',sans-serif;font-size:0.79rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color 0.15s,border-color 0.15s;background:none;border-top:none;border-left:none;border-right:none;white-space:nowrap}
 .cc-tab.active{color:var(--olive);border-bottom-color:var(--olive)}
 #cc-body{flex:1;overflow-y:auto;padding:1.25rem 1.5rem}
@@ -75,7 +75,7 @@ const STYLE = `
 .badge-active{background:#e6f0e6;color:#2a6e2a;border:1px solid #b5d5b5}
 .badge-stopped{background:#f0ece2;color:#8a7a55}
 
-/* ── Therapy session cards ── */
+/* Therapy session cards */
 .therapy-session{border:1px solid var(--border);border-radius:7px;overflow:hidden;margin-bottom:0.65rem}
 .therapy-session:last-child{margin-bottom:0}
 .therapy-session-hdr{display:flex;align-items:center;justify-content:space-between;padding:0.55rem 0.85rem;background:var(--cream);border-bottom:1px solid var(--border);gap:0.5rem;flex-wrap:wrap}
@@ -91,15 +91,19 @@ const STYLE = `
 .drug-name{font-weight:700;color:var(--dark)}
 .drug-form{font-size:0.75rem;color:var(--gray)}
 .drug-dosage{font-size:0.8rem;color:var(--olive);font-weight:700;white-space:nowrap}
-
 .diag-list{display:flex;flex-direction:column;gap:0.35rem}
 .diag-item{display:flex;align-items:center;gap:0.65rem;padding:0.45rem 0.7rem;background:var(--cream);border:1px solid var(--border);border-radius:4px}
 .diag-kod{font-family:monospace;font-size:0.8rem;font-weight:700;color:var(--olive);flex-shrink:0}
 .diag-opis{font-size:0.83rem}
-.request-box{background:var(--cream);border:1px dashed var(--border);border-radius:8px;padding:1.25rem 1rem;text-align:center;color:var(--gray);font-size:0.81rem;margin-bottom:1.25rem}
-.request-box svg{opacity:0.25;margin-bottom:0.5rem;display:block;margin-inline:auto}
 
-/* ── Logs tab ── */
+/* Dosie tasks mini link */
+.tasks-mini-link{display:flex;align-items:center;justify-content:space-between;padding:0.65rem 0.85rem;background:#f0f4e8;border:1px solid #c5d88a;border-radius:8px;cursor:pointer;transition:background .14s}
+.tasks-mini-link:hover{background:#e6efce}
+.tasks-mini-left{display:flex;align-items:center;gap:0.55rem;font-size:0.83rem;color:#4a6a10;font-weight:600}
+.tasks-mini-count{font-size:0.72rem;background:#4a6a10;color:#fff;border-radius:20px;padding:0.1rem 0.5rem;font-weight:700}
+.tasks-mini-arrow{font-size:0.8rem;color:#4a6a10;opacity:0.7}
+
+/* Logs tab */
 .logs-toolbar-cc{display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;flex-wrap:wrap}
 .logs-month-sel{padding:0.38rem 0.7rem;border:1px solid var(--border);border-radius:6px;font-family:'Lato',sans-serif;font-size:0.82rem;background:#fff;color:var(--dark);cursor:pointer;outline:none}
 .logs-type-chips{display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.85rem}
@@ -113,20 +117,14 @@ const STYLE = `
 .ltchip-fizio{background:#fdf0e0;color:#c07028}.ltchip-fizio.active,.ltchip-fizio:hover{border-color:#c07028}
 .ltchip-sup{background:#fce8f0;color:#b03060}.ltchip-sup.active,.ltchip-sup:hover{border-color:#b03060}
 
-/* ── Log entry card (accent border, matches logs.html) ── */
-.log-entry{
-  background:#fff;border:1px solid var(--border);border-radius:7px;
-  padding:0.85rem 1rem 0.85rem 1.1rem;
-  border-left:3px solid var(--le-accent,var(--border));
-  margin-bottom:0.6rem;transition:box-shadow 0.13s;
-}
+/* Log entry card */
+.log-entry{background:#fff;border:1px solid var(--border);border-radius:7px;padding:0.85rem 1rem 0.85rem 1.1rem;border-left:3px solid var(--le-accent,var(--border));margin-bottom:0.6rem;transition:box-shadow 0.13s}
 .log-entry:hover{box-shadow:0 2px 8px rgba(0,0,0,0.07)}
 .log-entry[data-type="doctor"]        {--le-accent:#2e4a8a}
 .log-entry[data-type="nurse"]         {--le-accent:#6a3a8a}
 .log-entry[data-type="social"]        {--le-accent:#3a6e3a}
 .log-entry[data-type="fizioterapevt"] {--le-accent:#c07028}
 .log-entry[data-type="supervizornega"]{--le-accent:#b03060}
-
 .le-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;flex-wrap:wrap;gap:0.3rem}
 .le-left{display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap}
 .le-diag{font-family:monospace;font-size:0.81rem;font-weight:700;color:var(--olive)}
@@ -144,8 +142,6 @@ const STYLE = `
 .le-fv{font-size:0.82rem;color:var(--dark);line-height:1.5}
 .vital-chips{display:flex;flex-wrap:wrap;gap:0.35rem 0.9rem;padding:0.5rem 0.7rem;background:var(--cream);border-radius:5px;border:1px solid var(--border);margin:0.35rem 0}
 .vc{font-size:0.8rem;color:var(--dark)}.vc span{font-weight:700}
-
-/* Supervisor sections inside log entry */
 .le-sup-section{margin-top:0.5rem}
 .le-sup-title{font-size:0.61rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray);display:flex;align-items:center;gap:0.4rem;margin-bottom:0.3rem}
 .le-sup-title::after{content:'';flex:1;height:1px;background:var(--border)}
@@ -161,13 +157,46 @@ const STYLE = `
 .cc-page-btn.active{background:var(--dark);color:#fff;border-color:var(--dark);font-weight:700}
 .cc-page-btn:disabled{opacity:0.35;cursor:default}
 .cc-page-info{font-size:0.72rem;color:var(--gray);padding:0 0.25rem}
-
 .cc-btn-outline{display:block;width:100%;padding:0.55rem;background:var(--cream);border:1px solid var(--border);border-radius:6px;font-family:'Lato',sans-serif;font-size:0.81rem;font-weight:700;color:var(--gray);cursor:pointer;text-align:center;transition:background 0.15s;margin-top:0.5rem}
 .cc-btn-outline:hover{background:var(--cream2,#f0ece2)}
 .cc-btn-olive{background:var(--olive)!important;color:#fff!important;border-color:var(--olive)!important}
 .cc-btn-olive:hover{opacity:0.88}
 .srodstvo-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;padding:0.6rem 0.8rem;background:var(--cream);border:1px solid var(--border);border-radius:5px;font-size:0.84rem;margin-bottom:0.4rem}
-.overflow-note{font-size:0.77rem;color:var(--gray);text-align:center;padding:0.5rem;background:var(--cream);border-radius:4px;margin-top:0.5rem;border:1px solid var(--border)}
+
+/* ── Tasks tab styles ── */
+.cct-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem}
+.cct-btn-group{display:flex;gap:.4rem;flex-wrap:wrap}
+.cct-btn{display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .85rem;border-radius:5px;font-family:'Lato',sans-serif;font-size:.74rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;border:none;transition:all .14s;white-space:nowrap}
+.cct-btn-task{background:var(--dark);color:#fff}
+.cct-btn-task:hover{background:var(--olive)}
+.cct-btn-req{background:#2e4a8a;color:#fff}
+.cct-btn-req:hover{background:#1a3060}
+.cct-empty{text-align:center;padding:2rem 1rem;color:var(--gray);font-size:.84rem}
+.cct-feed{display:flex;flex-direction:column;gap:.5rem}
+.cct-card{background:#fff;border:1px solid var(--border);border-radius:7px;padding:.75rem .95rem .75rem 1.05rem;border-left:3px solid var(--cct-accent,var(--border));display:flex;align-items:flex-start;justify-content:space-between;gap:.65rem;transition:box-shadow .13s}
+.cct-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.cct-card.ct-task{--cct-accent:var(--olive)}
+.cct-card.ct-request{--cct-accent:#2e4a8a}
+.cct-card.ct-completed{--cct-accent:#81c784;opacity:.8}
+.cct-card.ct-rejected{--cct-accent:#ef5350;opacity:.75}
+.cct-card.ct-overdue{--cct-accent:#c0392b}
+.cct-card-main{flex:1;min-width:0}
+.cct-top{display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem;flex-wrap:wrap}
+.cct-type-pill{font-size:.62rem;font-weight:700;padding:.08rem .4rem;border-radius:8px;letter-spacing:.05em;text-transform:uppercase;display:inline-flex;align-items:center;gap:.25rem}
+.ctp-task{background:#f0f4e8;color:#4a6a10}
+.ctp-req{background:#e8ecf5;color:#2e4a8a}
+.cct-title{font-weight:700;font-size:.84rem;color:var(--dark);line-height:1.35;margin-bottom:.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cct-meta{display:flex;align-items:center;flex-wrap:wrap;gap:.3rem;font-size:.68rem;color:var(--gray)}
+.cct-st{display:inline-flex;align-items:center;gap:.2rem;padding:.07rem .4rem;border-radius:8px;font-size:.63rem;font-weight:700}
+.cs-pending{background:#fff3e0;color:#e65100}
+.cs-inprogress{background:#e3f2fd;color:#1565c0}
+.cs-completed{background:#e8f5e9;color:#2e7d32}
+.cs-rejected{background:#fce4ec;color:#c62828}
+.cct-due.overdue{color:#c0392b;font-weight:700}
+.cct-view-btn{flex-shrink:0;padding:.38rem .75rem;border:1px solid var(--border);border-radius:5px;font-family:'Lato',sans-serif;font-size:.73rem;font-weight:700;color:var(--gray);background:#fff;cursor:pointer;transition:all .14s;white-space:nowrap}
+.cct-view-btn:hover{border-color:var(--olive);color:var(--olive)}
+.cct-section-label{font-size:.63rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gray);margin:1rem 0 .45rem;display:flex;align-items:center;gap:.5rem}
+.cct-section-label::after{content:'';flex:1;height:1px;background:var(--border)}
 </style>`;
 
 // ── DOM ────────────────────────────────────────────────────────────────
@@ -195,6 +224,7 @@ function injectDOM(){
           <button class="cc-tab" data-tab="social">Социјално досие</button>
           <button class="cc-tab active" data-tab="dosie">Медицинско досие</button>
           <button class="cc-tab" data-tab="logs">Записи</button>
+          <button class="cc-tab" data-tab="tasks">Задачи</button>
           <button class="cc-tab" data-tab="info">Лични податоци</button>
         </div>
       </div>
@@ -223,7 +253,8 @@ let _logsPage=1;
 const LOGS_PAGE_SIZE=10;
 let _vitalsView='chart';
 let _activeParam='puls';
-const LOGS_FETCH_MAX=300; // fetch up to 300, paginate client-side
+const LOGS_FETCH_MAX=300;
+let _currentClientId=null;
 
 // ── Helpers ────────────────────────────────────────────────────────────
 function e(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -274,9 +305,24 @@ function canSeeLogType(logType){
   return isPrivileged();
 }
 
+function getMyRole(){
+  const u=(window._username||'').toLowerCase();
+  if(u.startsWith('doktor'))             return 'doktor';
+  if(u.startsWith('fizioterapevt'))      return 'fizioterapevt';
+  if(u.startsWith('glavnasestra'))       return 'glavna_sestra';
+  if(u.startsWith('menadzer'))           return 'menadzer';
+  if(u.startsWith('socijalonrabotnik'))  return 'socijalen';
+  if(u.startsWith('supervizornega'))     return 'supervizor';
+  return 'other';
+}
+
+const CAN_CREATE_REQUEST_ROLES=['menadzer','glavna_sestra','doktor','medicinska_sestra'];
+
 // ── Open ────────────────────────────────────────────────────────────────
 window.openClientCard = async function(clientId){
   injectDOM();
+  _currentClientId=clientId;
+  window._ccCurrentClientId=clientId;
   _logsMonth=null; _logsTypeFilter='all'; _logsPage=1;
   _vitalsView='chart'; _activeParam='puls';
   document.getElementById('cc-body').innerHTML='<div class="cc-empty">Се вчитува…</div>';
@@ -291,7 +337,6 @@ window.openClientCard = async function(clientId){
   document.body.style.overflow='hidden';
 
   const [clientRes, therapySessionsRes, logsRes, vitalsRes, srodRes] = await Promise.all([
-
     window._sb.from('clients').select(`
       id,ime_prezime,obrakanje,maticen_broj,embg,licna_karta_broj,
       adresa,telefon,floor_number,room_number,bed_number,
@@ -310,8 +355,6 @@ window.openClientCard = async function(clientId){
       .select(`id,started_at,ended_at,note,created_at,chronic_therapy_drugs(id,generic_name,form,dosage,sort_order)`)
       .eq('client_id',clientId).order('started_at',{ascending:false}),
 
-    // Fetch all fields needed for full log cards including supervisor fields
-    // NOTE: column list must exactly match client_logs schema — no 'plan' column exists
     window._sb.from('client_logs')
       .select(`id,created_at,log_type,created_by,
         dijagnoza_kod,dijagnoza_opis,anamneza,naod,parenteralna,zabeleski,
@@ -330,12 +373,11 @@ window.openClientCard = async function(clientId){
 
   _client = clientRes.data;
 
-  // Log any query errors to console so they're visible in DevTools
-  if(clientRes.error)       console.error('[client-card] client query:',       clientRes.error);
-  if(therapySessionsRes.error) console.error('[client-card] therapy query:',  therapySessionsRes.error);
-  if(logsRes.error)         console.error('[client-card] logs query:',         logsRes.error);
-  if(vitalsRes.error)       console.error('[client-card] vitals query:',       vitalsRes.error);
-  if(srodRes.error)         console.error('[client-card] srodstvo query:',     srodRes.error);
+  if(clientRes.error)       console.error('[client-card] client:',      clientRes.error);
+  if(therapySessionsRes.error)console.error('[client-card] therapy:',  therapySessionsRes.error);
+  if(logsRes.error)         console.error('[client-card] logs:',        logsRes.error);
+  if(vitalsRes.error)       console.error('[client-card] vitals:',      vitalsRes.error);
+  if(srodRes.error)         console.error('[client-card] srodstvo:',    srodRes.error);
 
   _therapySessions = (therapySessionsRes.data||[]).map(s=>({
     ...s,
@@ -354,19 +396,15 @@ window.openClientCard = async function(clientId){
 
   const c=_client;
 
-  // ── Avatar: show photo if profile_pic_url is set ──
   const avEl=document.getElementById('cc-avatar');
   if(c.profile_pic_url){
     const img=document.createElement('img');
-    img.src=c.profile_pic_url;
-    img.alt='Профилна слика';
+    img.src=c.profile_pic_url; img.alt='Профилна слика';
     img.style.cssText='width:100%;height:100%;object-fit:cover';
     img.onerror=()=>{ avEl.innerHTML=''; avEl.textContent=(c.ime_prezime||'?').charAt(0).toUpperCase(); };
-    avEl.innerHTML='';
-    avEl.appendChild(img);
+    avEl.innerHTML=''; avEl.appendChild(img);
   }else{
-    avEl.innerHTML='';
-    avEl.textContent=(c.ime_prezime||'?').charAt(0).toUpperCase();
+    avEl.innerHTML=''; avEl.textContent=(c.ime_prezime||'?').charAt(0).toUpperCase();
   }
 
   document.getElementById('cc-name').textContent=(c.obrakanje?c.obrakanje+' ':'')+(c.ime_prezime||'');
@@ -387,8 +425,7 @@ window.openClientCard = async function(clientId){
   const fl=c.floor_number||(window.roomToFloor?window.roomToFloor(c.room_number):null);
   if(fl){bp.push('<span class="cc-dot"></span>');bp.push(`<span class="cc-hbadge">Кат ${fl}</span>`);}
 
-  // Status badge
-  const cst = c.client_status || c.status || 'active';
+  const cst=c.client_status||c.status||'active';
   if(cst==='odjavен'){bp.push('<span class="cc-dot"></span><span class="cc-hbadge" style="background:#e8ecf5;color:#2e4a8a;border-color:#c0ccdf">Одјавен</span>');}
   else if(cst==='pocinat'){bp.push('<span class="cc-dot"></span><span class="cc-hbadge" style="background:#f5e8e8;color:#8a3a3a;border-color:#dfc0c0">Починат</span>');}
   else{bp.push('<span class="cc-dot"></span><span class="cc-hbadge green">Активен</span>');}
@@ -417,6 +454,7 @@ function renderTab(tab){
   else if(tab==='dosie') {body.innerHTML=renderDosie();scheduleChart();}
   else if(tab==='logs')  {body.innerHTML=renderLogs();bindLogsControls();}
   else if(tab==='info')  body.innerHTML=renderInfo();
+  else if(tab==='tasks') {body.innerHTML='';renderTasksTab(body);}
 }
 window._ccTab=renderTab;
 
@@ -450,8 +488,8 @@ function renderDosie(){
   if(!canSeeAll())return'<div class="cc-empty">Немате пристап до медицинското досие.</div>';
   const c=_client;
   const diags=c.client_chronic_diagnoses||[];
-  const activeSessions  = _therapySessions.filter(s=>!s.ended_at);
-  const endedSessions   = _therapySessions.filter(s=> s.ended_at);
+  const activeSessions=_therapySessions.filter(s=>!s.ended_at);
+  const endedSessions =_therapySessions.filter(s=> s.ended_at);
 
   const leftCol=`<div>
     <div class="cc-section">
@@ -484,10 +522,13 @@ function renderDosie(){
   const miniLogs=_logs.filter(l=>canSeeLogType(l.log_type||'doctor')).slice(0,3);
   const rightCol=`<div>
     <div class="cc-section">
-      <div class="cc-section-title"><span>Барања и задачи</span></div>
-      <div class="request-box">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M8 8h8M8 16h5"/></svg>
-        Поврзано со модулот за задачи — наскоро
+      <div class="cc-section-title"><span>Задачи и барања</span></div>
+      <div class="tasks-mini-link" onclick="document.querySelectorAll('.cc-tab').forEach(b=>b.classList.remove('active'));document.querySelector('.cc-tab[data-tab=\\'tasks\\']').classList.add('active');window._ccTab('tasks')">
+        <div class="tasks-mini-left">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9 12 11 14 15 10"/></svg>
+          Преглед на задачи и барања
+        </div>
+        <span class="tasks-mini-arrow">→</span>
       </div>
     </div>
     <div class="cc-section">
@@ -527,7 +568,7 @@ function renderTherapySessions(active, ended){
   let html='';
   if(active.length) html+=active.map(sessionHtml).join('');
   if(ended.length){
-    if(active.length) html+=`<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray);margin:0.75rem 0 0.4rem">Претходни сесии</div>`;
+    if(active.length)html+=`<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray);margin:0.75rem 0 0.4rem">Претходни сесии</div>`;
     html+=ended.map(sessionHtml).join('');
   }
   return html;
@@ -539,7 +580,7 @@ function renderAdmissionVitals(c){
   if(c.priem_temperatura) v.push(`Т°: <span>${c.priem_temperatura}°C</span>`);
   if(c.priem_puls)         v.push(`Пулс: <span>${c.priem_puls} bpm</span>`);
   if(c.priem_spo2)         v.push(`SpO2: <span>${c.priem_spo2}%</span>`);
-  if(c.priem_kp_sistolicen&&c.priem_kp_dijastolicen) v.push(`КП: <span>${c.priem_kp_sistolicen}/${c.priem_kp_dijastolicen}</span>`);
+  if(c.priem_kp_sistolicen&&c.priem_kp_dijastolicen)v.push(`КП: <span>${c.priem_kp_sistolicen}/${c.priem_kp_dijastolicen}</span>`);
   if(c.priem_respiracii)   v.push(`Респ: <span>${c.priem_respiracii}/мин</span>`);
   if(c.priem_tezina)       v.push(`Тежина: <span>${c.priem_tezina} kg</span>`);
   if(c.priem_seker)        v.push(`Шеќер: <span>${c.priem_seker} mmol/L</span>`);
@@ -550,19 +591,13 @@ function renderAdmissionVitals(c){
 // ══════════════════════════════════════════════════════════════════════
 // Записи
 // ══════════════════════════════════════════════════════════════════════
-const _TL={
-  doctor:'Доктор',nurse:'Сестра',social:'Социјален',
-  fizioterapevt:'Физиотерапевт',supervizornega:'Супервизор за нега',other:'Друго'
-};
-const _TC={
-  doctor:'lt-doctor',nurse:'lt-nurse',social:'lt-social',
-  fizioterapevt:'lt-fizio',supervizornega:'lt-supervizornega',other:'lt-other'
-};
+const _TL={doctor:'Доктор',nurse:'Сестра',social:'Социјален',fizioterapevt:'Физиотерапевт',supervizornega:'Супервизор за нега',other:'Друго'};
+const _TC={doctor:'lt-doctor',nurse:'lt-nurse',social:'lt-social',fizioterapevt:'lt-fizio',supervizornega:'lt-supervizornega',other:'lt-other'};
 
 function getFilteredLogs(){
   let logs=_logs.filter(l=>canSeeLogType(l.log_type||'doctor'));
-  if(_logsMonth) logs=logs.filter(l=>l.created_at.startsWith(_logsMonth));
-  if(_logsTypeFilter!=='all') logs=logs.filter(l=>(l.log_type||'doctor')===_logsTypeFilter);
+  if(_logsMonth)logs=logs.filter(l=>l.created_at.startsWith(_logsMonth));
+  if(_logsTypeFilter!=='all')logs=logs.filter(l=>(l.log_type||'doctor')===_logsTypeFilter);
   return logs;
 }
 
@@ -573,7 +608,6 @@ function renderLogs(){
     return`<option value="${m}" ${_logsMonth===m?'selected':''}>${lbl}</option>`;
   }).join('');
 
-  // Count per type (of all permission-visible logs, before type filter)
   const allVisible=_logs.filter(l=>canSeeLogType(l.log_type||'doctor'));
   const typeCount={};
   allVisible.forEach(l=>{const t=l.log_type||'doctor';typeCount[t]=(typeCount[t]||0)+1;});
@@ -583,7 +617,6 @@ function renderLogs(){
   if(_logsPage>totalPages)_logsPage=totalPages;
   const slice=filtered.slice((_logsPage-1)*LOGS_PAGE_SIZE,_logsPage*LOGS_PAGE_SIZE);
 
-  // Type chips
   const typeChips=[
     {type:'all',label:'Сите',cls:'ltchip-all'},
     {type:'doctor',label:'Доктор',cls:'ltchip-doctor',dot:'#2e4a8a'},
@@ -591,10 +624,8 @@ function renderLogs(){
     {type:'social',label:'Социјален',cls:'ltchip-social',dot:'#3a6e3a'},
     {type:'fizioterapevt',label:'Физио',cls:'ltchip-fizio',dot:'#c07028'},
     {type:'supervizornega',label:'Супервизор',cls:'ltchip-sup',dot:'#b03060'},
-  ].filter(ch=>{
-    if(ch.type==='all')return true;
-    return typeCount[ch.type]>0;
-  }).map(ch=>{
+  ].filter(ch=>ch.type==='all'||typeCount[ch.type]>0)
+   .map(ch=>{
     const dotHtml=ch.dot?`<span class="ltchip-dot" style="background:${ch.dot}"></span>`:'';
     const cnt=ch.type==='all'?allVisible.length:(typeCount[ch.type]||0);
     return`<span class="ltchip ${ch.cls} ${_logsTypeFilter===ch.type?'active':''}" data-type="${ch.type}">${dotHtml}${ch.label} <span style="opacity:0.65;font-weight:400">${cnt}</span></span>`;
@@ -615,7 +646,7 @@ function renderLogs(){
     ${totalPages>1?renderLogsPagination(totalPages,filtered.length):''}`;
 }
 
-function renderLogsPagination(totalPages, total){
+function renderLogsPagination(totalPages,total){
   let btns=`<button class="cc-page-btn" id="cc-pg-prev" ${_logsPage===1?'disabled':''}>‹</button>`;
   const pages=new Set([1,totalPages,_logsPage,_logsPage-1,_logsPage+1].filter(p=>p>=1&&p<=totalPages));
   let prev=0;
@@ -625,8 +656,7 @@ function renderLogsPagination(totalPages, total){
     prev=p;
   });
   btns+=`<button class="cc-page-btn" id="cc-pg-next" ${_logsPage===totalPages?'disabled':''}>›</button>`;
-  const start=(_logsPage-1)*LOGS_PAGE_SIZE+1;
-  const end=Math.min(_logsPage*LOGS_PAGE_SIZE,total);
+  const start=(_logsPage-1)*LOGS_PAGE_SIZE+1,end=Math.min(_logsPage*LOGS_PAGE_SIZE,total);
   btns+=`<span class="cc-page-info">${start}–${end} / ${total}</span>`;
   return`<div class="cc-pagination" id="cc-logs-pagination">${btns}</div>`;
 }
@@ -634,14 +664,12 @@ function renderLogsPagination(totalPages, total){
 function bindLogsControls(){
   const sel=document.getElementById('cc-logs-month');
   if(sel){sel.addEventListener('change',()=>{_logsMonth=sel.value||null;_logsPage=1;refreshLogs();});}
-
   const chips=document.getElementById('cc-logs-type-chips');
   if(chips){chips.addEventListener('click',ev=>{
     const chip=ev.target.closest('[data-type]');
     if(!chip)return;
     _logsTypeFilter=chip.dataset.type;_logsPage=1;refreshLogs();
   });}
-
   bindPagination();
 }
 
@@ -663,16 +691,13 @@ function refreshLogs(){
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// Log entry card renderer (full, with accent border + supervisor body)
+// Log entry card renderer
 // ══════════════════════════════════════════════════════════════════════
 function renderLogEntry(l){
   const type=l.log_type||'doctor';
   const time=new Date(l.created_at).toLocaleTimeString('mk-MK',{hour:'2-digit',minute:'2-digit'});
   const dateStr=new Date(l.created_at).toLocaleDateString('mk-MK');
-
-  const smenaHtml=l.smena?`<span class="le-smena">⏰ ${e(l.smena)}</span>`:'';
-
-  // Vitals
+  const smenaHtml=l.smena?`<span class="le-smena">${e(l.smena)}</span>`:'';
   const v=[];
   if(l.temperatura) v.push(`Т°: <span>${l.temperatura}°C</span>`);
   if(l.puls)        v.push(`Пулс: <span>${l.puls} bpm</span>`);
@@ -685,12 +710,8 @@ function renderLogEntry(l){
   if(l.diureza!=null)v.push(`Диуреза: <span>${l.diureza} ml</span>`);
   if(l.stolica)     v.push(`Столица: <span>${e(l.stolica)}</span>`);
   const vitalsHtml=v.length?`<div class="vital-chips">${v.map(x=>`<div class="vc">${x}</div>`).join('')}</div>`:'';
-
-  const diagHtml=l.dijagnoza_kod
-    ?`<div style="margin:0.3rem 0 0.2rem"><span class="le-diag">${e(l.dijagnoza_kod)}${l.dijagnoza_opis?' — '+e(l.dijagnoza_opis):''}</span></div>`:'';
-
+  const diagHtml=l.dijagnoza_kod?`<div style="margin:0.3rem 0 0.2rem"><span class="le-diag">${e(l.dijagnoza_kod)}${l.dijagnoza_opis?' — '+e(l.dijagnoza_opis):''}</span></div>`:'';
   const bodyHtml=type==='supervizornega'?renderSupBody(l):renderStdBody(l);
-
   return`<div class="log-entry" data-type="${e(type)}">
     <div class="le-top">
       <div class="le-left">
@@ -705,27 +726,15 @@ function renderLogEntry(l){
   </div>`;
 }
 
-// Standard body
 function renderStdBody(l){
-  const rows=[
-    ['anamneza','Анамнеза'],['naod','Наод'],
-    ['parenteralna','Парентерална'],
-    ['zabeleski','Забелешки'],
-  ];
-  const html=rows.filter(([k])=>l[k])
-    .map(([k,lb])=>`<div class="le-field"><div class="le-fl">${lb}</div><div class="le-fv">${e(l[k])}</div></div>`)
-    .join('');
+  const rows=[['anamneza','Анамнеза'],['naod','Наод'],['parenteralna','Парентерална'],['zabeleski','Забелешки']];
+  const html=rows.filter(([k])=>l[k]).map(([k,lb])=>`<div class="le-field"><div class="le-fl">${lb}</div><div class="le-fv">${e(l[k])}</div></div>`).join('');
   return html?`<div style="margin-top:0.25rem">${html}</div>`:'';
 }
 
-// Supervisor body — parse pipe-delimited strings into grids
 function parsePipe(raw){
   if(!raw)return[];
-  return raw.split('|').map(s=>{
-    const i=s.indexOf(':');
-    if(i===-1)return{k:s.trim(),v:''};
-    return{k:s.slice(0,i).trim(),v:s.slice(i+1).trim()};
-  }).filter(p=>p.k);
+  return raw.split('|').map(s=>{const i=s.indexOf(':');if(i===-1)return{k:s.trim(),v:''};return{k:s.slice(0,i).trim(),v:s.slice(i+1).trim()};}).filter(p=>p.k);
 }
 
 function renderSupBody(l){
@@ -735,16 +744,11 @@ function renderSupBody(l){
     {title:'Мобилност',raw:l.mobilnost},
     {title:'Психосоцијално',raw:l.psihosocijalno},
   ].filter(s=>s.raw);
-
   const sectHtml=sections.map(s=>{
     const pairs=parsePipe(s.raw);
     const cells=pairs.map(p=>`<div class="le-sup-kv"><div class="k">${e(p.k)}</div><div class="v">${e(p.v)||'—'}</div></div>`).join('');
-    return`<div class="le-sup-section">
-      <div class="le-sup-title">${s.title}</div>
-      <div class="le-sup-grid">${cells}</div>
-    </div>`;
+    return`<div class="le-sup-section"><div class="le-sup-title">${s.title}</div><div class="le-sup-grid">${cells}</div></div>`;
   }).join('');
-
   const zabHtml=l.zabeleski?`<div class="le-field" style="margin-top:0.4rem"><div class="le-fl">Забелешки</div><div class="le-fv">${e(l.zabeleski)}</div></div>`:'';
   return sectHtml+zabHtml||'';
 }
@@ -785,7 +789,6 @@ function renderInfo(){
 }
 
 window.editClientData=function(clientId){
-  // Use openClientEdit from edit.js if available, otherwise fallback to redirect
   if(typeof window.openClientEdit==='function'){
     window.openClientEdit(clientId,()=>window.openClientCard(clientId));
   }else{
@@ -793,6 +796,141 @@ window.editClientData=function(clientId){
     window.location.href=`clients.html?edit=${clientId}`;
   }
 };
+
+// ══════════════════════════════════════════════════════════════════════
+// Задачи tab — inline renderer (no external file needed)
+// ══════════════════════════════════════════════════════════════════════
+async function renderTasksTab(container){
+  container.innerHTML='<div style="padding:1.5rem;text-align:center;color:var(--gray)">Се вчитува…</div>';
+  const clientId=_currentClientId;
+  const myRole=getMyRole();
+
+  const [{data:tasks},{data:requests}] = await Promise.all([
+    window._sb.from('tasks').select('*').eq('client_id',clientId).eq('archived',false).order('created_at',{ascending:false}),
+    window._sb.from('requests').select('*').eq('client_id',clientId).eq('archived',false).order('created_at',{ascending:false}),
+  ]);
+
+  const allTasks=tasks||[], allRequests=requests||[];
+  const total=allTasks.length+allRequests.length;
+
+  async function refresh(){ await renderTasksTab(document.getElementById('cc-body')); }
+
+  container.innerHTML='';
+
+  // Toolbar
+  const toolbar=document.createElement('div');
+  toolbar.className='cct-toolbar';
+  toolbar.innerHTML=`
+    <div style="font-size:.78rem;color:var(--gray)">${total} активн${total===1?'а':'и'} ставк${total===1?'а':'и'}</div>
+    <div class="cct-btn-group">
+      <button class="cct-btn cct-btn-task" id="cct-new-task-btn">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9 12 11 14 15 10"/></svg>
+        Нова задача
+      </button>
+      ${CAN_CREATE_REQUEST_ROLES.includes(myRole)?`<button class="cct-btn cct-btn-req" id="cct-new-req-btn">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m15 6 6 6-6 6"/></svg>
+        Ново барање
+      </button>`:''}
+    </div>`;
+  container.appendChild(toolbar);
+
+  toolbar.querySelector('#cct-new-task-btn').addEventListener('click',()=>{
+    if(typeof openNewTask==='function') openNewTask(refresh);
+  });
+  const reqBtn=toolbar.querySelector('#cct-new-req-btn');
+  if(reqBtn){
+    reqBtn.addEventListener('click',()=>{
+      if(typeof openNewRequest==='function') openNewRequest(refresh,clientId);
+    });
+  }
+
+  if(!total){
+    const empty=document.createElement('div');
+    empty.className='cct-empty';
+    empty.innerHTML=`<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.2;margin:0 auto .5rem;display:block"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+    Нема поврзани задачи или барања за овој корисник.`;
+    container.appendChild(empty);
+    return;
+  }
+
+  // Active items
+  const active=[
+    ...allTasks.filter(t=>t.status!=='completed').map(t=>({...t,_k:'task'})),
+    ...allRequests.filter(r=>r.status!=='completed'&&r.status!=='rejected').map(r=>({...r,_k:'request'})),
+  ].sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+
+  if(active.length){
+    const lbl=document.createElement('div');
+    lbl.className='cct-section-label';lbl.textContent='Активни';
+    container.appendChild(lbl);
+    const feed=document.createElement('div');feed.className='cct-feed';
+    active.forEach(item=>feed.appendChild(makeCctCard(item,refresh)));
+    container.appendChild(feed);
+  }
+
+  // Done items
+  const done=[
+    ...allTasks.filter(t=>t.status==='completed').map(t=>({...t,_k:'task'})),
+    ...allRequests.filter(r=>r.status==='completed'||r.status==='rejected').map(r=>({...r,_k:'request'})),
+  ].sort((a,b)=>new Date(b.completed_at||b.created_at)-new Date(a.completed_at||a.created_at));
+
+  if(done.length){
+    const lbl=document.createElement('div');
+    lbl.className='cct-section-label';lbl.textContent='Завршени';
+    container.appendChild(lbl);
+    const feed=document.createElement('div');feed.className='cct-feed';
+    done.forEach(item=>feed.appendChild(makeCctCard(item,refresh)));
+    container.appendChild(feed);
+  }
+}
+
+function makeCctCard(item,onRefresh){
+  const isTask=item._k==='task';
+  const now=new Date();
+  const isOverdue=item.due_datetime&&new Date(item.due_datetime)<now
+    &&item.status!=='completed'&&item.status!=='rejected';
+  const stMap={
+    pending:`<span class="cct-st cs-pending">На чекање</span>`,
+    in_progress:`<span class="cct-st cs-inprogress">Во тек</span>`,
+    completed:`<span class="cct-st cs-completed">Завршено</span>`,
+    rejected:`<span class="cct-st cs-rejected">Одбиено</span>`,
+  };
+  const due=item.due_datetime?new Date(item.due_datetime).toLocaleDateString('mk-MK',{day:'numeric',month:'short'}):null;
+
+  const cls=['cct-card',
+    isTask?'ct-task':'ct-request',
+    item.status==='completed'?'ct-completed':'',
+    item.status==='rejected'?'ct-rejected':'',
+    isOverdue?'ct-overdue':'',
+  ].filter(Boolean).join(' ');
+
+  const card=document.createElement('div');
+  card.className=cls;
+  card.innerHTML=`
+    <div class="cct-card-main">
+      <div class="cct-top">
+        <span class="cct-type-pill ${isTask?'ctp-task':'ctp-req'}">
+          ${isTask
+            ?`<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9 12 11 14 15 10"/></svg> Задача`
+            :`<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m15 6 6 6-6 6"/></svg> Барање`}
+        </span>
+        ${stMap[item.status]||''}
+      </div>
+      <div class="cct-title" title="${e(item.title)}">${e(item.title)}</div>
+      <div class="cct-meta">
+        ${due?`<span class="cct-due ${isOverdue?'overdue':''}"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ${due}</span>`:''}
+        ${item.priority==='urgent'?'<span style="color:#c62828;font-size:.63rem;font-weight:700">Итно</span>':''}
+        ${item.priority==='high'?'<span style="color:#e65100;font-size:.63rem">Висок</span>':''}
+      </div>
+    </div>
+    <button class="cct-view-btn">Преглед →</button>`;
+
+  card.querySelector('.cct-view-btn').addEventListener('click',ex=>{
+    ex.stopPropagation();
+    if(typeof openViewTskReq==='function') openViewTskReq({...item},item._k,onRefresh);
+  });
+  return card;
+}
 
 // ══════════════════════════════════════════════════════════════════════
 // Витали widget
@@ -810,7 +948,7 @@ function renderVitalsWidget(){
   ];
   const available=params.filter(p=>_vitals.some(v=>v[p.key]!=null));
   if(!available.length)return'<div class="cc-empty" style="padding:0.5rem">Нема доволно витални податоци.</div>';
-  if(!available.find(p=>p.key===_activeParam)) _activeParam=available[0].key;
+  if(!available.find(p=>p.key===_activeParam))_activeParam=available[0].key;
 
   if(_vitalsView==='chart'){
     const pillsHtml=available.map(p=>`<span class="vpill ${p.key===_activeParam?'active':''}" data-vparam="${p.key}">${p.label}</span>`).join('');
@@ -825,7 +963,7 @@ function renderVitalsWidget(){
         <div class="chart-note" id="cc-chart-note"></div>
       </div>
     </div>`;
-  } else {
+  }else{
     const hdr=`<div class="vl-row hdr"><div class="vl-cell date">Датум</div>${available.map(p=>`<div class="vl-cell">${p.label}</div>`).join('')}</div>`;
     const rows=_vitals.map(v=>`<div class="vl-row">
       <div class="vl-cell date">${fmtDate(v.created_at)}</div>
@@ -842,10 +980,7 @@ function renderVitalsWidget(){
 }
 
 function scheduleChart(){
-  setTimeout(()=>{
-    bindVitalsControls();
-    if(_vitalsView==='chart') drawChart();
-  },50);
+  setTimeout(()=>{bindVitalsControls();if(_vitalsView==='chart')drawChart();},50);
 }
 
 function bindVitalsControls(){
@@ -874,44 +1009,34 @@ function drawChart(){
   ];
   const param=params.find(p=>p.key===_activeParam)||params[0];
   const pts=_vitals.filter(v=>v[param.key]!=null).map(v=>({
-    x:new Date(v.created_at).getTime(),v:parseFloat(v[param.key]),
-    lbl:fmtDate(v.created_at)
+    x:new Date(v.created_at).getTime(),v:parseFloat(v[param.key]),lbl:fmtDate(v.created_at)
   })).reverse();
   if(!pts.length)return;
   const wrap=canvas.parentElement;
-  canvas.width=wrap.offsetWidth||320;
-  canvas.height=wrap.offsetHeight||155;
+  canvas.width=wrap.offsetWidth||320;canvas.height=wrap.offsetHeight||155;
   const ctx=canvas.getContext('2d');
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const pad={t:20,r:12,b:30,l:38};
-  const W=canvas.width-pad.l-pad.r;
-  const H=canvas.height-pad.t-pad.b;
+  const W=canvas.width-pad.l-pad.r,H=canvas.height-pad.t-pad.b;
   const vals=pts.map(p=>p.v);
-  const mn=Math.min(...vals),mx=Math.max(...vals);
-  const range=mx-mn||1;
+  const mn=Math.min(...vals),mx=Math.max(...vals),range=mx-mn||1;
   function cx(i){return pad.l+(i/(pts.length-1||1))*W;}
   function cy(v){return pad.t+H-(((v-mn)/range)*H);}
-  // Grid
   ctx.strokeStyle='#e8e4de';ctx.lineWidth=1;
   for(let i=0;i<=4;i++){
-    const y=pad.t+(H/4)*i;
-    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+W,y);ctx.stroke();
-    const val=mx-(range/4)*i;
-    ctx.fillStyle='#9a968e';ctx.font='10px Lato,sans-serif';ctx.textAlign='right';
+    const y=pad.t+(H/4)*i;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+W,y);ctx.stroke();
+    const val=mx-(range/4)*i;ctx.fillStyle='#9a968e';ctx.font='10px Lato,sans-serif';ctx.textAlign='right';
     ctx.fillText(val%1===0?val:val.toFixed(1),pad.l-4,y+4);
   }
-  // Area fill
   if(pts.length>1){
     ctx.beginPath();ctx.moveTo(cx(0),cy(pts[0].v));
     pts.forEach((p,i)=>{if(i>0)ctx.lineTo(cx(i),cy(p.v));});
     ctx.lineTo(cx(pts.length-1),pad.t+H);ctx.lineTo(cx(0),pad.t+H);ctx.closePath();
     ctx.fillStyle=param.color+'22';ctx.fill();
   }
-  // Line
   ctx.beginPath();ctx.strokeStyle=param.color;ctx.lineWidth=2;ctx.lineJoin='round';
   pts.forEach((p,i)=>{if(i===0)ctx.moveTo(cx(0),cy(p.v));else ctx.lineTo(cx(i),cy(p.v));});
   ctx.stroke();
-  // Dots + labels
   pts.forEach((p,i)=>{
     ctx.beginPath();ctx.arc(cx(i),cy(p.v),3.5,0,Math.PI*2);
     ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle=param.color;ctx.lineWidth=2;ctx.stroke();
@@ -920,9 +1045,8 @@ function drawChart(){
       ctx.fillText(p.v%1===0?p.v:parseFloat(p.v).toFixed(1),cx(i),cy(p.v)-9);
     }
   });
-  // X axis labels
   const noteEl=document.getElementById('cc-chart-note');
-  if(noteEl&&pts.length){noteEl.textContent=`${pts[0].lbl} – ${pts[pts.length-1].lbl}`;}
+  if(noteEl&&pts.length)noteEl.textContent=`${pts[0].lbl} – ${pts[pts.length-1].lbl}`;
 }
 
 })();
