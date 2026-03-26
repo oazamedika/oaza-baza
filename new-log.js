@@ -611,10 +611,6 @@
   window.nlSave = async function () {
     clearErr();
     if (!_client) { setErr('Нема избран корисник.'); return; }
-    if (_client.client_status !== 'active') {
-    alert('Не може да се додаде запис за одјавен или починат корисник.');
-    return;
-  }
 
     const nurse     = isNurse();
     const caregiver = isCaregiver();
