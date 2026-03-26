@@ -18,7 +18,7 @@ const STYLE = `
 #cc-modal{background:#fff;border-radius:14px;width:100%;max-width:1060px;max-height:95vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,0.26);overflow:hidden}
 #cc-header{padding:1.25rem 1.5rem 0;background:#fff;flex-shrink:0}
 .cc-hero{display:flex;align-items:flex-start;gap:1.1rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
-.cc-avatar{width:60px;height:60px;border-radius:50%;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;flex-shrink:0;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.12)}
+.cc-avatar{width:88px;height:88px;border-radius:50%;background:var(--olive);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;flex-shrink:0;overflow:hidden;box-shadow:0 3px 12px rgba(0,0,0,0.16)}
 .cc-avatar img{width:100%;height:100%;object-fit:cover}
 .cc-hero-info{flex:1;min-width:0}
 .cc-hero-row1{display:flex;align-items:center;justify-content:space-between;gap:0.75rem}
@@ -311,9 +311,10 @@ window.openClientCard = async function(clientId){
       .eq('client_id',clientId).order('started_at',{ascending:false}),
 
     // Fetch all fields needed for full log cards including supervisor fields
+    // NOTE: column list must exactly match client_logs schema — no 'plan' column exists
     window._sb.from('client_logs')
       .select(`id,created_at,log_type,created_by,
-        dijagnoza_kod,dijagnoza_opis,anamneza,naod,parenteralna,plan,zabeleski,
+        dijagnoza_kod,dijagnoza_opis,anamneza,naod,parenteralna,zabeleski,
         kp_sistolicen,kp_dijastolicen,puls,temperatura,spo2,respiracii,
         tezina,seker,bolka,diureza,stolica,
         smena,higijenska_nega,ishrana,mobilnost,psihosocijalno`)
@@ -328,6 +329,14 @@ window.openClientCard = async function(clientId){
   ]);
 
   _client = clientRes.data;
+
+  // Log any query errors to console so they're visible in DevTools
+  if(clientRes.error)       console.error('[client-card] client query:',       clientRes.error);
+  if(therapySessionsRes.error) console.error('[client-card] therapy query:',  therapySessionsRes.error);
+  if(logsRes.error)         console.error('[client-card] logs query:',         logsRes.error);
+  if(vitalsRes.error)       console.error('[client-card] vitals query:',       vitalsRes.error);
+  if(srodRes.error)         console.error('[client-card] srodstvo query:',     srodRes.error);
+
   _therapySessions = (therapySessionsRes.data||[]).map(s=>({
     ...s,
     chronic_therapy_drugs:(s.chronic_therapy_drugs||[]).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0))
@@ -348,8 +357,15 @@ window.openClientCard = async function(clientId){
   // ── Avatar: show photo if profile_pic_url is set ──
   const avEl=document.getElementById('cc-avatar');
   if(c.profile_pic_url){
-    avEl.innerHTML=`<img src="${e(c.profile_pic_url)}" alt="Профилна слика" onerror="this.parentNode.innerHTML='${e((c.ime_prezime||'?').charAt(0).toUpperCase())}'"/>`;
+    const img=document.createElement('img');
+    img.src=c.profile_pic_url;
+    img.alt='Профилна слика';
+    img.style.cssText='width:100%;height:100%;object-fit:cover';
+    img.onerror=()=>{ avEl.innerHTML=''; avEl.textContent=(c.ime_prezime||'?').charAt(0).toUpperCase(); };
+    avEl.innerHTML='';
+    avEl.appendChild(img);
   }else{
+    avEl.innerHTML='';
     avEl.textContent=(c.ime_prezime||'?').charAt(0).toUpperCase();
   }
 
@@ -693,7 +709,7 @@ function renderLogEntry(l){
 function renderStdBody(l){
   const rows=[
     ['anamneza','Анамнеза'],['naod','Наод'],
-    ['parenteralna','Парентерална'],['plan','План / Терапија'],
+    ['parenteralna','Парентерална'],
     ['zabeleski','Забелешки'],
   ];
   const html=rows.filter(([k])=>l[k])
