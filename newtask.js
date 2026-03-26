@@ -1,8 +1,11 @@
 /**
  * newtask.js — New Task modal
- * Opens a modal to create a personal task (optionally linked to a client).
- * Call: openNewTask(onSaved?)
- * Requires: window._sb, window._username, window._userId (from auth-guard.js)
+ * Personal tasks — owner_id is always set to window._userId (auth.uid()).
+ * The RLS policy for tasks_insert checks: owner_id = auth.uid()
+ * so window._userId MUST equal the Supabase session uid.
+ *
+ * Call: openNewTask(onSaved?, prefillClientId?)
+ * Requires: window._sb, window._username, window._userId
  */
 (function () {
 
@@ -15,10 +18,10 @@ const CATEGORIES = [
   { v: 'other',    l: 'Друго' },
 ];
 const PRIORITIES = [
-  { v: 'low',    l: 'Ниски',   cls: 'pr-low' },
-  { v: 'normal', l: 'Нормален',cls: 'pr-normal' },
-  { v: 'high',   l: 'Висок',   cls: 'pr-high' },
-  { v: 'urgent', l: 'Итно',    cls: 'pr-urgent' },
+  { v: 'low',    l: 'Ниски',    cls: 'pr-low' },
+  { v: 'normal', l: 'Нормален', cls: 'pr-normal' },
+  { v: 'high',   l: 'Висок',    cls: 'pr-high' },
+  { v: 'urgent', l: 'Итно',     cls: 'pr-urgent' },
 ];
 
 function injectStyles() {
@@ -49,23 +52,22 @@ function injectStyles() {
 .pr-btn.selected.pr-high{background:#fff3e0;color:#e65100;border-color:#ffa726}
 .pr-btn.selected.pr-urgent{background:#fce4ec;color:#c62828;border-color:#ef5350}
 .pr-btn:not(.selected):hover{border-color:var(--dark)}
-.nt-client-search{position:relative}
-.nt-client-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:10;max-height:180px;overflow-y:auto}
-.nt-client-opt{padding:.5rem .75rem;font-size:.84rem;cursor:pointer;display:flex;align-items:center;gap:.6rem;transition:background .1s}
-.nt-client-opt:hover{background:var(--cream)}
-.nt-client-opt .mb{font-family:monospace;font-size:.75rem;color:var(--olive);font-weight:700}
-.nt-client-clear{position:absolute;right:.6rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--gray);font-size:1rem;line-height:1;padding:0}
-.nt-client-clear:hover{color:var(--dark)}
-.nt-selected-client{display:flex;align-items:center;gap:.5rem;padding:.45rem .75rem;background:var(--cream);border:1px solid var(--border);border-radius:6px;font-size:.84rem}
-.nt-selected-client .mb{font-family:monospace;font-size:.75rem;color:var(--olive);font-weight:700}
-.nt-selected-client button{margin-left:auto;background:none;border:none;cursor:pointer;color:var(--gray);font-size:.9rem;padding:0}
+.nt-dd-wrap{position:relative}
+.nt-dd-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:20;max-height:180px;overflow-y:auto}
+.nt-opt{padding:.5rem .75rem;font-size:.84rem;cursor:pointer;display:flex;align-items:center;gap:.6rem;transition:background .1s}
+.nt-opt:hover{background:var(--cream)}
+.nt-opt .nt-mb{font-family:monospace;font-size:.75rem;color:var(--olive);font-weight:700}
+.nt-selected-box{display:flex;align-items:center;gap:.5rem;padding:.45rem .75rem;background:var(--cream);border:1px solid var(--border);border-radius:6px;font-size:.84rem}
+.nt-selected-box .nt-mb{font-family:monospace;font-size:.75rem;color:var(--olive);font-weight:700}
+.nt-selected-box button{margin-left:auto;background:none;border:none;cursor:pointer;color:var(--gray);font-size:1rem;padding:0;line-height:1}
+.nt-selected-box button:hover{color:var(--dark)}
 .nt-hint{font-size:.73rem;color:var(--gray);font-style:italic}
-.btn-cancel{padding:.55rem 1.1rem;border:1px solid var(--border);border-radius:5px;font-family:'Lato',sans-serif;font-size:.8rem;font-weight:700;color:var(--gray);background:#fff;cursor:pointer;transition:all .15s}
-.btn-cancel:hover{border-color:var(--dark);color:var(--dark)}
+.nt-err{font-size:.75rem;color:#c0392b;font-weight:600;background:#fce4ec;padding:.4rem .7rem;border-radius:5px;border:1px solid #efb0b0}
+.btn-cancel-t{padding:.55rem 1.1rem;border:1px solid var(--border);border-radius:5px;font-family:'Lato',sans-serif;font-size:.8rem;font-weight:700;color:var(--gray);background:#fff;cursor:pointer;transition:all .15s}
+.btn-cancel-t:hover{border-color:var(--dark);color:var(--dark)}
 .btn-save-task{padding:.55rem 1.4rem;background:var(--dark);color:#fff;border:none;border-radius:5px;font-family:'Lato',sans-serif;font-size:.8rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:background .15s}
 .btn-save-task:hover:not(:disabled){background:var(--olive)}
 .btn-save-task:disabled{opacity:.5;cursor:default}
-.nt-err{font-size:.75rem;color:#c0392b;font-weight:600}
   `;
   document.head.appendChild(s);
 }
@@ -76,29 +78,36 @@ function buildHTML() {
   d.innerHTML = `
 <div id="nt-modal" role="dialog" aria-modal="true" aria-labelledby="nt-modal-title">
   <div class="nt-header">
-    <span class="nt-title" id="nt-modal-title">✦ Нова задача</span>
+    <span class="nt-title" id="nt-modal-title">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:middle;margin-right:.3rem"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9 12 11 14 15 10"/></svg>
+      Нова задача
+    </span>
     <button class="nt-close" id="nt-close-btn" aria-label="Затвори">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
   </div>
   <div class="nt-body" id="nt-body">
+
     <!-- title -->
     <div class="nt-field">
       <label class="nt-label" for="nt-title">Наслов <span class="req">*</span></label>
       <input class="nt-input" id="nt-title" type="text" placeholder="Опис на задачата…" maxlength="200"/>
     </div>
+
     <!-- description -->
     <div class="nt-field">
       <label class="nt-label" for="nt-desc">Детали</label>
       <textarea class="nt-textarea" id="nt-desc" placeholder="Дополнителни белешки…"></textarea>
     </div>
+
     <!-- priority -->
     <div class="nt-field">
       <span class="nt-label">Приоритет</span>
       <div class="nt-priority-group" id="nt-priority-group">
-        ${PRIORITIES.map(p=>`<button type="button" class="pr-btn ${p.cls}${p.v==='normal'?' selected':''}" data-p="${p.v}">${p.l}</button>`).join('')}
+        ${PRIORITIES.map(p => `<button type="button" class="pr-btn ${p.cls}${p.v === 'normal' ? ' selected' : ''}" data-p="${p.v}">${p.l}</button>`).join('')}
       </div>
     </div>
+
     <!-- due + category -->
     <div class="nt-row2">
       <div class="nt-field">
@@ -109,36 +118,40 @@ function buildHTML() {
         <label class="nt-label" for="nt-cat">Категорија</label>
         <select class="nt-select" id="nt-cat">
           <option value="">— изберете —</option>
-          ${CATEGORIES.map(c=>`<option value="${c.v}">${c.l}</option>`).join('')}
+          ${CATEGORIES.map(c => `<option value="${c.v}">${c.l}</option>`).join('')}
         </select>
       </div>
     </div>
+
     <!-- reminder -->
     <div class="nt-field">
       <label class="nt-label" for="nt-reminder">Потсетник (опционално)</label>
       <input class="nt-input" id="nt-reminder" type="datetime-local"/>
       <span class="nt-hint">Ќе се покаже во вашиот дашборд пред рокот.</span>
     </div>
-    <!-- client link -->
+
+    <!-- optional client link -->
     <div class="nt-field">
       <span class="nt-label">Поврзан корисник (опционално)</span>
       <div id="nt-client-area"></div>
     </div>
+
     <!-- error -->
     <div class="nt-err" id="nt-err" style="display:none"></div>
   </div>
   <div class="nt-footer">
-    <button class="btn-cancel" id="nt-cancel-btn">Откажи</button>
+    <button class="btn-cancel-t" id="nt-cancel-btn">Откажи</button>
     <button class="btn-save-task" id="nt-save-btn">Зачувај задача</button>
   </div>
 </div>`;
   document.body.appendChild(d);
 }
 
-let _onSaved = null;
-let _selectedClient = null;
-let _allClients = [];
-let _priority = 'normal';
+let _onSaved         = null;
+let _prefillClientId = null;
+let _selectedClient  = null;
+let _allClients      = [];
+let _priority        = 'normal';
 
 async function loadClients() {
   if (_allClients.length) return;
@@ -148,29 +161,28 @@ async function loadClients() {
   _allClients = data || [];
 }
 
+function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
 function renderClientArea() {
   const area = document.getElementById('nt-client-area');
   if (!area) return;
   if (_selectedClient) {
-    area.innerHTML = `<div class="nt-selected-client">
+    area.innerHTML = `<div class="nt-selected-box">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      <span>${esc(_selectedClient.obrakanje ? _selectedClient.obrakanje + ' ' : '') + esc(_selectedClient.ime_prezime)}</span>
-      <span class="mb">${esc(_selectedClient.maticen_broj)}</span>
+      <span>${esc((_selectedClient.obrakanje ? _selectedClient.obrakanje + ' ' : '') + _selectedClient.ime_prezime)}</span>
+      <span class="nt-mb">${esc(_selectedClient.maticen_broj)}</span>
       <button onclick="window._ntClearClient()">✕</button>
     </div>`;
   } else {
-    area.innerHTML = `<div class="nt-client-search">
+    area.innerHTML = `<div class="nt-dd-wrap">
       <input class="nt-input" id="nt-client-q" type="text" placeholder="Пребарај по матичен број или ime…" autocomplete="off"/>
-      <div class="nt-client-dropdown" id="nt-client-dd" style="display:none"></div>
+      <div class="nt-dd-list" id="nt-client-dd" style="display:none"></div>
     </div>`;
     document.getElementById('nt-client-q').addEventListener('input', onClientSearch);
   }
 }
 
-window._ntClearClient = function () {
-  _selectedClient = null;
-  renderClientArea();
-};
+window._ntClearClient = function () { _selectedClient = null; renderClientArea(); };
 
 function onClientSearch(e) {
   const q = e.target.value.toLowerCase().trim();
@@ -178,16 +190,16 @@ function onClientSearch(e) {
   if (!q) { dd.style.display = 'none'; return; }
   const matches = _allClients.filter(c =>
     (c.maticen_broj || '').toLowerCase().includes(q) ||
-    (c.ime_prezime || '').toLowerCase().includes(q)
+    (c.ime_prezime  || '').toLowerCase().includes(q)
   ).slice(0, 8);
   if (!matches.length) { dd.style.display = 'none'; return; }
-  dd.innerHTML = matches.map(c => `
-    <div class="nt-client-opt" data-cid="${c.id}">
-      <span class="mb">${esc(c.maticen_broj)}</span>
-      <span>${esc(c.obrakanje ? c.obrakanje + ' ' : '') + esc(c.ime_prezime)}</span>
+  dd.innerHTML = matches.map(c =>
+    `<div class="nt-opt" data-cid="${c.id}">
+      <span class="nt-mb">${esc(c.maticen_broj)}</span>
+      <span>${esc((c.obrakanje ? c.obrakanje + ' ' : '') + c.ime_prezime)}</span>
     </div>`).join('');
   dd.style.display = 'block';
-  dd.querySelectorAll('.nt-client-opt').forEach(el => {
+  dd.querySelectorAll('.nt-opt').forEach(el => {
     el.addEventListener('click', () => {
       _selectedClient = _allClients.find(c => c.id === el.dataset.cid);
       renderClientArea();
@@ -205,31 +217,39 @@ async function save() {
   const title = document.getElementById('nt-title').value.trim();
   if (!title) { showErr('Насловот е задолжителен.'); document.getElementById('nt-title').focus(); return; }
 
-  const due = document.getElementById('nt-due').value;
+  // Verify we have a valid userId — this is the most common cause of RLS failures
+  const uid = window._userId;
+  if (!uid) { showErr('Грешка: корисничкиот ID не е достапен. Обидете се повторно да се најавите.'); return; }
+
+  const due      = document.getElementById('nt-due').value;
   const reminder = document.getElementById('nt-reminder').value;
-  const cat = document.getElementById('nt-cat').value;
-  const desc = document.getElementById('nt-desc').value.trim();
+  const cat      = document.getElementById('nt-cat').value;
+  const desc     = document.getElementById('nt-desc').value.trim();
 
   const btn = document.getElementById('nt-save-btn');
   btn.disabled = true; btn.textContent = 'Зачувување…';
 
   const row = {
-    owner_id: window._userId,
+    owner_id:            uid,            // must equal auth.uid() for RLS to pass
     title,
-    description: desc || null,
-    priority: _priority,
-    due_datetime: due || null,
-    reminder_at: reminder || null,
-    category: cat || null,
-    client_id: _selectedClient ? _selectedClient.id : null,
+    description:         desc || null,
+    priority:            _priority,
+    due_datetime:        due || null,
+    reminder_at:         reminder || null,
+    category:            cat || null,
+    client_id:           _selectedClient ? _selectedClient.id : null,
     client_maticen_broj: _selectedClient ? _selectedClient.maticen_broj : null,
-    status: 'pending',
-    archived: false,
+    status:              'pending',
+    archived:            false,
   };
 
   const { error } = await window._sb.from('tasks').insert(row);
   if (error) {
-    showErr('Грешка: ' + error.message);
+    // Provide a more helpful error message for RLS failures
+    const msg = error.code === '42501' || (error.message||'').includes('security policy')
+      ? 'Грешка со безбедносна политика. Проверете дека сте најавени и дека owner_id = auth.uid(). Детали: ' + error.message
+      : 'Грешка: ' + error.message;
+    showErr(msg);
     btn.disabled = false; btn.textContent = 'Зачувај задача';
     return;
   }
@@ -237,29 +257,34 @@ async function save() {
   if (typeof _onSaved === 'function') _onSaved();
 }
 
-function openModal() {
-  document.getElementById('nt-backdrop').classList.add('open');
-  // reset
+function resetModal() {
   _selectedClient = null;
   _priority = 'normal';
-  document.getElementById('nt-title').value = '';
-  document.getElementById('nt-desc').value = '';
-  document.getElementById('nt-due').value = '';
-  document.getElementById('nt-reminder').value = '';
-  document.getElementById('nt-cat').value = '';
-  document.querySelectorAll('.pr-btn').forEach(b => {
+  ['nt-title','nt-desc','nt-due','nt-reminder'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const cat = document.getElementById('nt-cat');
+  if (cat) cat.value = '';
+  document.querySelectorAll('#nt-priority-group .pr-btn').forEach(b => {
     b.classList.toggle('selected', b.dataset.p === 'normal');
   });
   showErr('');
+}
+
+function openModal() {
+  document.getElementById('nt-backdrop').classList.add('open');
+  resetModal();
+  if (_prefillClientId) {
+    _selectedClient = _allClients.find(c => c.id === _prefillClientId) || null;
+  }
   renderClientArea();
-  document.getElementById('nt-title').focus();
+  setTimeout(() => document.getElementById('nt-title')?.focus(), 50);
 }
 
 function closeModal() {
   document.getElementById('nt-backdrop').classList.remove('open');
 }
-
-function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 function init() {
   injectStyles();
@@ -272,13 +297,20 @@ function init() {
     const btn = e.target.closest('.pr-btn');
     if (!btn) return;
     _priority = btn.dataset.p;
-    document.querySelectorAll('.pr-btn').forEach(b => b.classList.toggle('selected', b === btn));
+    document.querySelectorAll('#nt-priority-group .pr-btn').forEach(b => b.classList.toggle('selected', b === btn));
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.nt-dd-wrap')) {
+      const dd = document.getElementById('nt-client-dd');
+      if (dd) dd.style.display = 'none';
+    }
   });
   loadClients();
 }
 
-window.openNewTask = function (onSaved) {
-  _onSaved = onSaved || null;
+window.openNewTask = async function (onSaved, prefillClientId) {
+  _onSaved         = onSaved || null;
+  _prefillClientId = prefillClientId || null;
   if (!document.getElementById('nt-backdrop')) init();
   openModal();
 };
