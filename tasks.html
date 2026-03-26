@@ -6,30 +6,483 @@
   <title>Задачи — ПУСЗ Оаза Портал</title>
   <link rel="stylesheet" href="shared.css"/>
   <script src="auth-guard.js"></script>
+  <style>
+    /* ── Toolbar ── */
+    .tk-topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1.5rem}
+    .tk-btn-group{display:flex;gap:.5rem;flex-wrap:wrap}
+    .btn-new-task{display:inline-flex;align-items:center;gap:.45rem;padding:.58rem 1.1rem;background:var(--dark);color:#fff;border:none;border-radius:5px;font-family:'Lato',sans-serif;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:background .15s;white-space:nowrap}
+    .btn-new-task:hover{background:var(--olive)}
+    .btn-new-req{display:inline-flex;align-items:center;gap:.45rem;padding:.58rem 1.1rem;background:#2e4a8a;color:#fff;border:none;border-radius:5px;font-family:'Lato',sans-serif;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:background .15s;white-space:nowrap}
+    .btn-new-req:hover{background:#1a3060}
+    #btn-new-req-wrap{display:none} /* shown only for roles that can create requests */
+
+    /* ── Filters ── */
+    .tk-filters{display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;margin-bottom:1.25rem}
+    .tk-search-wrap{position:relative;min-width:180px}
+    .tk-search-wrap svg{position:absolute;left:.6rem;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--gray)}
+    #tk-search{width:100%;padding:.42rem .7rem .42rem 2rem;border:1px solid var(--border);border-radius:4px;font-family:'Lato',sans-serif;font-size:.82rem;color:var(--dark);outline:none;box-sizing:border-box}
+    #tk-search:focus{border-color:var(--olive)}
+    .filter-chip{display:inline-flex;align-items:center;gap:.3rem;padding:.28rem .7rem;border-radius:20px;font-size:.72rem;font-weight:700;letter-spacing:.04em;cursor:pointer;border:2px solid transparent;transition:all .13s;user-select:none;white-space:nowrap}
+    .filter-chip:not(.active){background:var(--cream);color:var(--gray);border-color:#d0c8b0}
+    .filter-chip:hover:not(.active){border-color:var(--dark);color:var(--dark)}
+    .fc-all.active{background:#f0ece2;color:#5a4a32;border-color:#8a7a55}
+    .fc-tasks.active{background:#f0f4e8;color:#4a6a10;border-color:#8ab020}
+    .fc-requests.active{background:#e8ecf5;color:#2e4a8a;border-color:#5c8adc}
+    .fc-pending.active{background:#fff3e0;color:#e65100;border-color:#ffa726}
+    .fc-inprogress.active{background:#e3f2fd;color:#1565c0;border-color:#64b5f6}
+    .fc-completed.active{background:#e8f5e9;color:#2e7d32;border-color:#81c784}
+    .fc-archive.active{background:#f5eaea;color:#8a3a3a;border-color:#d08080}
+    .filter-sep{width:1px;height:20px;background:var(--border)}
+
+    /* ── Week groups ── */
+    .week-group{margin-bottom:1.75rem}
+    .week-header{display:flex;align-items:center;gap:.75rem;margin-bottom:.85rem}
+    .week-label{font-family:'Playfair Display',serif;font-size:.9rem;font-weight:600;color:var(--dark);white-space:nowrap}
+    .week-count{font-size:.72rem;color:var(--gray);background:var(--cream);border:1px solid var(--border);border-radius:20px;padding:.15rem .55rem}
+    .week-line{flex:1;height:1px;background:var(--border)}
+
+    /* ── Item cards ── */
+    .tk-feed{display:flex;flex-direction:column;gap:.65rem}
+    .tk-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:.9rem 1.1rem .9rem 1.25rem;border-left:4px solid var(--card-accent,var(--border));cursor:pointer;transition:box-shadow .14s,border-color .14s;position:relative}
+    .tk-card:hover{box-shadow:0 2px 10px rgba(0,0,0,.08);border-color:#c5beac}
+    .tk-card.is-task{--card-accent:var(--olive)}
+    .tk-card.is-request{--card-accent:#2e4a8a}
+    .tk-card.is-completed{--card-accent:#81c784;opacity:.8}
+    .tk-card.is-rejected{--card-accent:#ef5350;opacity:.75}
+    .tk-card.is-archived{opacity:.65}
+    .tk-card.is-overdue{--card-accent:#c0392b}
+    .tk-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.65rem;margin-bottom:.45rem}
+    .tk-title{font-weight:700;font-size:.88rem;color:var(--dark);line-height:1.35;flex:1}
+    .tk-type-pill{display:inline-flex;align-items:center;gap:.25rem;padding:.12rem .5rem;border-radius:10px;font-size:.63rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;flex-shrink:0}
+    .tp-task{background:#f0f4e8;color:#4a6a10}
+    .tp-request{background:#e8ecf5;color:#2e4a8a}
+    .tk-meta{display:flex;align-items:center;flex-wrap:wrap;gap:.35rem}
+    .tk-badge{display:inline-flex;align-items:center;gap:.22rem;padding:.1rem .45rem;border-radius:10px;font-size:.63rem;font-weight:700;letter-spacing:.04em}
+    .tb-pending{background:#fff3e0;color:#e65100;border:1px solid #ffa72666}
+    .tb-inprogress{background:#e3f2fd;color:#1565c0;border:1px solid #64b5f666}
+    .tb-completed{background:#e8f5e9;color:#2e7d32;border:1px solid #81c78466}
+    .tb-rejected{background:#fce4ec;color:#c62828;border:1px solid #ef535066}
+    .tb-pr-low{color:#2e7d32;font-size:.67rem;font-weight:700}
+    .tb-pr-high{color:#e65100;font-size:.67rem;font-weight:700}
+    .tb-pr-urgent{color:#c62828;font-size:.67rem;font-weight:700;animation:urgentPulse 1.8s ease infinite}
+    @keyframes urgentPulse{0%,100%{opacity:1}50%{opacity:.5}}
+    .tk-dot{width:3px;height:3px;border-radius:50%;background:var(--gray);opacity:.4;margin:0 .1rem}
+    .tk-due{font-size:.7rem;color:var(--gray)}
+    .tk-due.overdue{color:#c0392b;font-weight:700}
+    .tk-client-ref{font-size:.7rem;color:var(--olive);font-family:monospace;font-weight:700}
+    .tk-assignee{font-size:.7rem;color:var(--gray);display:inline-flex;align-items:center;gap:.2rem}
+    .tk-cat{font-size:.67rem;color:var(--gray);background:var(--cream);padding:.05rem .35rem;border-radius:4px}
+
+    /* ── Pagination ── */
+    .pagination{display:flex;align-items:center;justify-content:center;gap:.4rem;margin-top:1.25rem;flex-wrap:wrap}
+    .page-btn{min-width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:4px;background:#fff;font-family:'Lato',sans-serif;font-size:.8rem;cursor:pointer;color:var(--gray);transition:all .13s;padding:0 .5rem}
+    .page-btn:hover{border-color:var(--dark);color:var(--dark)}
+    .page-btn.active{background:var(--dark);color:#fff;border-color:var(--dark);font-weight:700}
+    .page-btn:disabled{opacity:.35;cursor:default}
+    .page-info{font-size:.75rem;color:var(--gray);padding:0 .3rem}
+
+    /* ── Empty ── */
+    .tk-empty{text-align:center;padding:4rem 2rem;color:var(--gray)}
+    .tk-empty svg{opacity:.18;display:block;margin:0 auto 1rem}
+    .tk-empty p{font-size:.88rem}
+
+    /* ── Summary bar ── */
+    .tk-summary{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem;font-size:.75rem;color:var(--gray)}
+    .tk-stat{background:var(--cream);border:1px solid var(--border);border-radius:20px;padding:.2rem .7rem}
+    .tk-stat strong{color:var(--dark)}
+  </style>
 </head>
 <body>
 <div class="app">
   <div id="sidebar-placeholder"></div>
   <main class="main">
     <div class="page-header">
-      <h1 class="page-title">Задачи</h1>
-      <p class="page-subtitle">Управување со задачи и рокови</p>
+      <h1 class="page-title">Задачи & Барања</h1>
+      <p class="page-subtitle">Управување со задачи, рокови и работни барања</p>
     </div>
+
     <div class="page-content">
-      <div class="card">
-        <div class="card-title">Задачи</div>
-        <p style="font-size:0.9rem;color:var(--gray);line-height:1.75;">Содржината на овој модул ќе биде додадена подоцна.</p>
+      <!-- top bar with new buttons -->
+      <div class="tk-topbar">
+        <div class="tk-btn-group">
+          <button class="btn-new-task" id="btn-new-task">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Нова задача
+          </button>
+          <span id="btn-new-req-wrap">
+            <button class="btn-new-req" id="btn-new-req">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              Ново барање
+            </button>
+          </span>
+        </div>
+        <div class="tk-summary" id="tk-summary"></div>
+      </div>
+
+      <!-- filters -->
+      <div class="tk-filters">
+        <div class="tk-search-wrap">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="tk-search" type="text" placeholder="Пребарај…"/>
+        </div>
+        <div class="filter-sep"></div>
+        <button class="filter-chip fc-all active"       data-f="all">Сите</button>
+        <button class="filter-chip fc-tasks"            data-f="tasks">✦ Задачи</button>
+        <button class="filter-chip fc-requests"         data-f="requests">⇄ Барања</button>
+        <div class="filter-sep"></div>
+        <button class="filter-chip fc-pending"          data-f="pending">⏳ На чекање</button>
+        <button class="filter-chip fc-inprogress"       data-f="in_progress">🔄 Во тек</button>
+        <button class="filter-chip fc-completed"        data-f="completed">✅ Завршени</button>
+        <div class="filter-sep"></div>
+        <button class="filter-chip fc-archive"          data-f="archive">🗄 Архива</button>
+      </div>
+
+      <!-- feed -->
+      <div id="tk-loading" style="padding:3rem;text-align:center;color:var(--gray)">Се вчитува…</div>
+      <div id="tk-feed-wrap" style="display:none"></div>
+      <div id="tk-empty" class="tk-empty" style="display:none">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="15" x2="12" y2="15"/></svg>
+        <p id="tk-empty-msg">Нема задачи.</p>
       </div>
     </div>
   </main>
 </div>
+
 <script src="sidebar.js"></script>
+<script src="newtask.js"></script>
+<script src="newrequest.js"></script>
+<script src="viewtskreq.js"></script>
+<script src="client-card.js"></script>
 <script>
-  window.addEventListener('DOMContentLoaded', () => {
-    const wait = setInterval(() => {
-      if (window._username !== undefined) { clearInterval(wait); buildSidebar('Задачи'); }
-    }, 30);
+/* ══════════════════════════════════════════
+   tasks.html — controller
+   ══════════════════════════════════════════ */
+
+const PAGE_SIZE = 12;
+
+// Roles allowed to create requests FOR others
+const CAN_CREATE_REQUEST = ['menadzer', 'doktor', 'medicinska_sestra', 'glavna_sestra'];
+
+let _tasks    = [];
+let _requests = [];
+let _filter   = 'all';   // all | tasks | requests | pending | in_progress | completed | archive
+let _search   = '';
+let _page     = 1;
+
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+/* ── boot ─────────────────────────────── */
+window.addEventListener('DOMContentLoaded',()=>{
+  const wait=setInterval(()=>{
+    if(window._username!==undefined){
+      clearInterval(wait);
+      buildSidebar('Задачи');
+      initPage();
+    }
+  },30);
+});
+
+async function initPage(){
+  const role=(window._userRole||'').toLowerCase();
+
+  // Show "New Request" button only for eligible roles
+  if(CAN_CREATE_REQUEST.includes(role)){
+    document.getElementById('btn-new-req-wrap').style.display='inline';
+  }
+
+  document.getElementById('btn-new-task').addEventListener('click',()=>{
+    openNewTask(loadAll);
   });
+  document.getElementById('btn-new-req').addEventListener('click',()=>{
+    openNewRequest(loadAll);
+  });
+
+  // Filter chips
+  document.querySelectorAll('.filter-chip').forEach(chip=>{
+    chip.addEventListener('click',()=>{
+      document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+      chip.classList.add('active');
+      _filter=chip.dataset.f;
+      _page=1;
+      render();
+    });
+  });
+
+  // Search
+  document.getElementById('tk-search').addEventListener('input',e=>{
+    _search=e.target.value.toLowerCase().trim();
+    _page=1;
+    render();
+  });
+
+  await loadAll();
+}
+
+async function loadAll(){
+  document.getElementById('tk-loading').style.display='block';
+  document.getElementById('tk-feed-wrap').style.display='none';
+  document.getElementById('tk-empty').style.display='none';
+
+  const uid=window._userId;
+
+  // Tasks: I own them
+  const{data:tasks}=await window._sb.from('tasks')
+    .select('*')
+    .eq('owner_id',uid)
+    .order('created_at',{ascending:false});
+
+  // Requests: I created OR assigned to me
+  const{data:reqCreated}=await window._sb.from('requests')
+    .select('*')
+    .eq('created_by',uid)
+    .order('created_at',{ascending:false});
+  const{data:reqAssigned}=await window._sb.from('requests')
+    .select('*')
+    .eq('assigned_to',uid)
+    .order('created_at',{ascending:false});
+
+  // Merge & deduplicate requests
+  const reqMap={};
+  [...(reqCreated||[]),...(reqAssigned||[])].forEach(r=>{ reqMap[r.id]=r; });
+
+  _tasks=tasks||[];
+  _requests=Object.values(reqMap);
+
+  document.getElementById('tk-loading').style.display='none';
+  render();
+}
+
+/* ── filter & render ───────────────────── */
+function getFiltered(){
+  const showArchive=_filter==='archive';
+  let items=[];
+
+  if(_filter==='tasks'||_filter==='all'||_filter==='pending'||_filter==='in_progress'||_filter==='completed'||showArchive){
+    _tasks.forEach(t=>{
+      if(showArchive){if(!t.archived)return;}
+      else{if(t.archived)return;}
+      if(_filter==='pending'&&t.status!=='pending')return;
+      if(_filter==='in_progress'&&t.status!=='in_progress')return;
+      if(_filter==='completed'&&t.status!=='completed')return;
+      items.push({...t,_kind:'task'});
+    });
+  }
+  if(_filter==='requests'||_filter==='all'||_filter==='pending'||_filter==='in_progress'||_filter==='completed'||showArchive){
+    _requests.forEach(r=>{
+      if(showArchive){if(!r.archived)return;}
+      else{if(r.archived)return;}
+      if(_filter==='pending'&&r.status!=='pending')return;
+      if(_filter==='in_progress'&&r.status!=='in_progress')return;
+      if(_filter==='completed'&&r.status!=='completed')return;
+      items.push({...r,_kind:'request'});
+    });
+  }
+  if(_filter==='tasks') items=items.filter(i=>i._kind==='task');
+  if(_filter==='requests') items=items.filter(i=>i._kind==='request');
+
+  // search
+  if(_search){
+    items=items.filter(i=>{
+      const hay=`${i.title||''} ${i.description||''} ${i.client_maticen_broj||''} ${i.request_type||''} ${i.category||''}`.toLowerCase();
+      return hay.includes(_search);
+    });
+  }
+
+  // sort: urgent first, then by due_datetime, then created_at
+  items.sort((a,b)=>{
+    const prOrd={urgent:0,high:1,normal:2,low:3};
+    const pa=prOrd[a.priority]??2, pb=prOrd[b.priority]??2;
+    if(pa!==pb)return pa-pb;
+    const da=a.due_datetime?new Date(a.due_datetime):new Date(a.created_at);
+    const db=b.due_datetime?new Date(b.due_datetime):new Date(b.created_at);
+    return da-db;
+  });
+
+  return items;
+}
+
+function getWeekKey(item){
+  // Use due_datetime if present, else created_at
+  const ref=item.due_datetime||item.created_at;
+  const d=new Date(ref);
+  // Monday of that week
+  const day=d.getDay();
+  const diff=d.getDate()-day+(day===0?-6:1);
+  const mon=new Date(d.setDate(diff));
+  return mon.toISOString().slice(0,10);
+}
+
+function weekLabel(isoMonday){
+  const mon=new Date(isoMonday+'T00:00:00');
+  const sun=new Date(mon); sun.setDate(sun.getDate()+6);
+  const now=new Date();
+
+  const thisMonday=new Date(now);
+  const dow=now.getDay();
+  const diffThis=now.getDate()-dow+(dow===0?-6:1);
+  thisMonday.setDate(diffThis);
+  thisMonday.setHours(0,0,0,0);
+
+  const lastMonday=new Date(thisMonday); lastMonday.setDate(lastMonday.getDate()-7);
+
+  if(mon.getTime()===thisMonday.getTime()) return'🗓 Оваа недела';
+  if(mon.getTime()===lastMonday.getTime()) return'📅 Минатата недела';
+
+  const fmt=d=>d.toLocaleDateString('mk-MK',{day:'numeric',month:'short'});
+  return`${fmt(mon)} – ${fmt(sun)}`;
+}
+
+function renderSummary(all){
+  const tasks=all.filter(i=>i._kind==='task'&&!i.archived);
+  const reqs=all.filter(i=>i._kind==='request'&&!i.archived);
+  const overdue=all.filter(i=>!i.archived&&i.due_datetime&&new Date(i.due_datetime)<new Date()&&i.status!=='completed'&&i.status!=='rejected');
+  document.getElementById('tk-summary').innerHTML=[
+    `<span class="tk-stat">Задачи: <strong>${tasks.length}</strong></span>`,
+    `<span class="tk-stat">Барања: <strong>${reqs.length}</strong></span>`,
+    overdue.length?`<span class="tk-stat" style="background:#fce4ec;border-color:#ef5350;color:#c62828">⚠ Задоцнети: <strong>${overdue.length}</strong></span>`:'',
+  ].filter(Boolean).join('');
+}
+
+function render(){
+  const items=getFiltered();
+
+  // summary always from unfiltered
+  const allVisible=getFiltered();
+  renderSummary([..._tasks.map(t=>({...t,_kind:'task'})),..._requests.map(r=>({...r,_kind:'request'}))]);
+
+  if(!items.length){
+    document.getElementById('tk-feed-wrap').style.display='none';
+    document.getElementById('tk-empty').style.display='block';
+    document.getElementById('tk-empty-msg').textContent=
+      _filter==='archive'?'Нема архивирани ставки.':'Нема задачи / барања за овие критериуми.';
+    return;
+  }
+
+  document.getElementById('tk-empty').style.display='none';
+  document.getElementById('tk-feed-wrap').style.display='block';
+
+  // Pagination
+  const total=items.length;
+  const totalPages=Math.ceil(total/PAGE_SIZE);
+  if(_page>totalPages)_page=totalPages;
+  const pageItems=items.slice((_page-1)*PAGE_SIZE,_page*PAGE_SIZE);
+
+  // Group by week
+  const weekOrder=[];
+  const weekMap={};
+  pageItems.forEach(item=>{
+    const wk=getWeekKey(item);
+    if(!weekMap[wk]){weekMap[wk]=[];weekOrder.push(wk);}
+    weekMap[wk].push(item);
+  });
+
+  let html='';
+  weekOrder.forEach(wk=>{
+    const grp=weekMap[wk];
+    html+=`<div class="week-group">
+      <div class="week-header">
+        <span class="week-label">${esc(weekLabel(wk))}</span>
+        <span class="week-count">${grp.length}</span>
+        <div class="week-line"></div>
+      </div>
+      <div class="tk-feed">
+        ${grp.map(renderCard).join('')}
+      </div>
+    </div>`;
+  });
+
+  // Pagination controls
+  if(totalPages>1){
+    let pg='';
+    pg+=`<button class="page-btn" onclick="goPage(${_page-1})" ${_page<=1?'disabled':''}>‹</button>`;
+    for(let i=1;i<=totalPages;i++){
+      if(i===1||i===totalPages||Math.abs(i-_page)<=2){
+        pg+=`<button class="page-btn ${i===_page?'active':''}" onclick="goPage(${i})">${i}</button>`;
+      } else if(Math.abs(i-_page)===3){
+        pg+=`<span class="page-info">…</span>`;
+      }
+    }
+    pg+=`<button class="page-btn" onclick="goPage(${_page+1})" ${_page>=totalPages?'disabled':''}>›</button>`;
+    pg+=`<span class="page-info">${(_page-1)*PAGE_SIZE+1}–${Math.min(_page*PAGE_SIZE,total)} / ${total}</span>`;
+    html+=`<div class="pagination">${pg}</div>`;
+  }
+
+  document.getElementById('tk-feed-wrap').innerHTML=html;
+}
+
+window.goPage=function(p){_page=p;render();window.scrollTo(0,0);};
+
+/* ── card rendering ─────────────────────── */
+function renderCard(item){
+  const isTask=item._kind==='task';
+  const now=new Date();
+  const isOverdue=item.due_datetime&&new Date(item.due_datetime)<now&&item.status!=='completed'&&item.status!=='rejected';
+  const classes=[
+    'tk-card',
+    isTask?'is-task':'is-request',
+    item.status==='completed'?'is-completed':'',
+    item.status==='rejected'?'is-rejected':'',
+    item.archived?'is-archived':'',
+    isOverdue?'is-overdue':'',
+  ].filter(Boolean).join(' ');
+
+  const statusBadge={
+    pending:     `<span class="tk-badge tb-pending">⏳ На чекање</span>`,
+    in_progress: `<span class="tk-badge tb-inprogress">🔄 Во тек</span>`,
+    completed:   `<span class="tk-badge tb-completed">✅ Завршено</span>`,
+    rejected:    `<span class="tk-badge tb-rejected">❌ Одбиено</span>`,
+  }[item.status]||'';
+
+  const prBadge=item.priority==='urgent'?'<span class="tb-pr-urgent">🚨 ИТНО</span>'
+    :item.priority==='high'?'<span class="tb-pr-high">▲ Висок</span>'
+    :item.priority==='low'?'<span class="tb-pr-low">▼ Ниски</span>':'';
+
+  const dueHtml=item.due_datetime
+    ?`<span class="tk-dot"></span><span class="tk-due ${isOverdue?'overdue':''}">⏰ ${fmtDue(item.due_datetime)}</span>`:'';
+
+  const clientHtml=item.client_maticen_broj
+    ?`<span class="tk-dot"></span><span class="tk-client-ref">мат. ${esc(item.client_maticen_broj)}</span>`:'';
+
+  const catHtml=isTask&&item.category
+    ?`<span class="tk-dot"></span><span class="tk-cat">${esc(item.category)}</span>`:'';
+
+  const reqTypeHtml=!isTask&&item.request_type
+    ?`<span class="tk-dot"></span><span class="tk-cat">${esc(item.request_type.replace(/_/g,' '))}</span>`:'';
+
+  return`<div class="${classes}" onclick="viewItem('${item.id}','${item._kind}')">
+    <div class="tk-top">
+      <div class="tk-title">${esc(item.title)}</div>
+      <span class="tk-type-pill ${isTask?'tp-task':'tp-request'}">${isTask?'✦ Задача':'⇄ Барање'}</span>
+    </div>
+    <div class="tk-meta">
+      ${statusBadge}
+      ${prBadge}
+      ${dueHtml}
+      ${clientHtml}
+      ${catHtml}
+      ${reqTypeHtml}
+      ${item.archived?'<span class="tk-dot"></span><span style="font-size:.67rem;color:var(--gray)">🗄 архива</span>':''}
+    </div>
+  </div>`;
+}
+
+function fmtDue(dt){
+  const d=new Date(dt);
+  const today=new Date(); today.setHours(0,0,0,0);
+  const tom=new Date(today); tom.setDate(tom.getDate()+1);
+  if(d<today)return`Задоцнет · ${d.toLocaleDateString('mk-MK',{day:'numeric',month:'short'})}`;
+  if(d>=today&&d<tom)return`Денес · ${d.toLocaleTimeString('mk-MK',{hour:'2-digit',minute:'2-digit'})}`;
+  if(d>=tom&&d<new Date(tom.getTime()+86400000))return`Утре · ${d.toLocaleTimeString('mk-MK',{hour:'2-digit',minute:'2-digit'})}`;
+  return d.toLocaleDateString('mk-MK',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+}
+
+window.viewItem=function(id,kind){
+  const item=kind==='task'
+    ?_tasks.find(t=>t.id===id)
+    :_requests.find(r=>r.id===id);
+  if(!item)return;
+  openViewTskReq({...item},kind,loadAll);
+};
 </script>
 </body>
 </html>
