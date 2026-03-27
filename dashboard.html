@@ -7,15 +7,220 @@
   <link rel="stylesheet" href="shared.css"/>
   <script src="auth-guard.js"></script>
   <style>
-    .btn-new-client{display:inline-flex;align-items:center;gap:0.5rem;padding:0.65rem 1.25rem;background:var(--dark);color:#fff;border:none;border-radius:5px;font-family:'Lato',sans-serif;font-size:0.82rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;text-decoration:none;transition:background 0.15s}
-    .btn-new-client:hover{background:var(--olive)}
-    .pending-badge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#c0392b;color:#fff;font-size:0.72rem;font-weight:700;flex-shrink:0}
-    .pending-item{display:flex;align-items:center;justify-content:space-between;padding:0.7rem 0;border-bottom:1px solid var(--border);font-size:0.88rem}
-    .pending-item:last-child{border-bottom:none}
-    .pending-name{font-weight:700;color:var(--dark)}
-    .pending-meta{font-size:0.75rem;color:var(--gray);margin-top:0.1rem}
-    .link-action{font-size:0.8rem;color:var(--olive);text-decoration:none;font-weight:700}
-    .link-action:hover{text-decoration:underline}
+    /* ── Layout ────────────────────────────────────── */
+    .dash-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+    .dash-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    @media (max-width: 860px) {
+      .dash-grid   { grid-template-columns: 1fr; }
+      .dash-grid-3 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 560px) {
+      .dash-grid-3 { grid-template-columns: 1fr; }
+    }
+
+    /* ── Stat cards ─────────────────────────────────── */
+    .stat-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.1rem 1.25rem;
+      border-left: 3px solid var(--olive);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .stat-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .stat-icon.olive  { background: rgba(107,130,40,0.1); color: var(--olive); }
+    .stat-icon.blue   { background: #e8ecf5; color: #2e4a8a; border-left-color: #2e4a8a; }
+    .stat-icon.red    { background: #fce4ec; color: #c62828; }
+    .stat-icon.amber  { background: #fff3e0; color: #e65100; }
+    .stat-card.blue   { border-left-color: #2e4a8a; }
+    .stat-card.red    { border-left-color: #c0392b; }
+    .stat-card.amber  { border-left-color: #e67e22; }
+    .stat-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: var(--gray); margin-bottom: 0.2rem; }
+    .stat-value { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 600; color: var(--dark); line-height: 1; }
+    .stat-sub   { font-size: 0.72rem; color: var(--gray); margin-top: 0.2rem; }
+
+    /* ── Section cards ──────────────────────────────── */
+    .dash-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .dash-card-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.85rem 1.1rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--cream);
+    }
+    .dash-card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 0.9rem; font-weight: 600; color: var(--dark);
+      display: flex; align-items: center; gap: 0.45rem;
+    }
+    .dash-card-title svg { opacity: 0.55; }
+    .dash-card-link {
+      font-size: 0.75rem; font-weight: 700; color: var(--olive);
+      text-decoration: none; display: inline-flex; align-items: center; gap: 0.2rem;
+    }
+    .dash-card-link:hover { text-decoration: underline; }
+    .dash-card-body { padding: 0.85rem 1.1rem; }
+
+    /* ── Item rows (tasks, priems) ───────────────────── */
+    .dash-item {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 0.75rem;
+      padding: 0.65rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .dash-item:last-child { border-bottom: none; }
+    .dash-item-main { flex: 1; min-width: 0; }
+    .dash-item-title {
+      font-size: 0.85rem; font-weight: 700; color: var(--dark);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-bottom: 0.2rem;
+    }
+    .dash-item-meta {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 0.3rem;
+      font-size: 0.7rem; color: var(--gray);
+    }
+    .dash-item-action {
+      flex-shrink: 0; font-size: 0.75rem; font-weight: 700;
+      color: var(--olive); cursor: pointer; background: none; border: none;
+      padding: 0; white-space: nowrap;
+    }
+    .dash-item-action:hover { text-decoration: underline; }
+
+    /* ── Badges ──────────────────────────────────────── */
+    .dbadge {
+      display: inline-block; padding: 0.1rem 0.45rem;
+      border-radius: 10px; font-size: 0.62rem; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .db-pending    { background: #fff3e0; color: #e65100; }
+    .db-inprogress { background: #e3f2fd; color: #1565c0; }
+    .db-task       { background: #f0f4e8; color: #4a6a10; }
+    .db-request    { background: #e8ecf5; color: #2e4a8a; }
+    .db-urgent     { background: #fce4ec; color: #c62828; }
+    .db-overdue    { background: #fce4ec; color: #c62828; font-weight: 700; }
+    .db-doctor     { background: #e8ecf5; color: #2e4a8a; }
+    .db-nurse      { background: #f0e8f5; color: #6a3a8a; }
+    .db-social     { background: #e8f0e8; color: #3a6e3a; }
+    .db-fizio      { background: #fdf0e0; color: #c07028; }
+    .db-sup        { background: #fce8f0; color: #b03060; }
+
+    /* ── Pending priems ──────────────────────────────── */
+    .priem-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #c0392b; color: #fff;
+      font-size: 0.68rem; font-weight: 700; flex-shrink: 0;
+    }
+
+    /* ── Today's logs mini ───────────────────────────── */
+    .log-mini {
+      display: flex; align-items: flex-start; gap: 0.6rem;
+      padding: 0.6rem 0; border-bottom: 1px solid var(--border);
+    }
+    .log-mini:last-child { border-bottom: none; }
+    .log-mini-av {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--olive); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Playfair Display', serif; font-size: 0.72rem; font-weight: 700;
+      flex-shrink: 0; overflow: hidden;
+    }
+    .log-mini-av img { width: 100%; height: 100%; object-fit: cover; }
+    .log-mini-name { font-size: 0.83rem; font-weight: 700; color: var(--dark); }
+    .log-mini-meta { font-size: 0.7rem; color: var(--gray); margin-top: 0.1rem; display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; }
+    .log-mini-time { margin-left: auto; font-size: 0.68rem; color: var(--gray); white-space: nowrap; flex-shrink: 0; }
+
+    /* ── Client status breakdown ─────────────────────── */
+    .status-row {
+      display: flex; align-items: center; gap: 0.65rem;
+      padding: 0.55rem 0; border-bottom: 1px solid var(--border);
+    }
+    .status-row:last-child { border-bottom: none; }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .status-row-label { font-size: 0.83rem; color: var(--dark); flex: 1; }
+    .status-row-count { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 600; color: var(--dark); }
+    .status-row-bar-wrap { flex: 2; height: 5px; background: var(--border); border-radius: 4px; overflow: hidden; }
+    .status-row-bar { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+
+    /* ── Welcome card ────────────────────────────────── */
+    .welcome-card {
+      background: linear-gradient(135deg, var(--dark) 0%, #3a3528 100%);
+      border-radius: 10px; padding: 1.4rem 1.5rem;
+      color: #fff; display: flex; flex-direction: column; gap: 0.6rem;
+      margin-bottom: 1.25rem;
+    }
+    .welcome-greeting { font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 600; }
+    .welcome-date { font-size: 0.8rem; opacity: 0.65; }
+    .welcome-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem; }
+    .welcome-btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.5rem 1rem; border-radius: 5px;
+      font-family: 'Lato', sans-serif; font-size: 0.78rem; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      cursor: pointer; text-decoration: none; border: none; transition: all 0.15s;
+    }
+    .welcome-btn-primary { background: var(--olive); color: #fff; }
+    .welcome-btn-primary:hover { background: #7a9020; }
+    .welcome-btn-secondary { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.25); }
+    .welcome-btn-secondary:hover { background: rgba(255,255,255,0.25); }
+
+    /* ── Empty states ────────────────────────────────── */
+    .dash-empty { text-align: center; padding: 1.75rem 1rem; color: var(--gray); font-size: 0.83rem; }
+    .dash-loading { padding: 1.25rem; text-align: center; color: var(--gray); font-size: 0.82rem; }
+
+    /* ── View all link row ───────────────────────────── */
+    .view-all-row {
+      padding: 0.6rem 1.1rem;
+      border-top: 1px solid var(--border);
+      background: var(--cream);
+      text-align: center;
+    }
+    .view-all-row a {
+      font-size: 0.78rem; font-weight: 700; color: var(--olive);
+      text-decoration: none;
+    }
+    .view-all-row a:hover { text-decoration: underline; }
+
+    /* ── Quick actions (new log, new task, etc.) ─────── */
+    .quick-actions {
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+      padding: 0.85rem 1.1rem;
+    }
+    .qa-btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.45rem 0.9rem; border-radius: 5px;
+      font-family: 'Lato', sans-serif; font-size: 0.75rem; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      cursor: pointer; border: 1px solid var(--border);
+      background: #fff; color: var(--dark); transition: all 0.14s;
+    }
+    .qa-btn:hover { border-color: var(--olive); color: var(--olive); }
+    .qa-btn.primary { background: var(--dark); color: #fff; border-color: var(--dark); }
+    .qa-btn.primary:hover { background: var(--olive); border-color: var(--olive); }
+    .qa-btn.blue { background: #2e4a8a; color: #fff; border-color: #2e4a8a; }
+    .qa-btn.blue:hover { background: #1a3060; border-color: #1a3060; }
   </style>
 </head>
 <body>
@@ -28,56 +233,162 @@
     </div>
     <div class="page-content">
 
+      <!-- Welcome banner -->
+      <div class="welcome-card" id="welcome-card">
+        <div class="welcome-greeting" id="welcome-greeting">Добредојдовте</div>
+        <div class="welcome-date" id="welcome-date"></div>
+        <div class="welcome-actions" id="welcome-actions"></div>
+      </div>
+
       <!-- Stat row -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1.25rem;margin-bottom:2rem">
-        <div class="card" style="border-left:3px solid var(--olive)">
-          <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--gray);margin-bottom:0.5rem">Активни Задачи</div>
-          <div style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:600;color:var(--dark)">—</div>
+      <div class="dash-grid-3" id="stat-row">
+        <div class="stat-card" id="stat-clients-card">
+          <div class="stat-icon olive">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div>
+            <div class="stat-label">Активни Корисници</div>
+            <div class="stat-value" id="stat-clients">—</div>
+            <div class="stat-sub" id="stat-clients-sub"></div>
+          </div>
         </div>
-        <div class="card" style="border-left:3px solid var(--olive)">
-          <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--gray);margin-bottom:0.5rem">Денешни Записи</div>
-          <div id="stat-logs" style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:600;color:var(--dark)">—</div>
+        <div class="stat-card" id="stat-logs-card">
+          <div class="stat-icon olive">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <div>
+            <div class="stat-label">Денешни Записи</div>
+            <div class="stat-value" id="stat-logs">—</div>
+            <div class="stat-sub" id="stat-logs-sub"></div>
+          </div>
         </div>
-        <div class="card" style="border-left:3px solid var(--olive)">
-          <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--gray);margin-bottom:0.5rem">Корисници</div>
-          <div id="stat-clients" style="font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:600;color:var(--dark)">—</div>
+        <div class="stat-card amber" id="stat-tasks-card">
+          <div class="stat-icon amber">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9 12 11 14 15 10"/></svg>
+          </div>
+          <div>
+            <div class="stat-label">Активни Задачи</div>
+            <div class="stat-value" id="stat-tasks">—</div>
+            <div class="stat-sub" id="stat-tasks-sub"></div>
+          </div>
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;flex-wrap:wrap">
+      <!-- Main grid -->
+      <div class="dash-grid">
 
-        <!-- Welcome / new client -->
-        <div class="card" style="display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem;flex-wrap:wrap">
-          <div>
-            <div class="card-title">Добредојдовте на Порталот</div>
-            <p style="font-size:0.9rem;color:var(--gray);line-height:1.75;max-width:360px;margin-top:0.4rem">
-              Користете го менито лево за да пристапите до сите модули.
-            </p>
+        <!-- LEFT COL -->
+        <div style="display:flex;flex-direction:column;gap:1.25rem">
+
+          <!-- My tasks widget -->
+          <div class="dash-card" id="my-tasks-card">
+            <div class="dash-card-hdr">
+              <div class="dash-card-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9 12 11 14 15 10"/></svg>
+                Мои задачи и барања
+              </div>
+              <a href="tasks.html" class="dash-card-link">Сите →</a>
+            </div>
+            <div id="my-tasks-body"><div class="dash-loading">Се вчитува…</div></div>
           </div>
-          <div id="new-client-btn-wrap" style="display:none;flex-shrink:0">
-            <a href="clients.html" class="btn-new-client">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Нов Корисник
-            </a>
+
+          <!-- Today's logs -->
+          <div class="dash-card" id="today-logs-card">
+            <div class="dash-card-hdr">
+              <div class="dash-card-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Денешни записи
+              </div>
+              <a href="logs.html" class="dash-card-link">Сите →</a>
+            </div>
+            <div id="today-logs-body"><div class="dash-loading">Се вчитува…</div></div>
           </div>
+
         </div>
 
-        <!-- Doctor: pending priems -->
-        <div class="card" id="pending-priems-card" style="display:none">
-          <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem">
-            <div class="card-title" style="margin:0">Приеми на чекање</div>
-            <div class="pending-badge" id="pending-count">0</div>
-          </div>
-          <div id="pending-list"><div style="font-size:0.85rem;color:var(--gray)">Се вчитува…</div></div>
-        </div>
+        <!-- RIGHT COL -->
+        <div style="display:flex;flex-direction:column;gap:1.25rem">
 
+          <!-- Doctor: pending priems -->
+          <div class="dash-card" id="pending-priems-card" style="display:none">
+            <div class="dash-card-hdr">
+              <div class="dash-card-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+                Приеми на чекање
+                <span class="priem-badge" id="pending-count" style="display:none">0</span>
+              </div>
+              <a href="clients.html" class="dash-card-link">Корисници →</a>
+            </div>
+            <div id="pending-list"><div class="dash-loading">Се вчитува…</div></div>
+          </div>
+
+          <!-- Client status breakdown — manager/glavna sestra only -->
+          <div class="dash-card" id="client-status-card" style="display:none">
+            <div class="dash-card-hdr">
+              <div class="dash-card-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Статус на корисници
+              </div>
+              <a href="clients.html" class="dash-card-link">Листа →</a>
+            </div>
+            <div id="client-status-body"><div class="dash-loading">Се вчитува…</div></div>
+          </div>
+
+          <!-- Quick actions -->
+          <div class="dash-card" id="quick-actions-card">
+            <div class="dash-card-hdr">
+              <div class="dash-card-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                Брзи акции
+              </div>
+            </div>
+            <div class="quick-actions" id="quick-actions-body"></div>
+          </div>
+
+        </div>
       </div>
     </div>
   </main>
 </div>
+
 <script src="sidebar.js"></script>
 <script src="client-card.js"></script>
+<script src="new-log.js"></script>
+<script src="newtask.js"></script>
+<script src="newrequest.js"></script>
+
 <script>
+/* ── helpers ─────────────────────────────────────── */
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function fmtDate(ts){return ts?new Date(ts).toLocaleDateString('mk-MK'):'—';}
+function fmtTime(ts){return ts?new Date(ts).toLocaleTimeString('mk-MK',{hour:'2-digit',minute:'2-digit'}):'—';}
+
+function getRole(){
+  const u=(window._username||'').toLowerCase();
+  if(u==='menadzer')           return 'menadzer';
+  if(u==='glavnasestra')       return 'glavna_sestra';
+  if(u==='doktor')             return 'doktor';
+  if(u==='socijalenrabotnik')  return 'socijalen';
+  if(u==='fizioterapevt')      return 'fizioterapevt';
+  if(u==='supervizornega')     return 'supervizor';
+  return 'other';
+}
+function isPrivileged(){const r=getRole();return r==='menadzer'||r==='glavna_sestra';}
+function isDoctor()    {return getRole()==='doktor';}
+function canCreateLog(){
+  const r=getRole();
+  return ['menadzer','glavna_sestra','doktor','fizioterapevt','socijalen','supervizor'].includes(r);
+}
+function canCreateTask(){return true;}
+function canCreateRequest(){
+  const r=getRole();
+  return ['menadzer','glavna_sestra','doktor','medicinska_sestra'].includes(r);
+}
+
+const TYPE_LABEL={doctor:'Доктор',nurse:'Сестра',social:'Социјален',fizioterapevt:'Физиотерапевт',supervizornega:'Супервизор за нега',other:'Друго'};
+const TYPE_CLS  ={doctor:'db-doctor',nurse:'db-nurse',social:'db-social',fizioterapevt:'db-fizio',supervizornega:'db-sup'};
+
+/* ── boot ────────────────────────────────────────── */
 window.addEventListener('DOMContentLoaded',()=>{
   const wait=setInterval(()=>{
     if(window._username!==undefined){
@@ -89,49 +400,306 @@ window.addEventListener('DOMContentLoaded',()=>{
 });
 
 async function initDashboard(){
-  const u=(window._username||'').toLowerCase();
+  const role=getRole();
+  const today=new Date();
+  const todayStr=today.toISOString().slice(0,10);
 
-  // Show new client button for managers
-  if(canManageClients()){
-    document.getElementById('new-client-btn-wrap').style.display='';
+  // Welcome greeting
+  const dayNames=['недела','понеделник','вторник','среда','четврток','петок','сабота'];
+  const monNames=['јануари','февруари','март','април','мај','јуни','јули','август','септември','октомври','ноември','декември'];
+  document.getElementById('welcome-date').textContent=
+    `${dayNames[today.getDay()]}, ${today.getDate()} ${monNames[today.getMonth()]} ${today.getFullYear()}`;
+  const gh=today.getHours();
+  const greetText = gh<12?'Добро утро':gh<18?'Добар ден':'Добра вечер';
+  document.getElementById('welcome-greeting').textContent=greetText;
+
+  // Welcome actions
+  buildQuickActions(role);
+
+  // ── Load everything in parallel ─────────────────
+  const uid=window._userId;
+
+  const promises=[
+    // 0 active client count
+    window._sb.from('clients').select('id',{count:'exact',head:true}).eq('client_status','active').neq('status','draft'),
+    // 1 today's logs count
+    window._sb.from('client_logs').select('id',{count:'exact',head:true}).gte('created_at',todayStr+'T00:00:00').lte('created_at',todayStr+'T23:59:59'),
+    // 2 today's logs detail (for widget) — limit 6
+    window._sb.from('client_logs').select('id,created_at,log_type,clients(id,ime_prezime,obrakanje,profile_pic_url,room_number,bed_number)').gte('created_at',todayStr+'T00:00:00').lte('created_at',todayStr+'T23:59:59').order('created_at',{ascending:false}).limit(6),
+    // 3 my active tasks
+    window._sb.from('tasks').select('id,title,status,priority,due_datetime,client_maticen_broj').eq('owner_id',uid).eq('archived',false).neq('status','completed').order('created_at',{ascending:false}),
+    // 4 requests assigned to me or created by me — active
+    window._sb.from('requests').select('id,title,status,priority,due_datetime,client_maticen_broj,request_type').or(`created_by.eq.${uid},assigned_to.eq.${uid}`).eq('archived',false).neq('status','completed').neq('status','rejected').order('created_at',{ascending:false}),
+  ];
+
+  // Extra queries per role
+  if(isDoctor()){
+    promises.push(
+      window._sb.from('clients').select('id,ime_prezime,obrakanje,floor_number,room_number,bed_number,created_at').eq('status','doctor').order('created_at',{ascending:true}) // 5
+    );
+  }
+  if(isPrivileged()){
+    promises.push(
+      window._sb.from('clients').select('id,status,client_status') // 5 or 6
+    );
   }
 
-  // Load stats
-  const[clientsRes,logsRes]=await Promise.all([
-    window._sb.from('clients').select('id',{count:'exact',head:true}).eq('status','completed'),
-    window._sb.from('client_logs').select('id',{count:'exact',head:true})
-      .gte('created_at',new Date().toISOString().slice(0,10)),
-  ]);
-  document.getElementById('stat-clients').textContent=clientsRes.count??'—';
-  document.getElementById('stat-logs').textContent=logsRes.count??'—';
+  const results=await Promise.all(promises);
 
-  // Doctor: show pending priems
-  if(u==='doktor'){
-    document.getElementById('pending-priems-card').style.display='';
-    const{data}=await window._sb.from('clients')
-      .select('id,ime_prezime,obrakanje,floor_number,room_number,bed_number,created_at')
-      .eq('status','doctor')
-      .order('created_at',{ascending:true});
-    const list=document.getElementById('pending-list');
-    const count=document.getElementById('pending-count');
-    const items=data||[];
-    count.textContent=items.length;
-    if(!items.length){
-      list.innerHTML='<div style="font-size:0.85rem;color:var(--gray)">Нема приеми на чекање.</div>';
-      return;
-    }
-    list.innerHTML=items.map(c=>`
-      <div class="pending-item">
-        <div>
-          <div class="pending-name">${esc(c.obrakanje?c.obrakanje+' ':'')}${esc(c.ime_prezime)}</div>
-          <div class="pending-meta">${c.floor_number?'К'+c.floor_number+'/С'+c.room_number+'/Кр'+c.bed_number:'—'} · ${new Date(c.created_at).toLocaleDateString('mk-MK')}</div>
-        </div>
-        <a href="clients.html" class="link-action">Заврши прием →</a>
-      </div>`).join('');
+  const clientCount  = results[0].count??0;
+  const logsCount    = results[1].count??0;
+  const todayLogs    = results[2].data||[];
+  const myTasks      = results[3].data||[];
+  const myRequests   = results[4].data||[];
+
+  // ── Stat: overdue count ──────────────────────────
+  const now=new Date();
+  const overdue=[...myTasks,...myRequests].filter(i=>i.due_datetime&&new Date(i.due_datetime)<now);
+  const activeTasks = myTasks.length+myRequests.length;
+
+  // ── Stat cards ───────────────────────────────────
+  document.getElementById('stat-clients').textContent=clientCount;
+  document.getElementById('stat-logs').textContent=logsCount;
+  document.getElementById('stat-tasks').textContent=activeTasks;
+  if(overdue.length){
+    document.getElementById('stat-tasks-sub').textContent=`${overdue.length} задоцнет${overdue.length===1?'а':'и'}`;
+    document.getElementById('stat-tasks-sub').style.color='#c0392b';
+    document.getElementById('stat-tasks-card').style.borderLeftColor='#c0392b';
+    document.getElementById('stat-tasks-card').querySelector('.stat-icon').style.background='#fce4ec';
+    document.getElementById('stat-tasks-card').querySelector('.stat-icon').style.color='#c62828';
+  }
+  document.getElementById('stat-logs-sub').textContent=`Денес · ${new Date().toLocaleDateString('mk-MK',{weekday:'short'})}`;
+
+  // ── My tasks widget ──────────────────────────────
+  renderMyTasksWidget(myTasks, myRequests);
+
+  // ── Today's logs widget ──────────────────────────
+  renderTodayLogsWidget(todayLogs, logsCount);
+
+  // ── Doctor: pending priems ───────────────────────
+  if(isDoctor()){
+    const priems=results[5]?.data||[];
+    renderPendingPriems(priems);
+  }
+
+  // ── Manager/Glavna: client status breakdown ──────
+  if(isPrivileged()){
+    const allClients=results[isDoctor()?6:5]?.data||[];
+    renderClientStatusBreakdown(allClients);
   }
 }
 
-function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+/* ── My tasks widget ─────────────────────────────── */
+function renderMyTasksWidget(tasks, requests){
+  const body=document.getElementById('my-tasks-body');
+  const combined=[
+    ...tasks.map(t=>({...t,_k:'task'})),
+    ...requests.map(r=>({...r,_k:'request'})),
+  ].sort((a,b)=>{
+    const p={urgent:0,high:1,normal:2,low:3};
+    const pa=p[a.priority]??2, pb=p[b.priority]??2;
+    if(pa!==pb) return pa-pb;
+    const da=a.due_datetime?new Date(a.due_datetime):new Date(9e15);
+    const db=b.due_datetime?new Date(b.due_datetime):new Date(9e15);
+    return da-db;
+  }).slice(0,5);
+
+  if(!combined.length){
+    body.innerHTML='<div class="dash-empty">Нема активни задачи или барања.</div>';
+    return;
+  }
+
+  const now=new Date();
+  const rows=combined.map(item=>{
+    const isOverdue=item.due_datetime&&new Date(item.due_datetime)<now;
+    const dueLabel=item.due_datetime?formatDue(item.due_datetime):'';
+    const prBadge=item.priority==='urgent'
+      ?`<span class="dbadge db-urgent">Итно</span>`
+      :item.priority==='high'
+        ?`<span style="font-size:0.65rem;color:#e65100;font-weight:700">↑ Висок</span>` :'';
+    return`<div class="dash-item">
+      <div class="dash-item-main">
+        <div class="dash-item-title">${esc(item.title)}</div>
+        <div class="dash-item-meta">
+          <span class="dbadge ${item._k==='task'?'db-task':'db-request'}">${item._k==='task'?'Задача':'Барање'}</span>
+          ${item.status==='in_progress'?'<span class="dbadge db-inprogress">Во тек</span>':''}
+          ${prBadge}
+          ${dueLabel?`<span style="font-size:0.68rem;color:${isOverdue?'#c0392b':'var(--gray)'};font-weight:${isOverdue?700:400}">${dueLabel}</span>`:''}
+          ${item.client_maticen_broj?`<span style="font-size:0.67rem;color:var(--olive);font-family:monospace">${esc(item.client_maticen_broj)}</span>`:''}
+        </div>
+      </div>
+      <button class="dash-item-action" onclick="openViewTskReq({id:'${item.id}',_kind:'${item._k}'},null,()=>{})">→</button>
+    </div>`;
+  }).join('');
+
+  const viewAll=tasks.length+requests.length>5
+    ?`<div class="view-all-row"><a href="tasks.html">Прикажи ги сите ${tasks.length+requests.length} →</a></div>`:'';
+
+  body.innerHTML=`<div style="padding:0.5rem 1.1rem 0">${rows}</div>${viewAll}`;
+}
+
+function formatDue(dt){
+  const d=new Date(dt), today=new Date(); today.setHours(0,0,0,0);
+  const tom=new Date(today); tom.setDate(tom.getDate()+1);
+  if(d<today) return`Задоцнет · ${d.toLocaleDateString('mk-MK',{day:'numeric',month:'short'})}`;
+  if(d>=today&&d<tom) return`Денес · ${d.toLocaleTimeString('mk-MK',{hour:'2-digit',minute:'2-digit'})}`;
+  if(d>=tom&&d<new Date(tom.getTime()+86400000)) return`Утре`;
+  return d.toLocaleDateString('mk-MK',{day:'numeric',month:'short'});
+}
+
+/* ── Today's logs widget ─────────────────────────── */
+function renderTodayLogsWidget(logs, total){
+  const body=document.getElementById('today-logs-body');
+
+  const canSee=logs.filter(l=>{
+    const t=l.log_type||'doctor';
+    const u=(window._username||'').toLowerCase();
+    if(u==='menadzer') return true;
+    if(t==='doctor'||t==='nurse') return u==='doktor'||u==='glavnasestra';
+    if(t==='social') return u==='socijalenrabotnik'||u==='doktor'||u==='glavnasestra';
+    if(t==='fizioterapevt') return u==='fizioterapevt'||u==='doktor'||u==='glavnasestra';
+    if(t==='supervizornega') return u==='supervizornega'||u==='doktor'||u==='glavnasestra';
+    return false;
+  });
+
+  if(!canSee.length){
+    body.innerHTML='<div class="dash-empty">Нема записи денес.</div>';
+    return;
+  }
+
+  const rows=canSee.slice(0,5).map(l=>{
+    const c=l.clients||{};
+    const av=c.profile_pic_url
+      ?`<div class="log-mini-av"><img src="${esc(c.profile_pic_url)}" alt=""/></div>`
+      :`<div class="log-mini-av">${esc((c.ime_prezime||'?').charAt(0))}</div>`;
+    const type=l.log_type||'doctor';
+    const loc=(c.room_number&&c.bed_number)?`С${c.room_number}/Кр${c.bed_number}`:'';
+    return`<div class="log-mini">
+      ${av}
+      <div style="flex:1;min-width:0">
+        <div class="log-mini-name">${esc(c.obrakanje?c.obrakanje+' ':'')}${esc(c.ime_prezime||'—')}</div>
+        <div class="log-mini-meta">
+          <span class="dbadge ${TYPE_CLS[type]||''}">${TYPE_LABEL[type]||'Друго'}</span>
+          ${loc?`<span>${esc(loc)}</span>`:''}
+        </div>
+      </div>
+      <span class="log-mini-time">${fmtTime(l.created_at)}</span>
+    </div>`;
+  }).join('');
+
+  const viewAll=total>5
+    ?`<div class="view-all-row"><a href="logs.html">Прикажи ги сите ${total} записи →</a></div>`:'';
+
+  body.innerHTML=`<div style="padding:0.5rem 1.1rem 0">${rows}</div>${viewAll}`;
+}
+
+/* ── Pending priems (doctor) ─────────────────────── */
+function renderPendingPriems(items){
+  const card=document.getElementById('pending-priems-card');
+  card.style.display='';
+  const badge=document.getElementById('pending-count');
+  badge.textContent=items.length;
+  badge.style.display=items.length?'':'none';
+
+  const body=document.getElementById('pending-list');
+  if(!items.length){
+    body.innerHTML='<div class="dash-empty">Нема приеми на чекање.</div>';
+    return;
+  }
+
+  const rows=items.map(c=>`<div class="dash-item">
+    <div class="dash-item-main">
+      <div class="dash-item-title">${esc(c.obrakanje?c.obrakanje+' ':'')}${esc(c.ime_prezime)}</div>
+      <div class="dash-item-meta">
+        ${c.floor_number?`<span>К${c.floor_number} / С${c.room_number} / Кр${c.bed_number}</span>`:''}
+        <span>Прием: ${fmtDate(c.created_at)}</span>
+      </div>
+    </div>
+    <button class="dash-item-action" onclick="openClientCard('${c.id}')">Заврши →</button>
+  </div>`).join('');
+
+  body.innerHTML=`<div style="padding:0.5rem 1.1rem 0">${rows}</div>`;
+}
+
+/* ── Client status breakdown (manager/glavna) ───── */
+function renderClientStatusBreakdown(clients){
+  const card=document.getElementById('client-status-card');
+  card.style.display='';
+
+  const active=clients.filter(c=>c.client_status==='active'||!c.client_status);
+  const total=active.length;
+
+  const byCat={
+    draft:     active.filter(c=>c.status==='draft').length,
+    doctor:    active.filter(c=>c.status==='doctor').length,
+    social:    active.filter(c=>c.status==='social').length,
+    completed: active.filter(c=>c.status==='completed').length,
+  };
+
+  const odjaveni=clients.filter(c=>c.client_status==='odjavен').length;
+  const pocina  =clients.filter(c=>c.client_status==='pocinat').length;
+
+  const rows=[
+    {label:'Нацрт',           count:byCat.draft,     color:'#8a7a55'},
+    {label:'Чека доктор',     count:byCat.doctor,    color:'#2e4a8a'},
+    {label:'Чека социјален',  count:byCat.social,    color:'#3a6e3a'},
+    {label:'Завршен прием',   count:byCat.completed, color:'var(--olive)'},
+    {label:'Одјавени',        count:odjaveni,        color:'#2e4a8a'},
+    {label:'Починати',        count:pocina,          color:'#8a3a3a'},
+  ].filter(r=>r.count>0);
+
+  const maxCount=Math.max(...rows.map(r=>r.count),1);
+
+  const html=rows.map(r=>`<div class="status-row">
+    <div class="status-dot" style="background:${r.color}"></div>
+    <div class="status-row-label">${r.label}</div>
+    <div class="status-row-bar-wrap">
+      <div class="status-row-bar" style="width:${Math.round(r.count/maxCount*100)}%;background:${r.color}"></div>
+    </div>
+    <div class="status-row-count">${r.count}</div>
+  </div>`).join('');
+
+  document.getElementById('client-status-body').innerHTML=
+    `<div style="padding:0.5rem 1.1rem 0">${html}</div>
+     <div style="padding:0.5rem 1.1rem;font-size:0.72rem;color:var(--gray);border-top:1px solid var(--border);margin-top:0.25rem">
+       Вкупно активни: <strong style="color:var(--dark)">${total}</strong>
+     </div>`;
+}
+
+/* ── Quick actions ───────────────────────────────── */
+function buildQuickActions(role){
+  const acts=[];
+  if(canCreateLog())
+    acts.push({label:'Нов запис',    cls:'primary',  onclick:`if(typeof openNewLog==='function')openNewLog(()=>{})`});
+  if(canCreateTask())
+    acts.push({label:'Нова задача',  cls:'',         onclick:`if(typeof openNewTask==='function')openNewTask(()=>{})`});
+  if(canCreateRequest())
+    acts.push({label:'Ново барање',  cls:'blue',     onclick:`if(typeof openNewRequest==='function')openNewRequest(()=>{})`});
+  if(canManageClients&&canManageClients())
+    acts.push({label:'Нов корисник', cls:'',         onclick:`window.location.href='clients.html'`});
+  acts.push({label:'Записи',         cls:'',         onclick:`window.location.href='logs.html'`});
+  acts.push({label:'Задачи',         cls:'',         onclick:`window.location.href='tasks.html'`});
+
+  // Welcome actions (first 3 in banner)
+  const wrapEl=document.getElementById('welcome-actions');
+  acts.slice(0,3).forEach(a=>{
+    const btn=document.createElement('button');
+    btn.className=`welcome-btn ${a.cls==='primary'?'welcome-btn-primary':a.cls==='blue'?'welcome-btn-primary':'welcome-btn-secondary'}`;
+    btn.innerHTML=`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>${esc(a.label)}`;
+    btn.setAttribute('onclick',a.onclick);
+    wrapEl.appendChild(btn);
+  });
+
+  // Quick actions card
+  const qaBody=document.getElementById('quick-actions-body');
+  acts.forEach(a=>{
+    const btn=document.createElement('button');
+    btn.className=`qa-btn ${a.cls}`;
+    btn.textContent=a.label;
+    btn.setAttribute('onclick',a.onclick);
+    qaBody.appendChild(btn);
+  });
+}
 </script>
 </body>
 </html>
