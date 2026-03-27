@@ -995,7 +995,15 @@ function renderVitalsWidget(){
     const hdr=`<div class="vl-row hdr"><div class="vl-cell date">Датум</div>${available.map(p=>`<div class="vl-cell">${p.label}</div>`).join('')}</div>`;
     const rows=_vitals.map(v=>`<div class="vl-row">
       <div class="vl-cell date">${fmtDate(v.created_at)}</div>
-      ${available.map(p=>`<div class="vl-cell ${v[p.key]!=null?'has':'empty'}">${v[p.key]!=null?v[p.key]:'—'}</div>`).join('')}
+      ${available.map(p=>{
+        if(p.paired){
+          const sys=v[p.key],dia=v[p.paired];
+          if(sys!=null&&dia!=null)return`<div class="vl-cell has">${sys}/${dia}</div>`;
+          if(sys!=null)           return`<div class="vl-cell has">${sys}/—</div>`;
+          return`<div class="vl-cell empty">—</div>`;
+        }
+        return`<div class="vl-cell ${v[p.key]!=null?'has':'empty'}">${v[p.key]!=null?v[p.key]:'—'}</div>`;
+      }).join('')}
     </div>`).join('');
     return`<div>
       <div class="vitals-view-tabs">
