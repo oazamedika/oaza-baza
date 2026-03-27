@@ -32,9 +32,10 @@ const STYLE = `
 .cc-hero-pills{display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.45rem}
 .cc-pill{display:inline-flex;align-items:center;gap:0.25rem;padding:0.18rem 0.6rem;border-radius:10px;background:var(--cream);border:1px solid var(--border);font-size:0.74rem;color:var(--dark)}
 .cc-pill-lbl{font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray);margin-right:0.1rem}
-.cc-tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-top:0.85rem;overflow-x:auto}
-.cc-tab{padding:0.65rem 1.1rem;font-family:'Lato',sans-serif;font-size:0.79rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color 0.15s,border-color 0.15s;background:none;border-top:none;border-left:none;border-right:none;white-space:nowrap}
-.cc-tab.active{color:var(--olive);border-bottom-color:var(--olive)}
+.cc-tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-top:0.85rem;overflow:hidden}
+.cc-tab{flex:1;padding:0.6rem 0.5rem;font-family:'Lato',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--gray);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color 0.15s,border-color 0.15s,background 0.15s;background:none;border-top:none;border-left:none;border-right:none;white-space:nowrap;text-align:center;min-width:0}
+.cc-tab:hover{color:var(--dark);background:rgba(0,0,0,0.025)}
+.cc-tab.active{color:var(--olive);border-bottom-color:var(--olive);background:rgba(107,130,40,0.04)}
 #cc-body{flex:1;overflow-y:auto;padding:1.25rem 1.5rem}
 .cc-section{margin-bottom:1.5rem}
 .cc-section-title{font-family:'Playfair Display',serif;font-size:0.95rem;font-weight:600;color:var(--dark);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
@@ -252,7 +253,8 @@ let _logsTypeFilter='all';
 let _logsPage=1;
 const LOGS_PAGE_SIZE=10;
 let _vitalsView='chart';
-let _activeParam='puls';
+let _activeParam='temperatura';
+let _therapyShowPast=0;
 const LOGS_FETCH_MAX=300;
 let _currentClientId=null;
 
@@ -324,7 +326,7 @@ window.openClientCard = async function(clientId){
   _currentClientId=clientId;
   window._ccCurrentClientId=clientId;
   _logsMonth=null; _logsTypeFilter='all'; _logsPage=1;
-  _vitalsView='chart'; _activeParam='puls';
+  _vitalsView='chart'; _activeParam='temperatura'; _therapyShowPast=0;
   document.getElementById('cc-body').innerHTML='<div class="cc-empty">Се вчитува…</div>';
   document.getElementById('cc-hero-badges').innerHTML='';
   document.getElementById('cc-hero-pills').innerHTML='';
@@ -506,16 +508,23 @@ function renderDosie(){
         :`<div class="diag-list">${diags.map(d=>`<div class="diag-item"><span class="diag-kod">${e(d.kod)}</span><span class="diag-opis">${e(d.opis||'—')}</span></div>`).join('')}</div>`}
     </div>
     <div class="cc-section">
-      <div class="cc-section-title"><span>Дијагноза на прием</span></div>
-      ${c.priem_dijagnoza_kod?`<div style="display:flex;align-items:center;gap:0.7rem;margin-bottom:0.6rem">
-        <span style="font-family:monospace;font-size:0.95rem;font-weight:700;color:var(--olive)">${e(c.priem_dijagnoza_kod)}</span>
-        <span style="font-size:0.87rem">${e(c.priem_dijagnoza_opis||'')}</span></div>`
-        :'<div class="cc-empty" style="padding:0.4rem">Нема внесена дијагноза.</div>'}
-      ${renderAdmissionVitals(c)}
-      ${c.priem_anamneza?`<div class="cc-field" style="margin-top:0.5rem"><div class="cc-label">Анамнеза</div><div class="cc-value">${e(c.priem_anamneza)}</div></div>`:''}
-      ${c.priem_naod?`<div class="cc-field" style="margin-top:0.4rem"><div class="cc-label">Наод</div><div class="cc-value">${e(c.priem_naod)}</div></div>`:''}
-      ${c.priem_notes?`<div class="cc-field" style="margin-top:0.4rem"><div class="cc-label">Белешки на прием</div><div class="cc-value">${e(c.priem_notes)}</div></div>`:''}
-      ${c.doctor_notes?`<div class="cc-field" style="margin-top:0.4rem"><div class="cc-label">Белешки на доктор</div><div class="cc-value">${e(c.doctor_notes)}</div></div>`:''}
+      <div class="cc-section-title"><span>Преглед на прием</span></div>
+      <button class="cc-btn-outline" id="cc-priem-toggle" style="margin-bottom:0">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:0.35rem"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Прикажи преглед на прием
+      </button>
+      <div id="cc-priem-body" style="display:none;margin-top:0.75rem">
+        ${c.priem_dijagnoza_kod?`<div style="display:flex;align-items:center;gap:0.7rem;margin-bottom:0.6rem">
+          <span style="font-family:monospace;font-size:0.95rem;font-weight:700;color:var(--olive)">${e(c.priem_dijagnoza_kod)}</span>
+          <span style="font-size:0.87rem">${e(c.priem_dijagnoza_opis||'')}</span></div>`
+          :''}
+        ${renderAdmissionVitals(c)}
+        ${c.priem_anamneza?`<div class="cc-field" style="margin-top:0.5rem"><div class="cc-label">Анамнеза</div><div class="cc-value">${e(c.priem_anamneza)}</div></div>`:''}
+        ${c.priem_naod?`<div class="cc-field" style="margin-top:0.4rem"><div class="cc-label">Наод</div><div class="cc-value">${e(c.priem_naod)}</div></div>`:''}
+        ${c.priem_notes?`<div class="cc-field" style="margin-top:0.4rem"><div class="cc-label">Белешки на прием</div><div class="cc-value">${e(c.priem_notes)}</div></div>`:''}
+        ${c.doctor_notes?`<div class="cc-field" style="margin-top:0.4rem"><div class="cc-label">Белешки на доктор</div><div class="cc-value">${e(c.doctor_notes)}</div></div>`:''}
+        ${(!c.priem_dijagnoza_kod&&!c.priem_anamneza&&!c.priem_naod&&!c.priem_notes&&!c.doctor_notes&&!renderAdmissionVitals(c))?'<div class="cc-empty" style="padding:0.4rem">Нема внесен преглед на прием.</div>':''}
+      </div>
     </div>
   </div>`;
 
@@ -523,13 +532,7 @@ function renderDosie(){
   const rightCol=`<div>
     <div class="cc-section">
       <div class="cc-section-title"><span>Задачи и барања</span></div>
-      <div class="tasks-mini-link" onclick="document.querySelectorAll('.cc-tab').forEach(b=>b.classList.remove('active'));document.querySelector('.cc-tab[data-tab=\\'tasks\\']').classList.add('active');window._ccTab('tasks')">
-        <div class="tasks-mini-left">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9 12 11 14 15 10"/></svg>
-          Преглед на задачи и барања
-        </div>
-        <span class="tasks-mini-arrow">→</span>
-      </div>
+      <div id="cc-dosie-tasks-widget"><div style="font-size:0.82rem;color:var(--gray)">Се вчитува…</div></div>
     </div>
     <div class="cc-section">
       <div class="cc-section-title"><span>Последни записи</span></div>
@@ -541,7 +544,6 @@ function renderDosie(){
   return`<div class="dosie-layout">${leftCol}${rightCol}</div>`;
 }
 
-// ── Therapy sessions renderer ──────────────────────────────────────────
 function renderTherapySessions(active, ended){
   if(!active.length&&!ended.length)return'<div class="cc-empty" style="padding:0.5rem">Нема внесена хронична терапија.</div>';
   function sessionHtml(s){
@@ -567,11 +569,21 @@ function renderTherapySessions(active, ended){
   }
   let html='';
   if(active.length) html+=active.map(sessionHtml).join('');
-  if(ended.length){
+
+  const showEnded=ended.slice(0,_therapyShowPast);
+  const hasMore=ended.length>_therapyShowPast;
+
+  if(showEnded.length){
     if(active.length)html+=`<div style="font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray);margin:0.75rem 0 0.4rem">Претходни сесии</div>`;
-    html+=ended.map(sessionHtml).join('');
+    html+=showEnded.map(sessionHtml).join('');
   }
-  return html;
+  if(hasMore){
+    html+=`<button class="cc-btn-outline" id="cc-therapy-load-more" style="margin-top:0.4rem">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:0.3rem"><polyline points="7 10 12 15 17 10"/></svg>
+      Вчитај уште 5 претходни терапии
+    </button>`;
+  }
+  return`<div id="cc-therapy-wrap">${html}</div>`;
 }
 
 // ── Admission vitals ───────────────────────────────────────────────────
@@ -803,85 +815,101 @@ window.editClientData=function(clientId){
 async function renderTasksTab(container){
   container.innerHTML='<div style="padding:1.5rem;text-align:center;color:var(--gray)">Се вчитува…</div>';
   const clientId=_currentClientId;
-  const myRole=getMyRole();
 
   const [{data:tasks},{data:requests}] = await Promise.all([
-    window._sb.from('tasks').select('*').eq('client_id',clientId).eq('archived',false).order('created_at',{ascending:false}),
-    window._sb.from('requests').select('*').eq('client_id',clientId).eq('archived',false).order('created_at',{ascending:false}),
+    window._sb.from('tasks').select('*').eq('client_id',clientId).order('created_at',{ascending:false}),
+    window._sb.from('requests').select('*').eq('client_id',clientId).order('created_at',{ascending:false}),
   ]);
 
   const allTasks=tasks||[], allRequests=requests||[];
-  const total=allTasks.length+allRequests.length;
 
   async function refresh(){ await renderTasksTab(document.getElementById('cc-body')); }
 
-  container.innerHTML='';
+  // Build combined list based on filter
+  function getItems(filter){
+    const combined=[
+      ...allTasks.map(t=>({...t,_k:'task'})),
+      ...allRequests.map(r=>({...r,_k:'request'})),
+    ];
+    if(filter==='tasks') return combined.filter(i=>i._k==='task'&&!i.archived);
+    if(filter==='requests') return combined.filter(i=>i._k==='request'&&!i.archived);
+    if(filter==='archived') return combined.filter(i=>i.archived);
+    // active (default)
+    return combined.filter(i=>!i.archived&&(i._k==='task'?i.status!=='completed':i.status!=='completed'&&i.status!=='rejected'));
+  }
 
-  // Toolbar
-  const toolbar=document.createElement('div');
-  toolbar.className='cct-toolbar';
-  toolbar.innerHTML=`
-    <div style="font-size:.78rem;color:var(--gray)">${total} активн${total===1?'а':'и'} ставк${total===1?'а':'и'}</div>
-    <div class="cct-btn-group">
-      <button class="cct-btn cct-btn-task" id="cct-new-task-btn">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9 12 11 14 15 10"/></svg>
-        Нова задача
-      </button>
-      ${CAN_CREATE_REQUEST_ROLES.includes(myRole)?`<button class="cct-btn cct-btn-req" id="cct-new-req-btn">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m15 6 6 6-6 6"/></svg>
-        Ново барање
-      </button>`:''}
-    </div>`;
-  container.appendChild(toolbar);
+  let _tFilter='active';
+  let _tPage=1;
+  const T_PAGE=10;
 
-  toolbar.querySelector('#cct-new-task-btn').addEventListener('click',()=>{
-    if(typeof openNewTask==='function') openNewTask(refresh);
-  });
-  const reqBtn=toolbar.querySelector('#cct-new-req-btn');
-  if(reqBtn){
-    reqBtn.addEventListener('click',()=>{
-      if(typeof openNewRequest==='function') openNewRequest(refresh,clientId);
+  function renderTasksContent(){
+    container.innerHTML='';
+
+    // Filter tabs
+    const tabsDiv=document.createElement('div');
+    tabsDiv.style.cssText='display:flex;gap:0.3rem;margin-bottom:1rem;flex-wrap:wrap';
+    [
+      {id:'active',label:'Активни'},
+      {id:'tasks',label:'Задачи'},
+      {id:'requests',label:'Барања'},
+      {id:'archived',label:'Архивирани'},
+    ].forEach(tab=>{
+      const btn=document.createElement('button');
+      btn.className=`vtab ${_tFilter===tab.id?'active':''}`;
+      btn.textContent=tab.label;
+      btn.addEventListener('click',()=>{_tFilter=tab.id;_tPage=1;renderTasksContent();});
+      tabsDiv.appendChild(btn);
     });
-  }
+    container.appendChild(tabsDiv);
 
-  if(!total){
-    const empty=document.createElement('div');
-    empty.className='cct-empty';
-    empty.innerHTML=`<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.2;margin:0 auto .5rem;display:block"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
-    Нема поврзани задачи или барања за овој корисник.`;
-    container.appendChild(empty);
-    return;
-  }
+    const items=getItems(_tFilter).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+    const totalPages=Math.ceil(items.length/T_PAGE)||1;
+    if(_tPage>totalPages)_tPage=totalPages;
+    const slice=items.slice((_tPage-1)*T_PAGE,_tPage*T_PAGE);
 
-  // Active items
-  const active=[
-    ...allTasks.filter(t=>t.status!=='completed').map(t=>({...t,_k:'task'})),
-    ...allRequests.filter(r=>r.status!=='completed'&&r.status!=='rejected').map(r=>({...r,_k:'request'})),
-  ].sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+    const countEl=document.createElement('div');
+    countEl.style.cssText='font-size:.75rem;color:var(--gray);margin-bottom:0.6rem';
+    countEl.textContent=`${items.length} ставк${items.length===1?'а':'и'}`;
+    container.appendChild(countEl);
 
-  if(active.length){
-    const lbl=document.createElement('div');
-    lbl.className='cct-section-label';lbl.textContent='Активни';
-    container.appendChild(lbl);
+    if(!items.length){
+      const empty=document.createElement('div');
+      empty.className='cct-empty';
+      empty.innerHTML=`<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.2;margin:0 auto .5rem;display:block"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+      Нема ставки за избраниот филтер.`;
+      container.appendChild(empty);
+      return;
+    }
+
     const feed=document.createElement('div');feed.className='cct-feed';
-    active.forEach(item=>feed.appendChild(makeCctCard(item,refresh)));
+    slice.forEach(item=>feed.appendChild(makeCctCard(item,refresh)));
     container.appendChild(feed);
+
+    if(totalPages>1){
+      const pgDiv=document.createElement('div');pgDiv.className='cc-pagination';
+      let btns=`<button class="cc-page-btn" id="tp-prev" ${_tPage===1?'disabled':''}>‹</button>`;
+      const pages=new Set([1,totalPages,_tPage,_tPage-1,_tPage+1].filter(p=>p>=1&&p<=totalPages));
+      let prev=0;
+      Array.from(pages).sort((a,b)=>a-b).forEach(p=>{
+        if(prev&&p-prev>1)btns+=`<span class="cc-page-info">…</span>`;
+        btns+=`<button class="cc-page-btn ${p===_tPage?'active':''}" data-pg="${p}">${p}</button>`;
+        prev=p;
+      });
+      btns+=`<button class="cc-page-btn" id="tp-next" ${_tPage===totalPages?'disabled':''}>›</button>`;
+      const s=(_tPage-1)*T_PAGE+1,en=Math.min(_tPage*T_PAGE,items.length);
+      btns+=`<span class="cc-page-info">${s}–${en} / ${items.length}</span>`;
+      pgDiv.innerHTML=btns;
+      pgDiv.addEventListener('click',ev=>{
+        const btn=ev.target.closest('[data-pg]');
+        if(btn){_tPage=parseInt(btn.dataset.pg);renderTasksContent();return;}
+        if(ev.target.id==='tp-prev'&&_tPage>1){_tPage--;renderTasksContent();}
+        if(ev.target.id==='tp-next'&&_tPage<totalPages){_tPage++;renderTasksContent();}
+      });
+      container.appendChild(pgDiv);
+    }
   }
 
-  // Done items
-  const done=[
-    ...allTasks.filter(t=>t.status==='completed').map(t=>({...t,_k:'task'})),
-    ...allRequests.filter(r=>r.status==='completed'||r.status==='rejected').map(r=>({...r,_k:'request'})),
-  ].sort((a,b)=>new Date(b.completed_at||b.created_at)-new Date(a.completed_at||a.created_at));
-
-  if(done.length){
-    const lbl=document.createElement('div');
-    lbl.className='cct-section-label';lbl.textContent='Завршени';
-    container.appendChild(lbl);
-    const feed=document.createElement('div');feed.className='cct-feed';
-    done.forEach(item=>feed.appendChild(makeCctCard(item,refresh)));
-    container.appendChild(feed);
-  }
+  renderTasksContent();
 }
 
 function makeCctCard(item,onRefresh){
@@ -938,10 +966,10 @@ function makeCctCard(item,onRefresh){
 function renderVitalsWidget(){
   if(!_vitals.length)return'<div class="cc-empty" style="padding:0.5rem">Нема витални знаци.</div>';
   const params=[
-    {key:'puls',         label:'Пулс',    unit:'bpm', color:'#c0392b'},
     {key:'temperatura',  label:'Т°',      unit:'°C',  color:'#e67e22'},
+    {key:'puls',         label:'Пулс',    unit:'bpm', color:'#c0392b'},
     {key:'spo2',         label:'SpO2',    unit:'%',   color:'#2980b9'},
-    {key:'kp_sistolicen',label:'КП сист.',unit:'mmHg',color:'#8e44ad'},
+    {key:'kp_sistolicen',label:'КП',      unit:'mmHg',color:'#8e44ad', paired:'kp_dijastolicen', pairedColor:'#c39bd3'},
     {key:'respiracii',   label:'Респ.',   unit:'/мин',color:'#27ae60'},
     {key:'tezina',       label:'Тежина',  unit:'kg',  color:'#7f8c8d'},
     {key:'seker',        label:'Шеќер',   unit:'mmol',color:'#f39c12'},
@@ -980,7 +1008,95 @@ function renderVitalsWidget(){
 }
 
 function scheduleChart(){
-  setTimeout(()=>{bindVitalsControls();if(_vitalsView==='chart')drawChart();},50);
+  setTimeout(()=>{
+    bindVitalsControls();
+    if(_vitalsView==='chart')drawChart();
+    populateDosieTasksWidget();
+    // Bind priem toggle
+    const priemBtn=document.getElementById('cc-priem-toggle');
+    if(priemBtn){
+      priemBtn.addEventListener('click',()=>{
+        const body=document.getElementById('cc-priem-body');
+        if(!body)return;
+        const isOpen=body.style.display!=='none';
+        body.style.display=isOpen?'none':'block';
+        priemBtn.innerHTML=isOpen
+          ?`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:0.35rem"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Прикажи преглед на прием`
+          :`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:0.35rem"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M1 1l22 22"/></svg>Скриј преглед на прием`;
+      });
+    }
+    // Bind therapy load-more button
+    const therapyBtn=document.getElementById('cc-therapy-load-more');
+    if(therapyBtn){
+      therapyBtn.addEventListener('click',()=>{
+        _therapyShowPast+=5;
+        const activeSessions=_therapySessions.filter(s=>!s.ended_at);
+        const endedSessions=_therapySessions.filter(s=>s.ended_at);
+        const wrap=document.getElementById('cc-therapy-wrap');
+        if(wrap){
+          const parent=wrap.parentElement;
+          parent.innerHTML=renderTherapySessions(activeSessions,endedSessions);
+          scheduleChart();
+        }
+      });
+    }
+  },50);
+}
+
+async function populateDosieTasksWidget(){
+  const el=document.getElementById('cc-dosie-tasks-widget');
+  if(!el)return;
+  const clientId=_currentClientId;
+  const [{data:tasks},{data:requests}]=await Promise.all([
+    window._sb.from('tasks').select('id,title,status,priority,due_datetime,created_at').eq('client_id',clientId).eq('archived',false).order('created_at',{ascending:false}),
+    window._sb.from('requests').select('id,title,status,priority,due_datetime,created_at').eq('client_id',clientId).eq('archived',false).order('created_at',{ascending:false}),
+  ]);
+  const active=[
+    ...(tasks||[]).filter(t=>t.status!=='completed').map(t=>({...t,_k:'task'})),
+    ...(requests||[]).filter(r=>r.status!=='completed'&&r.status!=='rejected').map(r=>({...r,_k:'request'})),
+  ].sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+
+  if(!active.length){
+    el.innerHTML='<div class="cc-empty" style="padding:0.5rem">Нема активни задачи или барања.</div>';
+    return;
+  }
+
+  const show=active.slice(0,2);
+  const rest=active.length-2;
+  const stMap={pending:'На чекање',in_progress:'Во тек',completed:'Завршено',rejected:'Одбиено'};
+  const cards=show.map(item=>{
+    const isTask=item._k==='task';
+    const isOverdue=item.due_datetime&&new Date(item.due_datetime)<new Date();
+    return`<div class="cct-card ${isTask?'ct-task':'ct-request'} ${isOverdue?'ct-overdue':''}" style="margin-bottom:0.4rem;cursor:pointer" data-tid="${e(item.id)}" data-tk="${e(item._k)}">
+      <div class="cct-card-main">
+        <div class="cct-top">
+          <span class="cct-type-pill ${isTask?'ctp-task':'ctp-req'}">${isTask?'Задача':'Барање'}</span>
+          <span class="cct-st ${item.status==='in_progress'?'cs-inprogress':'cs-pending'}">${stMap[item.status]||''}</span>
+        </div>
+        <div class="cct-title" title="${e(item.title)}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e(item.title)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const viewAllBtn=rest>0
+    ?`<button class="cc-btn-outline cc-btn-olive" id="cc-dosie-tasks-all">Прикажи ги сите задачи и барања (${active.length}) →</button>`
+    :'';
+
+  el.innerHTML=`<div class="cct-feed">${cards}</div>${viewAllBtn}`;
+
+  el.querySelectorAll('.cct-card[data-tid]').forEach(card=>{
+    card.addEventListener('click',()=>{
+      document.querySelectorAll('.cc-tab').forEach(b=>b.classList.remove('active'));
+      document.querySelector('.cc-tab[data-tab="tasks"]').classList.add('active');
+      window._ccTab('tasks');
+    });
+  });
+  const allBtn=document.getElementById('cc-dosie-tasks-all');
+  if(allBtn){allBtn.addEventListener('click',()=>{
+    document.querySelectorAll('.cc-tab').forEach(b=>b.classList.remove('active'));
+    document.querySelector('.cc-tab[data-tab="tasks"]').classList.add('active');
+    window._ccTab('tasks');
+  });}
 }
 
 function bindVitalsControls(){
@@ -1003,13 +1119,18 @@ function drawChart(){
   const canvas=document.getElementById('cc-vitals-canvas');
   if(!canvas)return;
   const params=[
-    {key:'puls',color:'#c0392b'},{key:'temperatura',color:'#e67e22'},{key:'spo2',color:'#2980b9'},
-    {key:'kp_sistolicen',color:'#8e44ad'},{key:'respiracii',color:'#27ae60'},
-    {key:'tezina',color:'#7f8c8d'},{key:'seker',color:'#f39c12'},
+    {key:'temperatura',color:'#e67e22'},
+    {key:'puls',color:'#c0392b'},
+    {key:'spo2',color:'#2980b9'},
+    {key:'kp_sistolicen',color:'#8e44ad', paired:'kp_dijastolicen', pairedColor:'#c39bd3'},
+    {key:'respiracii',color:'#27ae60'},
+    {key:'tezina',color:'#7f8c8d'},
+    {key:'seker',color:'#f39c12'},
   ];
   const param=params.find(p=>p.key===_activeParam)||params[0];
   const pts=_vitals.filter(v=>v[param.key]!=null).map(v=>({
-    x:new Date(v.created_at).getTime(),v:parseFloat(v[param.key]),lbl:fmtDate(v.created_at)
+    x:new Date(v.created_at).getTime(),v:parseFloat(v[param.key]),lbl:fmtDate(v.created_at),
+    v2:param.paired&&v[param.paired]!=null?parseFloat(v[param.paired]):null
   })).reverse();
   if(!pts.length)return;
   const wrap=canvas.parentElement;
@@ -1018,8 +1139,8 @@ function drawChart(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const pad={t:20,r:12,b:30,l:38};
   const W=canvas.width-pad.l-pad.r,H=canvas.height-pad.t-pad.b;
-  const vals=pts.map(p=>p.v);
-  const mn=Math.min(...vals),mx=Math.max(...vals),range=mx-mn||1;
+  const allVals=pts.flatMap(p=>param.paired&&p.v2!=null?[p.v,p.v2]:[p.v]);
+  const mn=Math.min(...allVals),mx=Math.max(...allVals),range=mx-mn||1;
   function cx(i){return pad.l+(i/(pts.length-1||1))*W;}
   function cy(v){return pad.t+H-(((v-mn)/range)*H);}
   ctx.strokeStyle='#e8e4de';ctx.lineWidth=1;
@@ -1028,15 +1149,47 @@ function drawChart(){
     const val=mx-(range/4)*i;ctx.fillStyle='#9a968e';ctx.font='10px Lato,sans-serif';ctx.textAlign='right';
     ctx.fillText(val%1===0?val:val.toFixed(1),pad.l-4,y+4);
   }
+
+  // Draw dotted connector lines between systolic and diastolic dots
+  if(param.paired){
+    ctx.save();
+    ctx.strokeStyle='#cbb8e0';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+    pts.forEach((p,i)=>{
+      if(p.v2!=null){
+        ctx.beginPath();ctx.moveTo(cx(i),cy(p.v));ctx.lineTo(cx(i),cy(p.v2));ctx.stroke();
+      }
+    });
+    ctx.restore();
+  }
+
+  // Area fill for primary
   if(pts.length>1){
     ctx.beginPath();ctx.moveTo(cx(0),cy(pts[0].v));
     pts.forEach((p,i)=>{if(i>0)ctx.lineTo(cx(i),cy(p.v));});
     ctx.lineTo(cx(pts.length-1),pad.t+H);ctx.lineTo(cx(0),pad.t+H);ctx.closePath();
     ctx.fillStyle=param.color+'22';ctx.fill();
   }
+
+  // Primary line
   ctx.beginPath();ctx.strokeStyle=param.color;ctx.lineWidth=2;ctx.lineJoin='round';
   pts.forEach((p,i)=>{if(i===0)ctx.moveTo(cx(0),cy(p.v));else ctx.lineTo(cx(i),cy(p.v));});
   ctx.stroke();
+
+  // Paired (diastolic) dashed line
+  if(param.paired){
+    const pairedPts=pts.filter(p=>p.v2!=null);
+    if(pairedPts.length>1){
+      ctx.save();ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.strokeStyle=param.pairedColor||'#c39bd3';ctx.lineWidth=2;ctx.lineJoin='round';
+      pairedPts.forEach((p,i)=>{
+        const idx=pts.indexOf(p);
+        if(i===0)ctx.moveTo(cx(idx),cy(p.v2));else ctx.lineTo(cx(idx),cy(p.v2));
+      });
+      ctx.stroke();ctx.restore();
+    }
+  }
+
+  // Dots for primary
   pts.forEach((p,i)=>{
     ctx.beginPath();ctx.arc(cx(i),cy(p.v),3.5,0,Math.PI*2);
     ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle=param.color;ctx.lineWidth=2;ctx.stroke();
@@ -1045,8 +1198,27 @@ function drawChart(){
       ctx.fillText(p.v%1===0?p.v:parseFloat(p.v).toFixed(1),cx(i),cy(p.v)-9);
     }
   });
+
+  // Dots for paired (diastolic)
+  if(param.paired){
+    pts.forEach((p,i)=>{
+      if(p.v2==null)return;
+      ctx.beginPath();ctx.arc(cx(i),cy(p.v2),3,0,Math.PI*2);
+      ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle=param.pairedColor||'#c39bd3';ctx.lineWidth=2;ctx.stroke();
+      if(pts.length<=8||i===0||i===pts.length-1||i%Math.ceil(pts.length/6)===0){
+        ctx.fillStyle=param.pairedColor||'#c39bd3';ctx.font='bold 10px Lato,sans-serif';ctx.textAlign='center';
+        ctx.fillText(p.v2%1===0?p.v2:parseFloat(p.v2).toFixed(1),cx(i),cy(p.v2)+16);
+      }
+    });
+  }
+
   const noteEl=document.getElementById('cc-chart-note');
-  if(noteEl&&pts.length)noteEl.textContent=`${pts[0].lbl} – ${pts[pts.length-1].lbl}`;
+  if(param.paired){
+    const hasPaired=pts.some(p=>p.v2!=null);
+    if(noteEl&&pts.length)noteEl.innerHTML=`${pts[0].lbl} – ${pts[pts.length-1].lbl}${hasPaired?` &nbsp;·&nbsp; <span style="color:${param.color}">●</span> Систоличен &nbsp;<span style="color:${param.pairedColor}">●</span> <span style="border-bottom:2px dashed ${param.pairedColor}">Дијастоличен</span>`:''}`;
+  } else {
+    if(noteEl&&pts.length)noteEl.textContent=`${pts[0].lbl} – ${pts[pts.length-1].lbl}`;
+  }
 }
 
 })();
