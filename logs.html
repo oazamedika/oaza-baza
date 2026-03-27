@@ -183,6 +183,8 @@
 
 <script src="sidebar.js"></script>
 <script src="new-log.js"></script>
+<script src="new-log-social.js"></script>
+<script src="new-log-fizio.js"></script>
 <script src="client-card.js"></script>
 <script src="chronic-th.js"></script>
 
@@ -201,6 +203,22 @@ let filteredLogs = [];
 let activePage   = 1;
 let activeType   = 'all';
 let searchQuery  = '';
+
+/* ── Role-based new log router ───────────────────────── */
+function openNewLogForRole(cb) {
+  const u = (window._username || '').toLowerCase();
+  if (u === 'fizioterapevt') {
+    if (typeof openNewLogFizio === 'function') openNewLogFizio(cb);
+    else console.warn('new-log-fizio.js not loaded');
+  } else if (u === 'menadzer' || u === 'socijalenrabotnik') {
+    if (typeof openNewLogSocial === 'function') openNewLogSocial(cb);
+    else console.warn('new-log-social.js not loaded');
+  } else {
+    // doktor, supervizornega, glavnasestra, and any other role
+    if (typeof openNewLog === 'function') openNewLog(cb);
+    else console.warn('new-log.js not loaded');
+  }
+}
 
 /* ── boot ─────────────────────────────────────────────── */
 window.addEventListener('DOMContentLoaded', () => {
@@ -232,7 +250,7 @@ function initPage() {
     updateDateDisplay(); loadFeed();
   });
 
-  document.getElementById('btnNewLog').addEventListener('click', () => openNewLog(loadFeed));
+  document.getElementById('btnNewLog').addEventListener('click', () => openNewLogForRole(loadFeed));
 
   document.getElementById('filterChips').addEventListener('click', e => {
     const chip = e.target.closest('[data-type]');
